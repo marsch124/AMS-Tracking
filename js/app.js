@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -47,6 +47,7 @@ function load() {
             color: '#7a5af8',
             type: 'timer',
             days: [true, true, true, true, true, true, true],
+            goalHours: 16,
             createdAt: dateKey(new Date()),
             done: {},
             sessions: []
@@ -176,6 +177,20 @@ function fmtSessionDate(s) {
     return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+/* ================= undo toast ================= */
+
+let toastTimer = null;
+
+function showToast(msg, undoFn) {
+    const t = document.querySelector('#toast');
+    t.querySelector('#toast-msg').textContent = msg;
+    t.querySelector('#toast-undo').hidden = !undoFn;
+    t._undo = undoFn || null;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+}
+
 /* ================= today screen ================= */
 
 const $ = (sel) => document.querySelector(sel);
@@ -235,6 +250,19 @@ function buildCard(habit) {
         else toggleTimer(habit);
     });
 
+    const wrap = document.createElement('div');
+    wrap.className = 'action-wrap';
+    if (active && habit.goalHours) {
+        const C = 188.5; // circumference of the r=30 ring
+        const progress = Math.min(1, (Date.now() - active.s) / (habit.goalHours * 3600e3));
+        wrap.innerHTML = `<svg class="ring" viewBox="0 0 66 66">` +
+            `<circle class="track" cx="33" cy="33" r="30" fill="none" stroke-width="4"/>` +
+            `<circle class="ring-progress${progress >= 1 ? ' done' : ''}" cx="33" cy="33" r="30" fill="none" ` +
+            `stroke="${habit.color}" stroke-width="4" stroke-linecap="round" ` +
+            `stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - progress)}"/></svg>`;
+    }
+    wrap.appendChild(btn);
+
     // --- middle: name + week dots ---
     const main = document.createElement('div');
     main.className = 'habit-main';
@@ -260,9 +288,17 @@ function buildCard(habit) {
     } else {
         num.style.color = habit.color;
         if (active) {
-            num.textContent = fmtDuration(Date.now() - active.s);
-            num.dataset.liveStart = active.s;
-            label.textContent = 'fasting';
+            const elapsed = Date.now() - active.s;
+            num.textContent = fmtDuration(elapsed);
+            const goalMs = habit.goalHours ? habit.goalHours * 3600e3 : null;
+            if (goalMs && elapsed >= goalMs) {
+                num.classList.add('goal-reached');
+                label.textContent = 'goal reached';
+            } else if (goalMs) {
+                label.textContent = `fasting \u00b7 goal ${habit.goalHours}h`;
+            } else {
+                label.textContent = 'fasting';
+            }
         } else {
             const last = lastFinishedSession(habit);
             if (last) {
@@ -277,7 +313,7 @@ function buildCard(habit) {
     stat.appendChild(num);
     stat.appendChild(label);
 
-    card.appendChild(btn);
+    card.appendChild(wrap);
     card.appendChild(main);
     card.appendChild(stat);
     card.addEventListener('click', () => openDetail(habit.id));
@@ -326,24 +362,34 @@ function toggleTimer(habit) {
     habit.sessions = habit.sessions || [];
     const active = activeSession(habit);
     if (active) {
-        const elapsed = Date.now() - active.s;
-        if (elapsed < 5 * 60000 &&
-            !confirm('This fast is under 5 minutes. End and record it anyway?\n(Cancel keeps it running.)')) {
-            return;
-        }
         active.e = Date.now();
+        save();
+        renderToday();
+        showToast(`Fast ended \u2014 ${fmtDuration(active.e - active.s)} h`, () => {
+            active.e = null;
+            save();
+            renderToday();
+        });
     } else {
-        habit.sessions.push({ s: Date.now(), e: null });
+        const session = { s: Date.now(), e: null };
+        habit.sessions.push(session);
+        save();
+        renderToday();
+        showToast('Fast started', () => {
+            habit.sessions = habit.sessions.filter(x => x !== session);
+            save();
+            renderToday();
+        });
     }
-    save();
-    renderToday();
 }
 
 /* Live tick for running timers */
 setInterval(() => {
-    document.querySelectorAll('[data-live-start]').forEach(el => {
-        el.textContent = fmtDuration(Date.now() - Number(el.dataset.liveStart));
-    });
+    if (document.hidden) return;
+    const todayVisible = !document.querySelector('#screen-today').hidden;
+    if (todayVisible && state.habits.some(h => h.type === 'timer' && activeSession(h))) {
+        renderToday();
+    }
 }, 20000);
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) renderToday();
@@ -485,11 +531,16 @@ function toggleHistoryDay(habit, d, wasDone) {
         else habit.done[key] = 1;
     } else if (wasDone) {
         const victims = (habit.sessions || []).filter(s => s.e && dateKey(new Date(s.e)) === key);
-        const label = victims.length === 1
-            ? `the ${fmtDuration(victims[0].e - victims[0].s)} h fast`
-            : `${victims.length} fasts`;
-        if (!confirm(`Remove ${label} recorded on ${d.toLocaleDateString()}?`)) return;
         habit.sessions = habit.sessions.filter(s => !victims.includes(s));
+        save();
+        openDetail(habit.id, true);
+        showToast(victims.length === 1 ? 'Fast removed' : `${victims.length} fasts removed`, () => {
+            habit.sessions.push(...victims);
+            habit.sessions.sort((a, b) => a.s - b.s);
+            save();
+            openDetail(habit.id, true);
+        });
+        return;
     } else {
         const answer = prompt(`How many hours did you fast on ${d.toLocaleDateString()}?`, '16');
         if (answer === null) return;
@@ -583,34 +634,111 @@ function buildSessionCard(habit) {
 
     const ul = document.createElement('ul');
     ul.className = 'session-list';
-    const recent = finished.slice(-10).reverse();
-    if (!recent.length) {
+
+    const active = activeSession(habit);
+    if (active) {
         const li = document.createElement('li');
+        li.className = 'session-active';
+        li.innerHTML = `<span class="session-when">In progress \u2014 started ` +
+            `${new Date(active.s).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</span>` +
+            `<span class="session-dur">${fmtDuration(Date.now() - active.s)} h</span>`;
+        li.addEventListener('click', () => openFastSheet(habit, active));
+        ul.appendChild(li);
+    }
+
+    const recent = finished.slice(-10).reverse();
+    if (!recent.length && !active) {
+        const li = document.createElement('li');
+        li.style.cursor = 'default';
         li.innerHTML = '<span class="session-when">No completed fasts yet — press the round button on the card to start one.</span>';
         ul.appendChild(li);
     }
     recent.forEach(s => {
         const li = document.createElement('li');
-        const del = document.createElement('button');
-        del.className = 'pill-btn icon-only';
-        del.style.width = del.style.height = '30px';
-        del.style.fontSize = '13px';
-        del.innerHTML = icon('x');
-        del.setAttribute('aria-label', 'Delete this fast');
-        del.addEventListener('click', () => {
-            if (!confirm('Delete this recorded fast?')) return;
-            habit.sessions.splice(habit.sessions.indexOf(s), 1);
-            save();
-            openDetail(habit.id);
-        });
         li.innerHTML = `<span class="session-when">${fmtSessionDate(s)}</span>` +
-            `<span class="session-dur">${fmtDuration(s.e - s.s)} h&nbsp;&nbsp;</span>`;
-        li.querySelector('.session-dur').appendChild(del);
+            `<span class="session-dur">${fmtDuration(s.e - s.s)} h</span>`;
+        li.addEventListener('click', () => openFastSheet(habit, s));
         ul.appendChild(li);
     });
+
+    const editHint = document.createElement('p');
+    editHint.className = 'cal-hint';
+    editHint.textContent = 'Tap a fast to correct its times or delete it.';
+    card.appendChild(editHint);
     card.appendChild(ul);
     return card;
 }
+
+/* ================= fast edit sheet ================= */
+
+let fastEdit = null; // { habitId, session }
+
+function toLocalInput(ms) {
+    const d = new Date(ms);
+    return dateKey(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function openFastSheet(habit, session) {
+    fastEdit = { habitId: habit.id, session };
+    $('#fast-sheet-title').textContent = session.e ? 'Edit fast' : 'Fast in progress';
+    $('#fast-start').value = toLocalInput(session.s);
+    $('#fast-end-wrap').hidden = !session.e;
+    if (session.e) $('#fast-end').value = toLocalInput(session.e);
+    updateFastNote();
+    $('#sheet-fast').hidden = false;
+}
+
+function updateFastNote() {
+    if (!fastEdit) return;
+    const s = new Date($('#fast-start').value).getTime();
+    const e = fastEdit.session.e ? new Date($('#fast-end').value).getTime() : Date.now();
+    $('#fast-duration-note').textContent =
+        isFinite(s) && isFinite(e) && e > s ? `Duration: ${fmtDuration(e - s)} h` : '';
+}
+
+$('#fast-start').addEventListener('input', updateFastNote);
+$('#fast-end').addEventListener('input', updateFastNote);
+$('#btn-fast-cancel').addEventListener('click', () => { $('#sheet-fast').hidden = true; });
+$('#sheet-fast').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-fast')) $('#sheet-fast').hidden = true;
+});
+
+$('#btn-fast-save').addEventListener('click', () => {
+    const habit = state.habits.find(h => h.id === fastEdit.habitId);
+    const session = fastEdit.session;
+    if (!habit || !habit.sessions.includes(session)) { $('#sheet-fast').hidden = true; return; }
+    const start = new Date($('#fast-start').value).getTime();
+    if (!isFinite(start)) { alert('Please enter a valid start time.'); return; }
+    if (start > Date.now()) { alert("The start can't be in the future."); return; }
+    if (session.e) {
+        const end = new Date($('#fast-end').value).getTime();
+        if (!isFinite(end)) { alert('Please enter a valid end time.'); return; }
+        if (end <= start) { alert('The end must be after the start.'); return; }
+        if (end - start > 48 * 3600e3) { alert('A fast can be at most 48 hours.'); return; }
+        if (end > Date.now() + 60000) { alert("The end can't be in the future."); return; }
+        session.e = end;
+    }
+    session.s = start;
+    habit.sessions.sort((a, b) => a.s - b.s);
+    save();
+    $('#sheet-fast').hidden = true;
+    openDetail(habit.id, true);
+});
+
+$('#btn-fast-delete').addEventListener('click', () => {
+    const habit = state.habits.find(h => h.id === fastEdit.habitId);
+    const session = fastEdit.session;
+    habit.sessions = habit.sessions.filter(x => x !== session);
+    save();
+    $('#sheet-fast').hidden = true;
+    openDetail(habit.id, true);
+    showToast(session.e ? 'Fast deleted' : 'Running fast deleted', () => {
+        habit.sessions.push(session);
+        habit.sessions.sort((a, b) => a.s - b.s);
+        save();
+        openDetail(habit.id, true);
+    });
+});
 
 $('#btn-back').addEventListener('click', () => showScreen('today'));
 
@@ -652,6 +780,7 @@ function openSheet(editId) {
 
     $('#sheet-title').textContent = habit ? 'Edit habit' : 'New habit';
     $('#f-name').value = habit ? habit.name : '';
+    $('#f-goal').value = habit && habit.goalHours ? habit.goalHours : '';
     renderSheetChips();
     $('#sheet-edit').hidden = false;
     if (!habit) setTimeout(() => $('#f-name').focus(), 250);
@@ -689,7 +818,8 @@ function renderSheetChips() {
         btn.onclick = () => { sheet.type = btn.dataset.type; renderSheetChips(); };
     });
 
-    // scheduled days (daily only)
+    // fasting goal (timer only), scheduled days (daily only)
+    $('#f-goal-wrap').hidden = sheet.type !== 'timer';
     $('#f-days-wrap').hidden = sheet.type !== 'daily';
     const dayRow = $('#f-days');
     dayRow.innerHTML = '';
@@ -716,6 +846,8 @@ $('#sheet-edit').addEventListener('click', (e) => {
 $('#btn-sheet-save').addEventListener('click', () => {
     const name = $('#f-name').value.trim();
     if (!name) { $('#f-name').focus(); return; }
+    const g = parseFloat(String($('#f-goal').value).replace(',', '.'));
+    const goalHours = isFinite(g) && g > 0 && g <= 48 ? g : null;
 
     if (sheet.editingId) {
         const habit = state.habits.find(h => h.id === sheet.editingId);
@@ -724,6 +856,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             habit.icon = sheet.icon;
             habit.color = sheet.color;
             habit.days = [...sheet.days];
+            if (habit.type === 'timer') habit.goalHours = goalHours;
         }
     } else {
         state.habits.push({
@@ -733,6 +866,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             color: sheet.color,
             type: sheet.type,
             days: [...sheet.days],
+            goalHours: sheet.type === 'timer' ? goalHours : null,
             createdAt: dateKey(new Date()),
             done: {},
             sessions: []
@@ -742,6 +876,60 @@ $('#btn-sheet-save').addEventListener('click', () => {
     $('#sheet-edit').hidden = true;
     if (sheet.editingId) openDetail(sheet.editingId);
     else renderToday();
+});
+
+/* ================= reorder sheet ================= */
+
+function renderReorder() {
+    const list = $('#reorder-list');
+    list.innerHTML = '';
+    state.habits.forEach((h, i) => {
+        const row = document.createElement('div');
+        row.className = 'reorder-row';
+        const name = document.createElement('span');
+        name.className = 'reorder-name';
+        name.innerHTML = `<span style="color:${h.color}">${icon(h.icon)}</span>${escapeHtml(h.name)}`;
+        const up = document.createElement('button');
+        up.className = 'pill-btn icon-only';
+        up.innerHTML = icon('chevU');
+        up.disabled = i === 0;
+        up.setAttribute('aria-label', 'Move up');
+        up.addEventListener('click', () => {
+            [state.habits[i - 1], state.habits[i]] = [state.habits[i], state.habits[i - 1]];
+            save();
+            renderReorder();
+        });
+        const down = document.createElement('button');
+        down.className = 'pill-btn icon-only';
+        down.innerHTML = icon('chevD');
+        down.disabled = i === state.habits.length - 1;
+        down.setAttribute('aria-label', 'Move down');
+        down.addEventListener('click', () => {
+            [state.habits[i], state.habits[i + 1]] = [state.habits[i + 1], state.habits[i]];
+            save();
+            renderReorder();
+        });
+        row.appendChild(name);
+        row.appendChild(up);
+        row.appendChild(down);
+        list.appendChild(row);
+    });
+}
+
+$('#btn-reorder').addEventListener('click', () => {
+    $('#sheet-settings').hidden = true;
+    renderReorder();
+    $('#sheet-reorder').hidden = false;
+});
+$('#btn-reorder-close').addEventListener('click', () => {
+    $('#sheet-reorder').hidden = true;
+    renderToday();
+});
+$('#sheet-reorder').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-reorder')) {
+        $('#sheet-reorder').hidden = true;
+        renderToday();
+    }
 });
 
 /* ================= settings / backup ================= */
@@ -799,6 +987,12 @@ if ('serviceWorker' in navigator) {
 }
 
 document.querySelectorAll('[data-hi]').forEach(el => { el.innerHTML = icon(el.dataset.hi); });
+
+$('#toast-undo').addEventListener('click', () => {
+    const t = $('#toast');
+    t.hidden = true;
+    if (t._undo) { const fn = t._undo; t._undo = null; fn(); }
+});
 
 save();
 renderToday();

@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
@@ -79,6 +79,11 @@
                 </div>
             </div>
 
+            <div id="f-goal-wrap" hidden>
+                <label class="field-label" for="f-goal">Fasting goal (hours)</label>
+                <input id="f-goal" type="number" inputmode="decimal" min="1" max="48" step="0.5" placeholder="e.g. 16">
+            </div>
+
             <div id="f-days-wrap">
                 <label class="field-label">On which days?</label>
                 <div id="f-days" class="chip-row"></div>
@@ -99,15 +104,19 @@
             <button id="btn-export" class="list-btn"><span data-hi="export"></span> Export backup (JSON)</button>
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
+            <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="help"></span> How it works</span></summary>
                 <div class="fold-body">
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
-                    <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on.</p>
+                    <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit and a ring fills around the button as the fast progresses, turning green when you reach it.</p>
+                    <p><strong>Editing a fast</strong> — forgot to press start or stop on time? In the habit's detail view, tap any fast in the list (including the one in progress) to correct its start and end times, or delete it.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable: tap any past day to check it off late (you did it but forgot to log it) or tap a filled day to remove a mistaken entry. For fasting, tapping an empty day asks how long the fast was; tapping a filled day removes that day's fast. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
-                    <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Timer habits also list recent fasts with average and longest duration; tap <span data-hi="x" class="hi-inline"></span> to remove a misrecorded fast. Stopping a fast under 5 minutes asks first, so a stray tap doesn't ruin one.</p>
+                    <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Timer habits also list recent fasts with average and longest duration.</p>
+                    <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
+                    <p><strong>Reorder</strong> — Settings → Reorder habits moves habits up and down the Today list.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Use Export for a JSON backup and Import to restore it, e.g. on a new phone.</p>
                 </div>
@@ -116,6 +125,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.3 <span class="vh-date">— 30 Aug 2026</span></h4>
+                    <p>The daily loop, sharpened.</p>
+                    <ul>
+                        <li><strong>Edit fast times</strong> — tap any fast in the detail list, including the one currently running, to correct when it actually started and ended, or to delete it. No more wrong fasts because you pressed start late.</li>
+                        <li><strong>Fasting goal with progress ring</strong> — give a start/stop habit a goal (e.g. 16 hours) when editing it; while fasting, a ring fills around the card's button and turns green with the timer once the goal is reached.</li>
+                        <li><strong>Reorder habits</strong> — Settings → Reorder habits, with up/down arrows per habit.</li>
+                        <li><strong>Undo instead of pop-ups</strong> — starting/ending a fast and removing entries now show a brief Undo bar instead of confirmation dialogs; only deleting a whole habit still asks first.</li>
+                    </ul>
                     <h4>v1.2 <span class="vh-date">— 30 Aug 2026</span></h4>
                     <p>Edit the past.</p>
                     <ul>
@@ -152,7 +169,45 @@
         </div>
     </div>
 
-    <script src="js/icons.js?v=3"></script>
-    <script src="js/app.js?v=3"></script>
+    <!-- ============ FAST EDIT SHEET ============ -->
+    <div id="sheet-fast" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2 id="fast-sheet-title">Edit fast</h2>
+            <label class="field-label" for="fast-start">Started</label>
+            <input id="fast-start" type="datetime-local">
+            <div id="fast-end-wrap">
+                <label class="field-label" for="fast-end">Ended</label>
+                <input id="fast-end" type="datetime-local">
+            </div>
+            <p id="fast-duration-note" class="cal-hint"></p>
+            <button id="btn-fast-delete" class="danger-btn">Delete this fast</button>
+            <div class="sheet-actions">
+                <button id="btn-fast-cancel" class="ghost-btn">Cancel</button>
+                <button id="btn-fast-save" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ REORDER SHEET ============ -->
+    <div id="sheet-reorder" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2>Reorder habits</h2>
+            <div id="reorder-list"></div>
+            <div class="sheet-actions">
+                <button id="btn-reorder-close" class="primary-btn">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ UNDO TOAST ============ -->
+    <div id="toast" class="toast" hidden>
+        <span id="toast-msg"></span>
+        <button id="toast-undo">Undo</button>
+    </div>
+
+    <script src="js/icons.js?v=4"></script>
+    <script src="js/app.js?v=4"></script>
 </body>
 </html>

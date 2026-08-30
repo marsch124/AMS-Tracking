@@ -10,6 +10,7 @@
     --shadow: 0 2px 10px rgba(20, 30, 60, 0.06);
     --danger: #e5484d;
     --accent: #3b70f0;
+    --toast-undo: #7ea4f7; /* on the inverted (dark) toast */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
         --surface: #161b26;
         --border: rgba(255, 255, 255, 0.08);
         --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+        --toast-undo: #2c5fd8; /* on the inverted (light) toast */
     }
 }
 
@@ -567,3 +569,124 @@ html, body {
     line-height: 1.5;
     margin-top: 16px;
 }
+
+/* ---------- v1.3: undo toast ---------- */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--text);
+    color: var(--bg);
+    padding: 12px 18px;
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    font-size: 15px;
+    font-weight: 600;
+    z-index: 80;
+    max-width: calc(100vw - 32px);
+    animation: toast-up 0.2s ease;
+}
+
+.toast[hidden] { display: none; }
+
+@keyframes toast-up {
+    from { transform: translate(-50%, 16px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+#toast-undo {
+    border: none;
+    background: transparent;
+    color: var(--toast-undo);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 2px 2px;
+    letter-spacing: 0.3px;
+}
+
+/* ---------- v1.3: fasting goal ring ---------- */
+
+.action-wrap {
+    position: relative;
+    flex: 0 0 auto;
+    width: 66px;
+    height: 66px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ring {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+    pointer-events: none;
+}
+
+.ring .track { stroke: var(--border); }
+.ring .ring-progress { transition: stroke-dashoffset 0.5s ease; }
+.ring .ring-progress.done { stroke: #2fa96d; }
+
+.stat-number.goal-reached { color: #2fa96d !important; }
+
+/* ---------- v1.3: reorder sheet ---------- */
+
+.reorder-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.reorder-name {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reorder-name .hi { width: 20px; height: 20px; vertical-align: -4px; margin-right: 6px; }
+
+.reorder-row .pill-btn { width: 40px; height: 40px; }
+.reorder-row .pill-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* fast list rows are tappable now */
+.session-list li { cursor: pointer; }
+.session-list li.session-active .session-when { color: var(--text); font-weight: 600; }
+
+#fast-start, #fast-end {
+    width: 100%;
+    font-size: 17px;
+    padding: 13px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+}
+#fast-start:focus, #fast-end:focus { border-color: var(--accent); }
+
+#f-goal {
+    width: 100%;
+    font-size: 17px;
+    padding: 13px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+}
+#f-goal:focus { border-color: var(--accent); }

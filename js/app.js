@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -407,7 +407,8 @@ function buildCard(habit) {
                 num.classList.add('goal-reached');
                 label.textContent = 'goal reached';
             } else if (goalMs) {
-                label.textContent = `${fmtDuration(goalMs - elapsed)} to goal`;
+                const eta = new Date(active.s + goalMs);
+                label.innerHTML = `${fmtDuration(goalMs - elapsed)} left<br>goal ${pad(eta.getHours())}:${pad(eta.getMinutes())}`;
             } else {
                 label.textContent = 'fasting';
             }

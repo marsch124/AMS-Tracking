@@ -41,8 +41,9 @@ app on his iPhone as the real test environment.
 
 - v1.4 "Habit power" — SHIPPED: weekly-target habit type, archive,
   grid layout toggle.
-- v1.5 "Delight & data" — NEXT: milestone celebrations (streaks 7/30/100,
-  personal-best fast), fast-duration bar chart with goal line, backup via
-  iOS share sheet plus "last backup X days ago" nudge.
+- v1.5 "Delight & data" — SHIPPED: milestone celebrations, fast-length
+  chart with goal line, share-sheet backup with staleness note.
+- Backlog beyond the agreed batches: daily notes per day, weekly-target
+  streak options, stats overview screen — propose to Martin first.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.

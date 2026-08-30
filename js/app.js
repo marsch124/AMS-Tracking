@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -230,6 +230,58 @@ function fmtSessionDate(s) {
     return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+/* ================= milestone celebrations ================= */
+
+const DAY_MILESTONES = [7, 14, 30, 50, 100, 200, 365, 500, 730, 1000];
+const WEEK_MILESTONES = [4, 10, 26, 52, 104];
+
+let celebrateTimer = null;
+
+function celebrate(text, color, sub) {
+    const el = $('#celebrate');
+    el.classList.remove('fading');
+    $('#celebrate-icon').innerHTML = icon('flame');
+    $('#celebrate-icon').style.color = color;
+    $('#celebrate-text').textContent = text;
+    $('#celebrate-sub').textContent = sub || '';
+    el.hidden = false;
+
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const colors = [color, ...PALETTE.filter(c => c !== color).slice(0, 4)];
+        for (let i = 0; i < 26; i++) {
+            const bit = document.createElement('span');
+            bit.className = 'confetti-bit' + (i % 3 === 0 ? ' round' : '');
+            bit.style.background = colors[i % colors.length];
+            const angle = Math.random() * 2 * Math.PI;
+            const dist = 90 + Math.random() * 150;
+            bit.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+            bit.style.setProperty('--dy', (Math.sin(angle) * dist - 40) + 'px');
+            bit.style.setProperty('--rot', (Math.random() * 540 - 270) + 'deg');
+            el.appendChild(bit);
+            setTimeout(() => bit.remove(), 1600);
+        }
+    }
+
+    clearTimeout(celebrateTimer);
+    celebrateTimer = setTimeout(() => {
+        el.classList.add('fading');
+        setTimeout(() => { el.hidden = true; el.classList.remove('fading'); }, 300);
+    }, 2100);
+}
+
+/* Fires once per milestone; only from live check-offs, never from backfills */
+function maybeCelebrateStreak(habit) {
+    const weekly = habit.type === 'weekly';
+    const value = weekly ? weeklyStreak(habit) : currentStreak(habit);
+    const list = weekly ? WEEK_MILESTONES : DAY_MILESTONES;
+    if (!list.includes(value)) return;
+    const tag = (weekly ? 'week' : 'day') + value;
+    if (habit.lastCelebrated === tag) return;
+    habit.lastCelebrated = tag;
+    save();
+    celebrate(`${value}-${weekly ? 'week' : 'day'} streak!`, habit.color, habit.name);
+}
+
 /* ================= undo toast ================= */
 
 let toastTimer = null;
@@ -428,6 +480,7 @@ function toggleToday(habit) {
     else habit.done[key] = 1;
     save();
     renderToday();
+    if (habit.done[key]) maybeCelebrateStreak(habit);
 }
 
 function toggleTimer(habit) {
@@ -442,6 +495,11 @@ function toggleTimer(habit) {
             save();
             renderToday();
         });
+        const others = habit.sessions.filter(x => x.e && x !== active);
+        const duration = active.e - active.s;
+        if (others.length >= 3 && duration > Math.max(...others.map(x => x.e - x.s))) {
+            celebrate('Personal best fast!', habit.color, fmtDuration(duration) + ' h \u00b7 ' + habit.name);
+        }
     } else {
         const session = { s: Date.now(), e: null };
         habit.sessions.push(session);
@@ -712,6 +770,9 @@ function buildSessionCard(habit) {
         card.appendChild(rows);
     }
 
+    const chart = buildFastChart(habit, finished);
+    if (chart) card.appendChild(chart);
+
     const ul = document.createElement('ul');
     ul.className = 'session-list';
 
@@ -747,6 +808,45 @@ function buildSessionCard(habit) {
     card.appendChild(editHint);
     card.appendChild(ul);
     return card;
+}
+
+/* Bar chart of recent fasts against the goal line. Single series in the
+   habit's color; the fast list right below acts as its table view. */
+function buildFastChart(habit, finished) {
+    const data = finished.slice(-30);
+    if (data.length < 2) return null;
+
+    const W = 320, H = 118, padT = 16, padB = 4;
+    const plotH = H - padT - padB;
+    const goalMs = habit.goalHours ? habit.goalHours * 3600e3 : null;
+    const maxV = Math.max(...data.map(s => s.e - s.s), goalMs || 0) * 1.12;
+    const bw = W / data.length;
+    const barW = Math.max(3, Math.min(14, bw - 2));
+
+    let marks = `<line x1="0" x2="${W}" y1="${H - padB}" y2="${H - padB}" stroke="var(--border)" stroke-width="1.5"/>`;
+    data.forEach((s, i) => {
+        const v = s.e - s.s;
+        const h = Math.max(3, (v / maxV) * plotH);
+        const x = i * bw + (bw - barW) / 2;
+        marks += `<rect data-i="${i}" x="${x.toFixed(1)}" y="${(H - padB - h).toFixed(1)}" ` +
+            `width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${habit.color}">` +
+            `<title>${fmtSessionDate(s)}: ${fmtDuration(v)} h</title></rect>`;
+    });
+    if (goalMs) {
+        const gy = H - padB - (goalMs / maxV) * plotH;
+        marks += `<line x1="0" x2="${W}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}" ` +
+            `stroke="var(--text-dim)" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.75"/>` +
+            `<text x="${W - 2}" y="${(gy - 4).toFixed(1)}" text-anchor="end" class="chart-label">goal ${habit.goalHours}h</text>`;
+    }
+
+    const box = document.createElement('div');
+    box.innerHTML = `<svg class="fast-chart" viewBox="0 0 ${W} ${H}" role="img" ` +
+        `aria-label="Length of the last ${data.length} fasts">${marks}</svg>` +
+        `<p class="cal-hint">Last ${data.length} fasts \u00b7 tap a bar to edit that fast.</p>`;
+    box.querySelectorAll('rect[data-i]').forEach(r => {
+        r.addEventListener('click', () => openFastSheet(habit, data[Number(r.dataset.i)]));
+    });
+    return box;
 }
 
 /* ================= fast edit sheet ================= */
@@ -1101,6 +1201,7 @@ $('#btn-layout').addEventListener('click', () => {
 
 $('#btn-settings').addEventListener('click', () => {
     updateLayoutLabel();
+    updateBackupNote();
     $('#archived-count').textContent = state.habits.filter(h => h.archived).length;
     $('#sheet-settings').hidden = false;
 });
@@ -1110,14 +1211,42 @@ $('#sheet-settings').addEventListener('click', (e) => {
 });
 $('#app-version').textContent = 'AMS Tracking v' + APP_VERSION;
 
-$('#btn-export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'ams-tracking-backup-' + dateKey(new Date()) + '.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
+$('#btn-export').addEventListener('click', async () => {
+    const json = JSON.stringify(state, null, 2);
+    const filename = 'ams-tracking-backup-' + dateKey(new Date()) + '.json';
+    try {
+        const file = new File([json], filename, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+        } else {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+        state.settings.lastBackup = Date.now();
+        save();
+        updateBackupNote();
+        showToast('Backup saved');
+    } catch (err) {
+        if (!err || err.name !== 'AbortError') alert('Backup failed: ' + (err && err.message));
+    }
 });
+
+function updateBackupNote() {
+    const el = $('#backup-note');
+    const last = state.settings.lastBackup;
+    if (!last) {
+        const hasData = state.habits.some(h => Object.keys(doneSet(h)).length || (h.sessions || []).length);
+        el.innerHTML = hasData ? '<span class="stale">No backup yet.</span>' : 'No backup yet.';
+        return;
+    }
+    const days = Math.floor((Date.now() - last) / 86400e3);
+    const text = days === 0 ? 'Last backup: today.' :
+        days === 1 ? 'Last backup: yesterday.' : `Last backup: ${days} days ago.`;
+    el.innerHTML = days > 30 ? `<span class="stale">${text}</span>` : text;
+}
 
 $('#btn-import').addEventListener('click', () => $('#import-file').click());
 $('#import-file').addEventListener('change', (e) => {

@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 
@@ -133,13 +133,22 @@
                     <p><strong>Reorder &amp; layout</strong> — Settings → Reorder habits moves habits up and down the Today list, and Settings → Layout switches between the list view and a two-column grid.</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
-                    <p><strong>Your data</strong> — everything is stored only on this device. Use Export for a JSON backup and Import to restore it, e.g. on a new phone.</p>
+                    <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
+                    <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
+                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it.</p>
                 </div>
             </details>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.5 <span class="vh-date">— 30 Aug 2026</span></h4>
+                    <p>Delight &amp; data.</p>
+                    <ul>
+                        <li><strong>Milestone celebrations</strong> — reaching a round streak (7, 14, 30, 50, 100, 200, 365&hellip; days for daily habits; 4, 10, 26, 52, 104 weeks for weekly targets) or finishing your longest fast yet triggers a brief hand-drawn confetti burst in the habit's color. Each milestone celebrates exactly once, celebrations never block a tap, and they respect the system's reduced-motion setting.</li>
+                        <li><strong>Fast-length chart</strong> — the fasting detail view now charts up to the last 30 fasts as bars with a dashed line at your goal, so you can see the trend, not just the average. Tapping a bar opens that fast for editing.</li>
+                        <li><strong>Backups via the share sheet</strong> — on iPhone, Export now opens the native share sheet so the backup JSON can be saved straight to iCloud Drive or sent anywhere; on desktop browsers it downloads as before. Settings shows when the last backup was made and turns amber once it is more than 30 days old (or was never made).</li>
+                    </ul>
                     <h4>v1.4 <span class="vh-date">— 30 Aug 2026</span></h4>
                     <p>Habit power.</p>
                     <ul>
@@ -185,7 +194,7 @@
                 </div>
             </details>
 
-            <p class="settings-note">All data is stored only on this device.<br><span id="app-version"></span></p>
+            <p class="settings-note"><span id="backup-note"></span><br>All data is stored only on this device.<br><span id="app-version"></span></p>
             <div class="sheet-actions">
                 <button id="btn-settings-close" class="ghost-btn">Close</button>
             </div>
@@ -237,13 +246,22 @@
         </div>
     </div>
 
+    <!-- ============ MILESTONE CELEBRATION ============ -->
+    <div id="celebrate" class="celebrate" hidden>
+        <div class="celebrate-card">
+            <span id="celebrate-icon"></span>
+            <span id="celebrate-text"></span>
+            <span id="celebrate-sub"></span>
+        </div>
+    </div>
+
     <!-- ============ UNDO TOAST ============ -->
     <div id="toast" class="toast" hidden>
         <span id="toast-msg"></span>
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=5"></script>
-    <script src="js/app.js?v=5"></script>
+    <script src="js/icons.js?v=6"></script>
+    <script src="js/app.js?v=6"></script>
 </body>
 </html>

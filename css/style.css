@@ -767,3 +767,82 @@ html, body {
     border-radius: 999px;
     cursor: pointer;
 }
+
+/* ---------- v1.5: milestone celebration ---------- */
+
+.celebrate {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; /* never blocks a tap */
+}
+
+.celebrate[hidden] { display: none; }
+
+.celebrate-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    padding: 26px 34px;
+    animation: pop-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+#celebrate-icon .hi { width: 52px; height: 52px; }
+#celebrate-text { font-size: 21px; font-weight: 800; }
+#celebrate-sub { font-size: 14px; font-weight: 600; color: var(--text-dim); }
+
+@keyframes pop-in {
+    from { transform: scale(0.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.celebrate.fading .celebrate-card { animation: pop-out 0.3s ease forwards; }
+@keyframes pop-out { to { transform: scale(0.85); opacity: 0; } }
+
+.confetti-bit {
+    position: fixed;
+    left: 50%;
+    top: 45%;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    opacity: 0;
+    animation: confetti-fly 1.5s ease-out forwards;
+}
+
+.confetti-bit.round { border-radius: 50%; }
+
+@keyframes confetti-fly {
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .celebrate-card { animation: none; }
+    .confetti-bit { display: none; }
+}
+
+/* ---------- v1.5: fast-length chart ---------- */
+
+.fast-chart { width: 100%; display: block; margin: 4px 0 6px; }
+.fast-chart rect { cursor: pointer; }
+.chart-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    fill: var(--text-dim);
+    font-family: inherit;
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
+.settings-note .stale { color: #b8860b; font-weight: 700; }

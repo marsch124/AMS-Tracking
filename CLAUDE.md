@@ -39,10 +39,9 @@ app on his iPhone as the real test environment.
 
 ## Roadmap agreed with Martin
 
-- v1.4 "Habit power": weekly-target habit type (n× per week, weekly
-  streaks), archive habit (hide without deleting history), grid layout
-  toggle for the Today screen.
-- v1.5 "Delight & data": milestone celebrations (streaks 7/30/100,
+- v1.4 "Habit power" — SHIPPED: weekly-target habit type, archive,
+  grid layout toggle.
+- v1.5 "Delight & data" — NEXT: milestone celebrations (streaks 7/30/100,
   personal-best fast), fast-duration bar chart with goal line, backup via
   iOS share sheet plus "last backup X days ago" nudge.
 - Present batches to Martin and wait for his on-phone feedback between

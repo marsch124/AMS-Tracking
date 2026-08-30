@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
@@ -45,6 +45,7 @@
         <h1 id="detail-title" class="page-title"></h1>
         <p id="detail-subtitle" class="page-subtitle"></p>
         <div id="detail-body"></div>
+        <button id="btn-archive" class="archive-btn"><span data-hi="import"></span> Archive habit</button>
         <button id="btn-delete" class="danger-btn">Delete habit</button>
     </main>
 
@@ -68,15 +69,25 @@
                 <div class="type-row">
                     <button type="button" class="type-btn" data-type="daily">
                         <span class="type-icon" data-hi="check"></span>
-                        <span class="type-name">Daily check</span>
-                        <span class="type-desc">Tick it off once a day</span>
+                        <span class="type-text"><span class="type-name">Daily check</span>
+                        <span class="type-desc">Tick it off once a day</span></span>
+                    </button>
+                    <button type="button" class="type-btn" data-type="weekly">
+                        <span class="type-icon" data-hi="target"></span>
+                        <span class="type-text"><span class="type-name">Weekly target</span>
+                        <span class="type-desc">Hit a number per week, on any days</span></span>
                     </button>
                     <button type="button" class="type-btn" data-type="timer">
                         <span class="type-icon" data-hi="timer"></span>
-                        <span class="type-name">Start / Stop</span>
-                        <span class="type-desc">One button toggles a timer, e.g. fasting</span>
+                        <span class="type-text"><span class="type-name">Start / Stop</span>
+                        <span class="type-desc">One button toggles a timer, e.g. fasting</span></span>
                     </button>
                 </div>
+            </div>
+
+            <div id="f-target-wrap" hidden>
+                <label class="field-label">Times per week</label>
+                <div id="f-target" class="chip-row"></div>
             </div>
 
             <div id="f-goal-wrap" hidden>
@@ -105,18 +116,22 @@
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
+            <button id="btn-layout" class="list-btn"><span data-hi="grid"></span> <span id="layout-label">Layout: list</span></button>
+            <button id="btn-archived" class="list-btn"><span data-hi="import"></span> Archived habits (<span id="archived-count">0</span>)</button>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="help"></span> How it works</span></summary>
                 <div class="fold-body">
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
+                    <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over.</p>
                     <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit and a ring fills around the button as the fast progresses, turning green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? In the habit's detail view, tap any fast in the list (including the one in progress) to correct its start and end times, or delete it.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable: tap any past day to check it off late (you did it but forgot to log it) or tap a filled day to remove a mistaken entry. For fasting, tapping an empty day asks how long the fast was; tapping a filled day removes that day's fast. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
                     <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Timer habits also list recent fasts with average and longest duration.</p>
                     <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
-                    <p><strong>Reorder</strong> — Settings → Reorder habits moves habits up and down the Today list.</p>
+                    <p><strong>Reorder &amp; layout</strong> — Settings → Reorder habits moves habits up and down the Today list, and Settings → Layout switches between the list view and a two-column grid.</p>
+                    <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Use Export for a JSON backup and Import to restore it, e.g. on a new phone.</p>
                 </div>
@@ -125,6 +140,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.4 <span class="vh-date">— 30 Aug 2026</span></h4>
+                    <p>Habit power.</p>
+                    <ul>
+                        <li><strong>Weekly-target habits</strong> — a third habit type for "3× per week" goals: pick a target from 1–7 when creating the habit, check off days as they happen, and the card shows this week's count against the target. Streaks are counted in weeks that hit the target (like "21 weeks"), and the week in progress never breaks a streak early. The detail view shows weekly streaks and how many weeks you've met since starting.</li>
+                        <li><strong>Archive habits</strong> — a habit you're done with (season over, goal reached) can be archived from its detail view: it leaves the Today screen but keeps its full history, visible count in Settings → Archived habits, restorable with one tap, with Undo when archiving.</li>
+                        <li><strong>Grid layout</strong> — Settings → Layout toggles a two-column card grid for the Today screen, handy once the habit list grows; the setting is remembered and included in backups.</li>
+                        <li>The habit type picker was redesigned as a vertical list to fit the three types comfortably.</li>
+                    </ul>
                     <h4>v1.3 <span class="vh-date">— 30 Aug 2026</span></h4>
                     <p>The daily loop, sharpened.</p>
                     <ul>
@@ -201,13 +224,26 @@
         </div>
     </div>
 
+    <!-- ============ ARCHIVED HABITS SHEET ============ -->
+    <div id="sheet-archived" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2>Archived habits</h2>
+            <p class="cal-hint">Archived habits keep all their history and can be restored any time.</p>
+            <div id="archived-list"></div>
+            <div class="sheet-actions">
+                <button id="btn-archived-close" class="primary-btn">Done</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ UNDO TOAST ============ -->
     <div id="toast" class="toast" hidden>
         <span id="toast-msg"></span>
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=4"></script>
-    <script src="js/app.js?v=4"></script>
+    <script src="js/icons.js?v=5"></script>
+    <script src="js/app.js?v=5"></script>
 </body>
 </html>

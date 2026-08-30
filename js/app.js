@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -28,6 +28,8 @@ function migrate(st) {
         if (EMOJI_TO_ICON[h.icon]) h.icon = EMOJI_TO_ICON[h.icon];
         else if (!ICON_PATHS[h.icon]) h.icon = 'sun';
     });
+    st.settings = st.settings || {};
+    if (!st.settings.layout) st.settings.layout = 'list';
 }
 
 function load() {
@@ -86,7 +88,7 @@ function weekdayIdx(d) { return (d.getDay() + 6) % 7; } // Mon=0 … Sun=6
 
 /* For timer habits, a day counts as done when a fast ENDED on it. */
 function doneSet(habit) {
-    if (habit.type === 'daily') return habit.done || {};
+    if (habit.type !== 'timer') return habit.done || {};
     const set = {};
     (habit.sessions || []).forEach(s => {
         if (s.e) set[dateKey(new Date(s.e))] = 1;
@@ -95,9 +97,60 @@ function doneSet(habit) {
 }
 
 function isScheduled(habit, d) {
-    if (habit.type === 'timer') return true;
+    if (habit.type !== 'daily') return true;
     const days = habit.days || [true, true, true, true, true, true, true];
     return !!days[weekdayIdx(d)];
+}
+
+/* ---- weekly-target habits: streaks are counted in weeks ---- */
+
+function weekStart(d) { return addDays(d, -weekdayIdx(d)); }
+
+function weekDoneCount(habit, ws) {
+    const done = doneSet(habit);
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+        if (done[dateKey(addDays(ws, i))]) n++;
+    }
+    return n;
+}
+
+function weeklyStreak(habit) {
+    const target = habit.target || 1;
+    let w = weekStart(new Date());
+    let streak = 0;
+    // the week in progress counts once met, but never breaks the streak
+    if (weekDoneCount(habit, w) >= target) streak++;
+    w = addDays(w, -7);
+    for (let i = 0; i < 530; i++) {
+        if (weekDoneCount(habit, w) >= target) streak++;
+        else break;
+        w = addDays(w, -7);
+    }
+    return streak;
+}
+
+function weeklyStats(habit) {
+    const target = habit.target || 1;
+    const done = doneSet(habit);
+    const keys = Object.keys(done).sort();
+    let start = keyToDate(habit.createdAt || dateKey(new Date()));
+    if (keys.length && keyToDate(keys[0]) < start) start = keyToDate(keys[0]);
+    let w = weekStart(start);
+    const thisWeek = weekStart(new Date());
+    let weeksTotal = 0;
+    let weeksMet = 0;
+    let best = 0;
+    let run = 0;
+    for (let i = 0; i < 530 && w <= thisWeek; i++) {
+        const met = weekDoneCount(habit, w) >= target;
+        const inProgress = w.getTime() === thisWeek.getTime();
+        if (!inProgress || met) weeksTotal++;
+        if (met) { weeksMet++; run++; best = Math.max(best, run); }
+        else if (!inProgress) run = 0;
+        w = addDays(w, 7);
+    }
+    return { weeksMet, weeksTotal, best };
 }
 
 function currentStreak(habit) {
@@ -206,9 +259,11 @@ function renderToday() {
 
     const list = $('#habit-list');
     list.innerHTML = '';
-    $('#empty-state').hidden = state.habits.length > 0;
+    list.classList.toggle('grid-layout', state.settings.layout === 'grid');
+    const visible = state.habits.filter(h => !h.archived);
+    $('#empty-state').hidden = visible.length > 0;
 
-    state.habits.forEach(habit => list.appendChild(buildCard(habit)));
+    visible.forEach(habit => list.appendChild(buildCard(habit)));
 }
 
 function buildCard(habit) {
@@ -224,7 +279,7 @@ function buildCard(habit) {
     // --- action button ---
     const btn = document.createElement('button');
     btn.className = 'habit-action';
-    if (habit.type === 'daily') {
+    if (habit.type !== 'timer') {
         if (doneToday) {
             btn.style.background = habit.color;
             btn.innerHTML = icon('check');
@@ -246,8 +301,8 @@ function buildCard(habit) {
     }
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (habit.type === 'daily') toggleToday(habit);
-        else toggleTimer(habit);
+        if (habit.type === 'timer') toggleTimer(habit);
+        else toggleToday(habit);
     });
 
     const wrap = document.createElement('div');
@@ -285,6 +340,11 @@ function buildCard(habit) {
         num.innerHTML = `${streak}${icon('flame', 'flame')}`;
         num.style.color = habit.color;
         label.textContent = streak === 1 ? 'day' : 'days';
+    } else if (habit.type === 'weekly') {
+        const streak = weeklyStreak(habit);
+        num.innerHTML = `${streak}${icon('flame', 'flame')}`;
+        num.style.color = habit.color;
+        label.textContent = streak === 1 ? 'week' : 'weeks';
     } else {
         num.style.color = habit.color;
         if (active) {
@@ -313,9 +373,19 @@ function buildCard(habit) {
     stat.appendChild(num);
     stat.appendChild(label);
 
-    card.appendChild(wrap);
-    card.appendChild(main);
-    card.appendChild(stat);
+    if (state.settings.layout === 'grid') {
+        card.classList.add('gcard');
+        const top = document.createElement('div');
+        top.className = 'grid-top';
+        top.appendChild(stat);
+        top.appendChild(wrap);
+        card.appendChild(top);
+        card.appendChild(main);
+    } else {
+        card.appendChild(wrap);
+        card.appendChild(main);
+        card.appendChild(stat);
+    }
     card.addEventListener('click', () => openDetail(habit.id));
     return card;
 }
@@ -344,7 +414,9 @@ function buildWeekDots(habit, done) {
     }
     const ratio = document.createElement('span');
     ratio.className = 'wd-ratio';
-    ratio.textContent = `${doneCount}/${scheduledCount}`;
+    ratio.textContent = habit.type === 'weekly'
+        ? `${doneCount}/${habit.target || 1}`
+        : `${doneCount}/${scheduledCount}`;
     row.appendChild(ratio);
     return row;
 }
@@ -413,7 +485,9 @@ function openDetail(id, keepMonth) {
         `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
     $('#detail-subtitle').textContent = habit.type === 'timer'
         ? 'Start / stop timer habit'
-        : 'Daily habit';
+        : habit.type === 'weekly'
+            ? `Weekly target \u00b7 ${habit.target || 1}\u00d7 per week`
+            : 'Daily habit';
 
     const body = $('#detail-body');
     body.innerHTML = '';
@@ -525,7 +599,7 @@ function buildHistoryCard(habit) {
 
 function toggleHistoryDay(habit, d, wasDone) {
     const key = dateKey(d);
-    if (habit.type === 'daily') {
+    if (habit.type !== 'timer') {
         habit.done = habit.done || {};
         if (wasDone) delete habit.done[key];
         else habit.done[key] = 1;
@@ -590,9 +664,15 @@ function buildYearCard(habit, done, year) {
     rows.className = 'stat-rows';
     const isCurrentYear = year === today.getFullYear();
     const stats = [];
-    if (isCurrentYear) {
-        stats.push(['Current streak', `${currentStreak(habit)} days`]);
-        stats.push(['Longest streak', `${longestStreak(habit)} days`]);
+    const unit = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    if (isCurrentYear && habit.type === 'weekly') {
+        const w = weeklyStats(habit);
+        stats.push(['Current streak', unit(weeklyStreak(habit), 'week')]);
+        stats.push(['Longest streak', unit(w.best, 'week')]);
+        stats.push(['Weeks met', `${w.weeksMet} of ${w.weeksTotal}`]);
+    } else if (isCurrentYear) {
+        stats.push(['Current streak', unit(currentStreak(habit), 'day')]);
+        stats.push(['Longest streak', unit(longestStreak(habit), 'day')]);
         const c = completionStats(habit);
         stats.push(['Completion', `${c.pct}% (${c.done} of ${c.total} days)`]);
     } else {
@@ -767,7 +847,8 @@ const sheet = {
     icon: ICON_NAMES_HABIT[0],
     color: PALETTE[0],
     type: 'daily',
-    days: [true, true, true, true, true, true, true]
+    days: [true, true, true, true, true, true, true],
+    target: 3
 };
 
 function openSheet(editId) {
@@ -777,6 +858,7 @@ function openSheet(editId) {
     sheet.color = habit ? habit.color : PALETTE[state.habits.length % PALETTE.length];
     sheet.type = habit ? habit.type : 'daily';
     sheet.days = habit && habit.days ? [...habit.days] : [true, true, true, true, true, true, true];
+    sheet.target = habit && habit.target ? habit.target : 3;
 
     $('#sheet-title').textContent = habit ? 'Edit habit' : 'New habit';
     $('#f-name').value = habit ? habit.name : '';
@@ -818,9 +900,20 @@ function renderSheetChips() {
         btn.onclick = () => { sheet.type = btn.dataset.type; renderSheetChips(); };
     });
 
-    // fasting goal (timer only), scheduled days (daily only)
+    // fasting goal (timer only), scheduled days (daily only), target (weekly only)
     $('#f-goal-wrap').hidden = sheet.type !== 'timer';
     $('#f-days-wrap').hidden = sheet.type !== 'daily';
+    $('#f-target-wrap').hidden = sheet.type !== 'weekly';
+    const targetRow = $('#f-target');
+    targetRow.innerHTML = '';
+    for (let n = 1; n <= 7; n++) {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip day-chip' + (n === sheet.target ? ' sel' : '');
+        c.textContent = n;
+        c.addEventListener('click', () => { sheet.target = n; renderSheetChips(); });
+        targetRow.appendChild(c);
+    }
     const dayRow = $('#f-days');
     dayRow.innerHTML = '';
     DAY_NAMES.forEach((n, i) => {
@@ -857,6 +950,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             habit.color = sheet.color;
             habit.days = [...sheet.days];
             if (habit.type === 'timer') habit.goalHours = goalHours;
+            if (habit.type === 'weekly') habit.target = sheet.target;
         }
     } else {
         state.habits.push({
@@ -867,6 +961,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             type: sheet.type,
             days: [...sheet.days],
             goalHours: sheet.type === 'timer' ? goalHours : null,
+            target: sheet.type === 'weekly' ? sheet.target : null,
             createdAt: dateKey(new Date()),
             done: {},
             sessions: []
@@ -932,9 +1027,83 @@ $('#sheet-reorder').addEventListener('click', (e) => {
     }
 });
 
+/* ================= archive ================= */
+
+$('#btn-archive').addEventListener('click', () => {
+    const habit = state.habits.find(h => h.id === detailId);
+    if (!habit) return;
+    habit.archived = true;
+    save();
+    showScreen('today');
+    showToast(`\u201c${habit.name}\u201d archived`, () => {
+        habit.archived = false;
+        save();
+        renderToday();
+    });
+});
+
+function renderArchived() {
+    $('#archived-count').textContent = state.habits.filter(h => h.archived).length;
+    const list = $('#archived-list');
+    list.innerHTML = '';
+    const archived = state.habits.filter(h => h.archived);
+    if (!archived.length) {
+        const empty = document.createElement('p');
+        empty.className = 'cal-hint';
+        empty.textContent = 'Nothing here \u2014 archive a habit from its detail view.';
+        list.appendChild(empty);
+    }
+    archived.forEach(h => {
+        const row = document.createElement('div');
+        row.className = 'archived-row';
+        const name = document.createElement('span');
+        name.className = 'reorder-name';
+        name.innerHTML = `<span style="color:${h.color}">${icon(h.icon)}</span>${escapeHtml(h.name)}`;
+        const restore = document.createElement('button');
+        restore.className = 'restore-btn';
+        restore.textContent = 'Restore';
+        restore.addEventListener('click', () => {
+            h.archived = false;
+            save();
+            renderArchived();
+            renderToday();
+        });
+        row.appendChild(name);
+        row.appendChild(restore);
+        list.appendChild(row);
+    });
+}
+
+$('#btn-archived').addEventListener('click', () => {
+    $('#sheet-settings').hidden = true;
+    renderArchived();
+    $('#sheet-archived').hidden = false;
+});
+$('#btn-archived-close').addEventListener('click', () => { $('#sheet-archived').hidden = true; });
+$('#sheet-archived').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-archived')) $('#sheet-archived').hidden = true;
+});
+
+/* ================= layout toggle ================= */
+
+function updateLayoutLabel() {
+    $('#layout-label').textContent = 'Layout: ' + state.settings.layout;
+}
+
+$('#btn-layout').addEventListener('click', () => {
+    state.settings.layout = state.settings.layout === 'grid' ? 'list' : 'grid';
+    save();
+    updateLayoutLabel();
+    renderToday();
+});
+
 /* ================= settings / backup ================= */
 
-$('#btn-settings').addEventListener('click', () => { $('#sheet-settings').hidden = false; });
+$('#btn-settings').addEventListener('click', () => {
+    updateLayoutLabel();
+    $('#archived-count').textContent = state.habits.filter(h => h.archived).length;
+    $('#sheet-settings').hidden = false;
+});
 $('#btn-settings-close').addEventListener('click', () => { $('#sheet-settings').hidden = true; });
 $('#sheet-settings').addEventListener('click', (e) => {
     if (e.target === $('#sheet-settings')) $('#sheet-settings').hidden = true;

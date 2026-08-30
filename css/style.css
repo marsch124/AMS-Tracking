@@ -636,6 +636,7 @@ html, body {
 .ring .ring-progress.done { stroke: #2fa96d; }
 
 .stat-number.goal-reached { color: #2fa96d !important; }
+.stat-label.goal-reached { color: #2fa96d !important; }
 
 /* ---------- v1.3: reorder sheet ---------- */
 

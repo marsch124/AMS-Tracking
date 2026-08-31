@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=18">
+    <link rel="stylesheet" href="css/style.css?v=19">
 </head>
 <body>
 
@@ -27,6 +27,10 @@
         </header>
         <h1 class="page-title">Today</h1>
         <p id="today-date" class="page-subtitle"></p>
+        <div id="day-progress" class="day-progress" hidden>
+            <div class="dp-bar"><div id="dp-fill" class="dp-fill"></div></div>
+            <span id="dp-text" class="dp-text"></span>
+        </div>
 
         <div id="habit-list" class="habit-list"></div>
 
@@ -152,6 +156,7 @@
                     <p><strong>Tonight's goal</strong> — press-and-hold the fasting habit's start button to pick a goal for just this fast (13/15/16/18h or the habit's default) before it starts. You can also change the running fast's goal by tapping it in the detail list. The ring, countdown, and goal time follow the per-fast goal.</p>
                     <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Small letters mark where each month begins, and tapping any pixel shows that day's date, status, and note. Timer habits also list recent fasts with average and longest duration.</p>
                     <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
+                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
@@ -166,6 +171,15 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.11 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>The feel release.</p>
+                    <ul>
+                        <li><strong>Swipe between months</strong> — the history calendar now answers a horizontal swipe with the previous or next month; the arrows remain.</li>
+                        <li><strong>Drag sheets to close</strong> — every bottom sheet follows your finger downward and dismisses when dragged far enough, like native iOS sheets. Tapping outside still works.</li>
+                        <li><strong>Day progress under Today</strong> — a slim bar with “4 of 6 done” shows how the day stands at a glance, turning green when everything scheduled is done. Skip-marked days are excused from the count.</li>
+                        <li><strong>Ink-drawn checkmarks</strong> — checking a habit off now draws the hand-drawn check in a quick stroke instead of an instant swap (still instant under reduced motion).</li>
+                        <li><strong>Type &amp; status-bar polish</strong> — long habit names shrink to fit their card and the detail title instead of truncating; forcing light or dark theme now also tints the iOS status bar correctly.</li>
+                    </ul>
                     <h4>v1.10.1 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>Skip days, unmistakable.</p>
                     <ul>
@@ -372,7 +386,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=18"></script>
-    <script src="js/app.js?v=18"></script>
+    <script src="js/icons.js?v=19"></script>
+    <script src="js/app.js?v=19"></script>
 </body>
 </html>

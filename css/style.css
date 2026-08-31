@@ -1042,3 +1042,58 @@ html, body {
 .cal-fast.cf-today .cf-hours.none { box-shadow: inset 0 0 0 2px var(--text-dim); }
 .cal-day.cal-fast:disabled { background: transparent; }
 .cal-day.cal-fast.has-note::after { bottom: -1px; }
+
+/* ---------- v1.11: the feel release ---------- */
+
+.day-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -10px 4px 16px;
+}
+
+.day-progress[hidden] { display: none; }
+
+.dp-bar {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+}
+
+.dp-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.dp-fill.complete { background: #2fa96d; }
+
+.dp-text {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-dim);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.habit-action.ink-draw .hi path {
+    stroke-dasharray: 30;
+    stroke-dashoffset: 30;
+    animation: ink-draw 0.3s ease-out 0.05s forwards;
+}
+
+@keyframes ink-draw { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .habit-action.ink-draw .hi path { animation: none; stroke-dashoffset: 0; }
+}
+
+.habit-name.name-sm { font-size: 14.5px; }
+.habit-name.name-xs { font-size: 12.5px; }
+#detail-title.title-sm { font-size: 30px; }
+#detail-title.title-xs { font-size: 23px; }
+#detail-title.title-sm .habit-icon .hi { width: 27px; height: 27px; }
+#detail-title.title-xs .habit-icon .hi { width: 23px; height: 23px; }

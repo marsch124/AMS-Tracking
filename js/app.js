@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.10.1';
+const APP_VERSION = '1.11';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -81,6 +81,12 @@ function applyTheme() {
     const t = state.settings.theme;
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
     else delete document.documentElement.dataset.theme;
+    // keep the iOS status-bar tint in step with a forced theme
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
+        if (!m.dataset.orig) m.dataset.orig = m.getAttribute('content');
+        m.setAttribute('content',
+            t === 'dark' ? '#0d1117' : t === 'light' ? '#f2f4f8' : m.dataset.orig);
+    });
 }
 
 function newId() {
@@ -373,6 +379,22 @@ function renderToday() {
     const visible = state.habits.filter(h => !h.archived);
     $('#empty-state').hidden = visible.length > 0;
 
+    // day progress: done vs scheduled today (skip-marked days are excused)
+    const todayKey = dateKey(new Date());
+    const scheduledToday = visible.filter(h =>
+        isScheduled(h, new Date()) && !skipSet(h)[todayKey]);
+    const doneToday = scheduledToday.filter(h => doneSet(h)[todayKey]).length;
+    const dp = $('#day-progress');
+    dp.hidden = scheduledToday.length === 0;
+    if (scheduledToday.length) {
+        const all = doneToday === scheduledToday.length;
+        $('#dp-fill').style.width = Math.round(100 * doneToday / scheduledToday.length) + '%';
+        $('#dp-fill').classList.toggle('complete', all);
+        $('#dp-text').textContent = all
+            ? `All ${scheduledToday.length} done`
+            : `${doneToday} of ${scheduledToday.length} done`;
+    }
+
     visible.forEach(habit => list.appendChild(buildCard(habit)));
 }
 
@@ -393,6 +415,10 @@ function buildCard(habit) {
         if (doneToday) {
             btn.style.background = habit.color;
             btn.innerHTML = icon('check');
+            if (justChecked === habit.id) {
+                btn.classList.add('ink-draw');
+                justChecked = null;
+            }
         } else {
             btn.classList.add('undone');
             btn.style.color = habit.color;
@@ -453,6 +479,8 @@ function buildCard(habit) {
     const name = document.createElement('p');
     name.className = 'habit-name';
     name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+    if (habit.name.length > 24) name.classList.add('name-xs');
+    else if (habit.name.length > 15) name.classList.add('name-sm');
     main.appendChild(name);
     main.appendChild(buildWeekDots(habit, done));
 
@@ -558,12 +586,15 @@ function buildWeekDots(habit, done) {
     return row;
 }
 
+let justChecked = null; // habit id whose checkmark should draw itself
+
 function toggleToday(habit) {
     const key = dateKey(new Date());
     habit.done = habit.done || {};
     if (habit.skip && habit.skip[key]) delete habit.skip[key];
     if (habit.done[key]) delete habit.done[key];
     else habit.done[key] = 1;
+    if (habit.done[key]) justChecked = habit.id;
     save();
     renderToday();
     if (habit.done[key]) maybeCelebrateStreak(habit);
@@ -655,8 +686,11 @@ function openDetail(id, keepMonth) {
     const habit = state.habits.find(h => h.id === id);
     if (!habit) return;
 
-    $('#detail-title').innerHTML =
+    const titleEl = $('#detail-title');
+    titleEl.innerHTML =
         `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+    titleEl.classList.toggle('title-sm', habit.name.length > 12 && habit.name.length <= 20);
+    titleEl.classList.toggle('title-xs', habit.name.length > 20);
     $('#detail-subtitle').textContent = habit.type === 'timer'
         ? 'Start / stop timer habit'
         : habit.type === 'weekly'
@@ -707,17 +741,37 @@ function buildHistoryCard(habit) {
     next.innerHTML = icon('chevR');
     next.setAttribute('aria-label', 'Next month');
     const now = new Date();
-    next.disabled = calMonth.y === now.getFullYear() && calMonth.m === now.getMonth();
-    prev.addEventListener('click', () => {
+    const atCurrentMonth = calMonth.y === now.getFullYear() && calMonth.m === now.getMonth();
+    next.disabled = atCurrentMonth;
+    const goPrev = () => {
         calMonth.m--;
         if (calMonth.m < 0) { calMonth.m = 11; calMonth.y--; }
         openDetail(habit.id, true);
-    });
-    next.addEventListener('click', () => {
+    };
+    const goNext = () => {
+        if (atCurrentMonth) return;
         calMonth.m++;
         if (calMonth.m > 11) { calMonth.m = 0; calMonth.y++; }
         openDetail(habit.id, true);
-    });
+    };
+    prev.addEventListener('click', goPrev);
+    next.addEventListener('click', goNext);
+
+    // swipe left/right on the calendar card changes the month
+    let swX = null, swY = null;
+    card.addEventListener('touchstart', (e) => {
+        swX = e.touches[0].clientX;
+        swY = e.touches[0].clientY;
+    }, { passive: true });
+    card.addEventListener('touchend', (e) => {
+        if (swX === null) return;
+        const dx = e.changedTouches[0].clientX - swX;
+        const dy = e.changedTouches[0].clientY - swY;
+        swX = null;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        if (dx < 0) goNext();
+        else goPrev();
+    }, { passive: true });
     nav.appendChild(prev);
     nav.appendChild(next);
     head.appendChild(title);
@@ -1731,6 +1785,53 @@ $('#toast-undo').addEventListener('click', () => {
     t.hidden = true;
     if (t._undo) { const fn = t._undo; t._undo = null; fn(); }
 });
+
+/* drag a bottom sheet down (from its top, or when scrolled to the top) to close it */
+function setupSheetDismiss() {
+    [['#sheet-edit', null], ['#sheet-settings', null], ['#sheet-fast', null],
+     ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null], ['#sheet-startgoal', null]]
+        .forEach(([sel, after]) => {
+            const backdrop = document.querySelector(sel);
+            const sheetEl = backdrop.querySelector('.sheet');
+            let startY = null;
+            let delta = 0;
+            let dragging = false;
+            sheetEl.addEventListener('touchstart', (e) => {
+                if (sheetEl.scrollTop > 0) return;
+                startY = e.touches[0].clientY;
+                delta = 0;
+                dragging = false;
+            }, { passive: true });
+            sheetEl.addEventListener('touchmove', (e) => {
+                if (startY === null) return;
+                delta = e.touches[0].clientY - startY;
+                if (delta > 8) dragging = true;
+                if (dragging && delta > 0) {
+                    sheetEl.style.transition = 'none';
+                    sheetEl.style.transform = `translateY(${delta}px)`;
+                    if (e.cancelable) e.preventDefault();
+                }
+            }, { passive: false });
+            sheetEl.addEventListener('touchend', () => {
+                if (startY === null) return;
+                startY = null;
+                sheetEl.style.transition = 'transform 0.2s ease';
+                if (dragging && delta > 90) {
+                    sheetEl.style.transform = 'translateY(110%)';
+                    setTimeout(() => {
+                        backdrop.hidden = true;
+                        sheetEl.style.transition = '';
+                        sheetEl.style.transform = '';
+                        if (after) after();
+                    }, 180);
+                } else {
+                    sheetEl.style.transform = '';
+                    setTimeout(() => { sheetEl.style.transition = ''; }, 220);
+                }
+            });
+        });
+}
+setupSheetDismiss();
 
 applyTheme();
 if (navigator.storage && navigator.storage.persist) {

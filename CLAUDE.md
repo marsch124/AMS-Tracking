@@ -51,6 +51,11 @@ app on his iPhone as the real test environment.
   month markers in the year grid, app icon badge (open habits today),
   theme override (auto/light/dark via data-theme), persistent-storage
   request with status in Settings.
+- v1.9–v1.10 — SHIPPED: 40-icon set with EN/DE search, traffic-light
+  fasting ring, hours-per-day fasting calendar with goal-met colors.
+- v1.11 "The feel release" — SHIPPED: month swipe, sheet drag-dismiss,
+  day-progress bar, ink-drawn checkmarks, name auto-fit + status-bar
+  theme sync.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Present batches to Martin and wait for his on-phone feedback between

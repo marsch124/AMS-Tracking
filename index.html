@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 
@@ -133,6 +133,7 @@
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
             <button id="btn-layout" class="list-btn"><span data-hi="grid"></span> <span id="layout-label">Layout: list</span></button>
+            <button id="btn-theme" class="list-btn"><span data-hi="moon"></span> <span id="theme-label">Theme: auto</span></button>
             <button id="btn-archived" class="list-btn"><span data-hi="import"></span> Archived habits (<span id="archived-count">0</span>)</button>
 
             <details class="fold">
@@ -146,21 +147,31 @@
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a filled day removes that day's fast. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
                     <p><strong>Day notes</strong> — tap the pencil in the calendar header to enter note mode, then tap any day to write a short note (“skipped, travel day”, “hard fast”). Days with notes get a mark, and the month's notes are listed under the calendar; tap one to edit it.</p>
                     <p><strong>Tonight's goal</strong> — press-and-hold the fasting habit's start button to pick a goal for just this fast (13/15/16/18h or the habit's default) before it starts. You can also change the running fast's goal by tapping it in the detail list. The ring, countdown, and goal time follow the per-fast goal.</p>
-                    <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Timer habits also list recent fasts with average and longest duration.</p>
+                    <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Small letters mark where each month begins, and tapping any pixel shows that day's date, status, and note. Timer habits also list recent fasts with average and longest duration.</p>
                     <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
-                    <p><strong>Reorder &amp; layout</strong> — Settings → Reorder habits moves habits up and down the Today list, and Settings → Layout switches between the list view and a two-column grid.</p>
+                    <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
+                    <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
                     <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
-                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it. “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
+                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it — and the app asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
             </details>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.8 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Polish &amp; protection.</p>
+                    <ul>
+                        <li><strong>Every pixel answers</strong> — tapping a day in the year grid shows its date, status (done / skip / not done), and note in a toast; skip days now render hollow in the year grid too.</li>
+                        <li><strong>Month markers</strong> — small letters in the year grid mark where each month begins, so a specific week is findable in the 365 pixels.</li>
+                        <li><strong>App icon badge</strong> — the installed app's icon shows the number of scheduled habits still open today (a running fast counts as underway, not open). Updates whenever the app is used; the count clears when everything is done.</li>
+                        <li><strong>Theme choice</strong> — Settings → Theme cycles auto / light / dark, for those who want the app permanently dark (or light) regardless of the system setting.</li>
+                        <li><strong>Storage protection</strong> — the app requests persistent storage from the system so habit data can't be silently evicted, and Settings shows the protection status and current data size.</li>
+                    </ul>
                     <h4>v1.7 <span class="vh-date">— 30 Aug 2026</span></h4>
                     <p>The analysis layer.</p>
                     <ul>
@@ -246,7 +257,7 @@
                 </div>
             </details>
 
-            <p class="settings-note"><span id="backup-note"></span><br>All data is stored only on this device.<br><span id="app-version"></span></p>
+            <p class="settings-note"><span id="backup-note"></span><br><span id="storage-note"></span><br>All data is stored only on this device.<br><span id="app-version"></span></p>
             <div class="sheet-actions">
                 <button id="btn-settings-close" class="ghost-btn">Close</button>
             </div>
@@ -330,7 +341,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=12"></script>
-    <script src="js/app.js?v=12"></script>
+    <script src="js/icons.js?v=13"></script>
+    <script src="js/app.js?v=13"></script>
 </body>
 </html>

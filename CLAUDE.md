@@ -47,6 +47,10 @@ app on his iPhone as the real test environment.
   per-fast goal (long-press start / edit running fast), day notes.
 - v1.7 "Analysis layer" — SHIPPED: stats overview screen, CSV export
   (semicolon-separated, decimal commas for DACH Excel).
+- v1.8 "Polish & protection" — SHIPPED: tap-a-pixel inspection with
+  month markers in the year grid, app icon badge (open habits today),
+  theme override (auto/light/dark via data-theme), persistent-storage
+  request with status in Settings.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Present batches to Martin and wait for his on-phone feedback between

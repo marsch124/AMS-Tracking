@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -30,6 +30,7 @@ function migrate(st) {
     });
     st.settings = st.settings || {};
     if (!st.settings.layout) st.settings.layout = 'list';
+    if (!st.settings.theme) st.settings.theme = 'auto';
 }
 
 function load() {
@@ -59,6 +60,27 @@ function load() {
 
 function save() {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    updateBadge();
+}
+
+/* Icon badge: scheduled habits still open today (installed PWAs only) */
+function updateBadge() {
+    if (!('setAppBadge' in navigator)) return;
+    const todayKey = dateKey(new Date());
+    const count = state.habits.filter(h => {
+        if (h.archived || !isScheduled(h, new Date())) return false;
+        if (doneSet(h)[todayKey] || skipSet(h)[todayKey]) return false;
+        if (h.type === 'timer' && activeSession(h)) return false; // fast underway
+        return true;
+    }).length;
+    if (count > 0) navigator.setAppBadge(count).catch(() => {});
+    else navigator.clearAppBadge().catch(() => {});
+}
+
+function applyTheme() {
+    const t = state.settings.theme;
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
 }
 
 function newId() {
@@ -842,19 +864,43 @@ function buildYearCard(habit, done, year) {
     const today = new Date();
     const start = new Date(year, 0, 1);
     const end = new Date(year, 11, 31);
+    const skip = skipSet(habit);
+    const MONTH_LETTERS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
     let doneCount = 0;
     let scheduledPast = 0;
     for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
+        if (d.getDate() === 1) {
+            const ml = document.createElement('span');
+            ml.className = 'px-month';
+            ml.textContent = MONTH_LETTERS[d.getMonth()];
+            grid.appendChild(ml);
+        }
         const px = document.createElement('span');
         px.className = 'px';
+        const k = dateKey(d);
         if (d > today) px.classList.add('future');
-        else if (isScheduled(habit, d)) scheduledPast++;
-        if (done[dateKey(d)]) {
+        else {
+            px.dataset.k = k;
+            if (isScheduled(habit, d) && !skip[k]) scheduledPast++;
+        }
+        if (done[k]) {
             px.style.background = habit.color;
             doneCount++;
+        } else if (skip[k] && d <= today) {
+            px.classList.add('skip');
+            px.style.color = habit.color;
         }
         grid.appendChild(px);
     }
+    grid.addEventListener('click', (e) => {
+        const k = e.target.dataset && e.target.dataset.k;
+        if (!k) return;
+        const d = keyToDate(k);
+        const status = done[k] ? 'done' : skipSet(habit)[k] ? 'skip day' : 'not done';
+        const note = (habit.notes || {})[k];
+        showToast(d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) +
+            ` \u2014 ${status}` + (note ? ` \u00b7 ${note}` : ''));
+    });
     card.appendChild(grid);
 
     const rows = document.createElement('div');
@@ -1457,11 +1503,40 @@ $('#btn-layout').addEventListener('click', () => {
     renderToday();
 });
 
+function updateThemeLabel() {
+    $('#theme-label').textContent = 'Theme: ' + state.settings.theme;
+}
+
+$('#btn-theme').addEventListener('click', () => {
+    const order = ['auto', 'light', 'dark'];
+    state.settings.theme = order[(order.indexOf(state.settings.theme) + 1) % 3];
+    save();
+    applyTheme();
+    updateThemeLabel();
+});
+
+async function updateStorageNote() {
+    const el = $('#storage-note');
+    try {
+        const persisted = navigator.storage && await navigator.storage.persisted();
+        let size = '';
+        if (navigator.storage && navigator.storage.estimate) {
+            const est = await navigator.storage.estimate();
+            if (est.usage) size = ' \u00b7 ' + Math.max(1, Math.round(est.usage / 1024)) + ' KB';
+        }
+        el.textContent = (persisted ? 'Storage: protected' : 'Storage: not yet protected') + size;
+    } catch (e) {
+        el.textContent = '';
+    }
+}
+
 /* ================= settings / backup ================= */
 
 $('#btn-settings').addEventListener('click', () => {
     updateLayoutLabel();
+    updateThemeLabel();
     updateBackupNote();
+    updateStorageNote();
     $('#archived-count').textContent = state.habits.filter(h => h.archived).length;
     $('#sheet-settings').hidden = false;
 });
@@ -1604,6 +1679,11 @@ $('#toast-undo').addEventListener('click', () => {
     t.hidden = true;
     if (t._undo) { const fn = t._undo; t._undo = null; fn(); }
 });
+
+applyTheme();
+if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(() => {});
+}
 
 save();
 renderToday();

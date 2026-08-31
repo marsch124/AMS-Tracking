@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1108,9 +1108,97 @@ $('#btn-edit').addEventListener('click', () => openSheet(detailId));
 function showScreen(which) {
     $('#screen-today').hidden = which !== 'today';
     $('#screen-detail').hidden = which !== 'detail';
+    $('#screen-stats').hidden = which !== 'stats';
     if (which === 'today') renderToday();
+    if (which === 'stats') renderStats();
     window.scrollTo(0, 0);
 }
+
+/* ================= stats screen ================= */
+
+function monthStats(habit, y, m) {
+    const done = doneSet(habit);
+    const skip = skipSet(habit);
+    const today = new Date();
+    let start = new Date(y, m, 1);
+    const created = keyToDate(habit.createdAt || dateKey(today));
+    const firstKey = Object.keys(done).sort()[0];
+    const tracked = firstKey && keyToDate(firstKey) < created ? keyToDate(firstKey) : created;
+    if (tracked > start) start = tracked;
+    const lastOfMonth = new Date(y, m + 1, 0);
+    const end = lastOfMonth < today ? lastOfMonth : today;
+    let sched = 0;
+    let dn = 0;
+    for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
+        const k = dateKey(d);
+        if (done[k]) dn++;
+        if (isScheduled(habit, d) && !skip[k]) sched++;
+    }
+    return { dn, sched, pct: sched ? Math.round(100 * dn / sched) : 0 };
+}
+
+function renderStats() {
+    const body = $('#stats-body');
+    body.innerHTML = '';
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const habits = state.habits.filter(h => !h.archived);
+    if (!habits.length) {
+        body.innerHTML = '<p class="cal-hint">No habits yet.</p>';
+        return;
+    }
+    habits.forEach(habit => {
+        const card = document.createElement('div');
+        card.className = 'detail-card stats-card';
+        card.style.cursor = 'pointer';
+        const weekly = habit.type === 'weekly';
+        const cur = weekly ? weeklyStreak(habit) : currentStreak(habit);
+        const best = weekly ? weeklyStats(habit).best : longestStreak(habit);
+        const unit = weekly ? 'wk' : 'd';
+        const mNow = monthStats(habit, now.getFullYear(), now.getMonth());
+        const mPrev = monthStats(habit, prev.getFullYear(), prev.getMonth());
+        const monthVal = (m) => weekly ? `${m.dn}\u00d7` : (m.sched ? m.pct + '%' : '\u2013');
+
+        const h = document.createElement('h3');
+        h.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+        card.appendChild(h);
+
+        const tiles = document.createElement('div');
+        tiles.className = 'tile-row';
+        [[`${cur}${unit}`, 'streak'], [`${best}${unit}`, 'best'],
+         [monthVal(mNow), 'this month'], [monthVal(mPrev), 'last month']].forEach(([v, l]) => {
+            const t = document.createElement('div');
+            t.className = 'tile';
+            t.innerHTML = `<div class="tile-num" style="color:${habit.color}">${v}</div>` +
+                `<div class="tile-lbl">${l}</div>`;
+            tiles.appendChild(t);
+        });
+        card.appendChild(tiles);
+
+        // last 30 days as a pixel strip
+        const done = doneSet(habit);
+        const skip = skipSet(habit);
+        const strip = document.createElement('div');
+        strip.className = 'strip-grid';
+        for (let i = 29; i >= 0; i--) {
+            const k = dateKey(addDays(now, -i));
+            const px = document.createElement('span');
+            px.className = 'px';
+            if (done[k]) px.style.background = habit.color;
+            else if (skip[k]) {
+                px.classList.add('skip');
+                px.style.color = habit.color;
+            }
+            strip.appendChild(px);
+        }
+        card.appendChild(strip);
+        card.addEventListener('click', () => openDetail(habit.id));
+        body.appendChild(card);
+    });
+}
+
+$('#btn-stats').addEventListener('click', () => showScreen('stats'));
+$('#btn-stats-back').addEventListener('click', () => showScreen('today'));
 
 /* ================= add / edit sheet ================= */
 
@@ -1405,6 +1493,59 @@ $('#btn-export').addEventListener('click', async () => {
         if (!err || err.name !== 'AbortError') alert('Backup failed: ' + (err && err.message));
     }
 });
+
+function csvField(v) {
+    const s = String(v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function fmtCsvDateTime(ms) {
+    const d = new Date(ms);
+    return dateKey(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+async function exportCsv() {
+    // Semicolon-separated with decimal commas: opens cleanly in DACH Excel
+    const dayRows = ['date;habit;type;status;note'];
+    const fastRows = ['habit;start;end;hours'];
+    state.habits.forEach(h => {
+        const done = doneSet(h);
+        const skip = skipSet(h);
+        const notes = h.notes || {};
+        const keys = [...new Set([...Object.keys(done), ...Object.keys(skip), ...Object.keys(notes)])].sort();
+        keys.forEach(k => {
+            const status = done[k] ? 'done' : skip[k] ? 'skip' : '';
+            dayRows.push([k, csvField(h.name), h.type, status, csvField(notes[k] || '')].join(';'));
+        });
+        (h.sessions || []).filter(s => s.e).forEach(s => {
+            const hours = ((s.e - s.s) / 3600e3).toFixed(2).replace('.', ',');
+            fastRows.push([csvField(h.name), fmtCsvDateTime(s.s), fmtCsvDateTime(s.e), hours].join(';'));
+        });
+    });
+    const stamp = dateKey(new Date());
+    const files = [
+        new File([dayRows.join('\n')], `ams-tracking-days-${stamp}.csv`, { type: 'text/csv' }),
+        new File([fastRows.join('\n')], `ams-tracking-fasts-${stamp}.csv`, { type: 'text/csv' })
+    ];
+    try {
+        if (navigator.canShare && navigator.canShare({ files })) {
+            await navigator.share({ files });
+        } else {
+            files.forEach(f => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(f);
+                a.download = f.name;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            });
+        }
+        showToast('CSV exported');
+    } catch (err) {
+        if (!err || err.name !== 'AbortError') alert('CSV export failed: ' + (err && err.message));
+    }
+}
+
+$('#btn-csv').addEventListener('click', exportCsv);
 
 function updateBackupNote() {
     const el = $('#backup-note');

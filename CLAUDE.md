@@ -43,7 +43,11 @@ app on his iPhone as the real test environment.
   grid layout toggle.
 - v1.5 "Delight & data" — SHIPPED: milestone celebrations, fast-length
   chart with goal line, share-sheet backup with staleness note.
-- Backlog beyond the agreed batches: daily notes per day, weekly-target
-  streak options, stats overview screen — propose to Martin first.
+- v1.6 "Life happens" — SHIPPED: skip days (excused, streak-safe),
+  per-fast goal (long-press start / edit running fast), day notes.
+- v1.7 "Analysis layer" — SHIPPED: stats overview screen, CSV export
+  (semicolon-separated, decimal commas for DACH Excel).
+- Backlog: reminders need a push server and would break the no-server
+  principle — flagged to Martin, revisit only if he asks.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.

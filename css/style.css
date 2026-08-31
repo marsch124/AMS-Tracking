@@ -900,3 +900,51 @@ html, body {
     font-size: 15px;
     font-weight: 700;
 }
+
+/* ---------- v1.7: stats screen ---------- */
+
+.topbar-group { display: flex; gap: 10px; }
+
+.stats-card h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.stats-card h3 .hi { width: 20px; height: 20px; vertical-align: -4px; margin-right: 6px; }
+
+.tile-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.tile { text-align: center; }
+.tile-num {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    font-variant-numeric: tabular-nums;
+}
+.tile-lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 1px;
+}
+
+.strip-grid {
+    display: grid;
+    grid-template-columns: repeat(30, 1fr);
+    gap: 3px;
+}
+
+.px.skip {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px currentColor;
+    opacity: 0.55;
+}

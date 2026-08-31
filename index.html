@@ -12,14 +12,17 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=11">
+    <link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 
     <!-- ============ TODAY (main) SCREEN ============ -->
     <main id="screen-today" class="screen">
         <header class="topbar">
-            <button id="btn-settings" class="pill-btn icon-only" aria-label="Settings"><span data-hi="sliders"></span></button>
+            <div class="topbar-group">
+                <button id="btn-settings" class="pill-btn icon-only" aria-label="Settings"><span data-hi="sliders"></span></button>
+                <button id="btn-stats" class="pill-btn icon-only" aria-label="Statistics"><span data-hi="chart"></span></button>
+            </div>
             <button id="btn-add" class="pill-btn icon-only accent" aria-label="Add habit"><span data-hi="plus"></span></button>
         </header>
         <h1 class="page-title">Today</h1>
@@ -33,6 +36,18 @@
             <p>Tap <strong>＋</strong> to add your first habit.<br>
                Daily check-offs and start/stop timers<br>(like intermittent fasting) are supported.</p>
         </div>
+    </main>
+
+    <!-- ============ STATS SCREEN ============ -->
+    <main id="screen-stats" class="screen" hidden>
+        <header class="topbar">
+            <button id="btn-stats-back" class="pill-btn" aria-label="Back"><span data-hi="chevL"></span> Today</button>
+            <span></span>
+            <span></span>
+        </header>
+        <h1 class="page-title">Stats</h1>
+        <p class="page-subtitle">All habits at a glance</p>
+        <div id="stats-body"></div>
     </main>
 
     <!-- ============ DETAIL SCREEN ============ -->
@@ -114,6 +129,7 @@
             <h2>Settings</h2>
             <button id="btn-export" class="list-btn"><span data-hi="export"></span> Export backup (JSON)</button>
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
+            <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
             <button id="btn-layout" class="list-btn"><span data-hi="grid"></span> <span id="layout-label">Layout: list</span></button>
@@ -135,15 +151,22 @@
                     <p><strong>Reorder &amp; layout</strong> — Settings → Reorder habits moves habits up and down the Today list, and Settings → Layout switches between the list view and a two-column grid.</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
+                    <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
-                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it.</p>
+                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it. “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
             </details>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.7 <span class="vh-date">— 30 Aug 2026</span></h4>
+                    <p>The analysis layer.</p>
+                    <ul>
+                        <li><strong>Stats overview</strong> — a new chart button on the Today screen opens a per-habit overview: current streak, best streak, this month vs last month (completion % for daily and fasting habits, check-off count for weekly targets), and the last 30 days as a mini pixel strip with skip days hollow. Archived habits stay out of it.</li>
+                        <li><strong>CSV export for Excel</strong> — Settings → “Export CSV for Excel” produces two files via the share sheet (or as downloads): <em>days.csv</em> with one row per logged day (date; habit; type; done/skip; note) and <em>fasts.csv</em> with one row per fast (habit; start; end; duration in hours). Semicolon-separated with decimal commas, so they open cleanly in German/Austrian Excel.</li>
+                    </ul>
                     <h4>v1.6 <span class="vh-date">— 30 Aug 2026</span></h4>
                     <p>Life happens.</p>
                     <ul>
@@ -307,7 +330,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=11"></script>
-    <script src="js/app.js?v=11"></script>
+    <script src="js/icons.js?v=12"></script>
+    <script src="js/app.js?v=12"></script>
 </body>
 </html>

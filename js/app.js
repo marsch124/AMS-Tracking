@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.11.3';
+const APP_VERSION = '1.12';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1870,6 +1870,29 @@ $('#btn-update').addEventListener('click', () => {
     checkForUpdate(true);
 });
 setTimeout(() => checkForUpdate(false), 2500);
+
+/* Voice / Shortcut commands: ?fast=start | stop | toggle acts on the
+   first (non-archived) fasting habit, so a Siri Shortcut opening that
+   URL starts or ends the fast. */
+function handleUrlAction() {
+    const action = new URLSearchParams(location.search).get('fast');
+    if (!action) return;
+    history.replaceState(null, '', location.pathname);
+    const habit = state.habits.find(h => h.type === 'timer' && !h.archived);
+    if (!habit) {
+        showToast('No fasting habit found');
+        return;
+    }
+    const active = activeSession(habit);
+    if (action === 'start' || (action === 'toggle' && !active)) {
+        if (active) showToast(`Already fasting \u2014 ${fmtDuration(Date.now() - active.s)} h`);
+        else startFast(habit, null);
+    } else if (action === 'stop' || (action === 'toggle' && active)) {
+        if (!active) showToast('No fast is running');
+        else toggleTimer(habit);
+    }
+}
+handleUrlAction();
 
 applyTheme();
 if (navigator.storage && navigator.storage.persist) {

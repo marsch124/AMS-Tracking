@@ -60,5 +60,10 @@ app on his iPhone as the real test environment.
   theme sync.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
+- Parked: Siri/Lock-Screen launch of the installed app — impossible on
+  current iOS (Shortcuts can't open web clips; URLs open Safari's
+  separate storage). Re-test the Shortcuts "Open App" picker after each
+  iOS release; if "Tracking" appears, the v1.12 URL commands plus an
+  Open App shortcut make it work with no app changes.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.

@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=24">
+    <link rel="stylesheet" href="css/style.css?v=25">
 </head>
 <body>
 
@@ -164,7 +164,7 @@
                     <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
-                    <p><strong>Voice commands (Siri)</strong> — on iPhone, create a Shortcut with the <em>“Open App”</em> action and choose AMS Tracking, named e.g. “Fasten”: saying “Hey Siri, Fasten” then opens the app instantly with the start/stop button one tap away. <strong>Important:</strong> do <em>not</em> use the “Open URLs” action with the app's web address — iOS opens that in Safari, which keeps a completely separate copy of your data, so nothing you do there reaches the real app. (The <code>?fast=start/stop/toggle</code> web commands still exist for platforms where links open in the installed app.)</p>
+                    <p><strong>Voice commands (Siri)</strong> — as of iOS 2026 releases, Shortcuts cannot open an installed web app: the “Open App” action doesn't list it, and “Open URLs” lands in Safari, which keeps a completely separate copy of your data — so a voice or Lock Screen launcher isn't possible yet. The practical setup is the app icon in the Dock; the icon badge shows the day's status before you even tap. Worth re-trying after each iOS update: if “Tracking” ever appears in the Shortcuts “Open App” picker, a “Hey Siri, Fasten” shortcut and a Lock Screen button will work immediately. (The <code>?fast=start/stop/toggle</code> web commands exist for platforms where links open in the installed app.)</p>
                     <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. Settings → Check for app update asks immediately.</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it — and the app asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
@@ -173,6 +173,11 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.12.2 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Siri, on hold.</p>
+                    <ul>
+                        <li><strong>Voice launch parked</strong> — field testing showed current iOS offers no way for Shortcuts to open an installed web app, so the guide now recommends the Dock icon and explains what to re-try after future iOS updates.</li>
+                    </ul>
                     <h4>v1.12.1 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>Honest Siri instructions.</p>
                     <ul>
@@ -414,7 +419,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=24"></script>
-    <script src="js/app.js?v=24"></script>
+    <script src="js/icons.js?v=25"></script>
+    <script src="js/app.js?v=25"></script>
 </body>
 </html>

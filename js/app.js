@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.11.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -793,7 +793,7 @@ function buildHistoryCard(habit) {
     hint.textContent = noteMode
         ? 'Note mode: tap a day to write or edit its note.'
         : habit.type === 'timer'
-            ? 'Tap a day to record a forgotten fast (0 hours marks a skip day), or to remove one.'
+            ? 'Tap a day to record a forgotten fast (0 = skip day) or to edit a recorded one.'
             : 'Tap a day to cycle: done \u2192 skip day \u2192 empty.';
     card.appendChild(hint);
 
@@ -911,16 +911,9 @@ function toggleHistoryDay(habit, d, wasDone) {
     } else if (!wasDone && habit.skip && habit.skip[key]) {
         delete habit.skip[key];
     } else if (wasDone) {
-        const victims = (habit.sessions || []).filter(s => s.e && dateKey(new Date(s.e)) === key);
-        habit.sessions = habit.sessions.filter(s => !victims.includes(s));
-        save();
-        openDetail(habit.id, true);
-        showToast(victims.length === 1 ? 'Fast removed' : `${victims.length} fasts removed`, () => {
-            habit.sessions.push(...victims);
-            habit.sessions.sort((a, b) => a.s - b.s);
-            save();
-            openDetail(habit.id, true);
-        });
+        // never destructive on tap: open the day's fast in the editor instead
+        const dayFasts = (habit.sessions || []).filter(s => s.e && dateKey(new Date(s.e)) === key);
+        if (dayFasts.length) openFastSheet(habit, dayFasts[dayFasts.length - 1]);
         return;
     } else {
         const answer = prompt(`How many hours did you fast on ${d.toLocaleDateString()}?\n(Enter 0 to mark a skip day.)`, '16');

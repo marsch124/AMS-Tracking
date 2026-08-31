@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=19">
+    <link rel="stylesheet" href="css/style.css?v=20">
 </head>
 <body>
 
@@ -150,7 +150,7 @@
                     <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit: a ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? In the habit's detail view, tap any fast in the list (including the one in progress) to correct its start and end times, or delete it.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
-                    <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a filled day removes that day's fast. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
+                    <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
                     <p><strong>The fasting calendar</strong> — for a fasting habit, each calendar day shows the date with the fasted hours in a circle beneath: green when that day's goal was met, gray when the fast fell short of it, red with a live count for today's fast in progress, and a dashed circle with a dash (–) for skip days. The Fasts card counts how many days met the goal.</p>
                     <p><strong>Day notes</strong> — tap the pencil in the calendar header to enter note mode, then tap any day to write a short note (“skipped, travel day”, “hard fast”). Days with notes get a mark, and the month's notes are listed under the calendar; tap one to edit it.</p>
                     <p><strong>Tonight's goal</strong> — press-and-hold the fasting habit's start button to pick a goal for just this fast (13/15/16/18h or the habit's default) before it starts. You can also change the running fast's goal by tapping it in the detail list. The ring, countdown, and goal time follow the per-fast goal.</p>
@@ -171,6 +171,11 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.11.1 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Never destructive on a tap.</p>
+                    <ul>
+                        <li><strong>Tapping a recorded fast opens its editor</strong> — previously, tapping a day with a fast on the fasting calendar removed it immediately (with only a brief Undo bar as the safety net). Now the tap opens the fast edit sheet with its start and stop times, a Delete button, and Cancel — nothing is changed or removed until you explicitly choose. Empty days still offer the backfill prompt, and skip days still un-mark on tap.</li>
+                    </ul>
                     <h4>v1.11 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>The feel release.</p>
                     <ul>
@@ -386,7 +391,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=19"></script>
-    <script src="js/app.js?v=19"></script>
+    <script src="js/icons.js?v=20"></script>
+    <script src="js/app.js?v=20"></script>
 </body>
 </html>

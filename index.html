@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=15">
+    <link rel="stylesheet" href="css/style.css?v=16">
 </head>
 <body>
 
@@ -143,7 +143,7 @@
                 <div class="fold-body">
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
                     <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over.</p>
-                    <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit: a ring fills around the button as the fast progresses, the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”), and everything turns green when you reach it.</p>
+                    <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit: a ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? In the habit's detail view, tap any fast in the list (including the one in progress) to correct its start and end times, or delete it.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a filled day removes that day's fast. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
@@ -165,6 +165,11 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.9.1 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Traffic-light ring.</p>
+                    <ul>
+                        <li><strong>Progress ring with phase colors</strong> — the fasting ring is now thicker and changes color with progress toward the goal: red for the first third, yellow for the middle third, green for the last stretch and beyond. One glance at the ring now tells you roughly how deep into the fast you are.</li>
+                    </ul>
                     <h4>v1.9 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>An icon for everything.</p>
                     <ul>
@@ -354,7 +359,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=15"></script>
-    <script src="js/app.js?v=15"></script>
+    <script src="js/icons.js?v=16"></script>
+    <script src="js/app.js?v=16"></script>
 </body>
 </html>

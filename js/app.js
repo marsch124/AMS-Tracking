@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.9.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -423,10 +423,12 @@ function buildCard(habit) {
     if (active && activeGoalMs) {
         const C = 188.5; // circumference of the r=30 ring
         const progress = Math.min(1, (Date.now() - active.s) / activeGoalMs);
+        // traffic-light ring: red in the first third, yellow in the middle, green near the goal
+        const phase = progress < 1 / 3 ? '#d9463e' : progress < 2 / 3 ? '#e0a80f' : '#2fa96d';
         wrap.innerHTML = `<svg class="ring" viewBox="0 0 66 66">` +
-            `<circle class="track" cx="33" cy="33" r="30" fill="none" stroke-width="4"/>` +
+            `<circle class="track" cx="33" cy="33" r="30" fill="none" stroke-width="6"/>` +
             `<circle class="ring-progress${progress >= 1 ? ' done' : ''}" cx="33" cy="33" r="30" fill="none" ` +
-            `stroke="${habit.color}" stroke-width="4" stroke-linecap="round" ` +
+            `stroke="${phase}" stroke-width="6" stroke-linecap="round" ` +
             `stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - progress)}"/></svg>`;
     }
     wrap.appendChild(btn);

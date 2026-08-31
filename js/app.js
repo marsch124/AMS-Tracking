@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.9';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1268,6 +1268,7 @@ function openSheet(editId) {
 
     $('#sheet-title').textContent = habit ? 'Edit habit' : 'New habit';
     $('#f-name').value = habit ? habit.name : '';
+    $('#f-icon-search').value = '';
     $('#f-goal').value = habit && habit.goalHours ? habit.goalHours : '';
     renderSheetChips();
     $('#sheet-edit').hidden = false;
@@ -1275,14 +1276,19 @@ function openSheet(editId) {
 }
 
 function renderSheetChips() {
-    // icons
+    // icons, filtered by the search box (names + English/German keywords)
+    const q = ($('#f-icon-search').value || '').trim().toLowerCase();
+    const names = ICON_NAMES_HABIT.filter(n =>
+        !q || n.toLowerCase().includes(q) || (ICON_KEYWORDS[n] || '').includes(q));
     const iconRow = $('#f-icons');
     iconRow.innerHTML = '';
-    ICON_NAMES_HABIT.forEach(ic => {
+    $('#f-icons-empty').hidden = names.length > 0;
+    names.forEach(ic => {
         const c = document.createElement('button');
         c.type = 'button';
         c.className = 'chip' + (ic === sheet.icon ? ' sel' : '');
         c.innerHTML = icon(ic);
+        c.setAttribute('aria-label', ic);
         c.addEventListener('click', () => { sheet.icon = ic; renderSheetChips(); });
         iconRow.appendChild(c);
     });
@@ -1335,6 +1341,8 @@ function renderSheetChips() {
         dayRow.appendChild(c);
     });
 }
+
+$('#f-icon-search').addEventListener('input', renderSheetChips);
 
 $('#btn-add').addEventListener('click', () => openSheet(null));
 $('#btn-sheet-cancel').addEventListener('click', () => { $('#sheet-edit').hidden = true; });

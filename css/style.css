@@ -974,3 +974,19 @@ html, body {
     color: var(--text-dim);
     letter-spacing: 0;
 }
+
+/* ---------- v1.9: icon search ---------- */
+
+#f-icon-search {
+    width: 100%;
+    font-size: 16px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    margin-bottom: 10px;
+    -webkit-appearance: none;
+}
+#f-icon-search:focus { border-color: var(--accent); }

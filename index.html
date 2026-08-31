@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=14">
+    <link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 
@@ -73,8 +73,10 @@
             <label class="field-label" for="f-name">Name</label>
             <input id="f-name" type="text" maxlength="40" placeholder="e.g. Meditate" autocomplete="off">
 
-            <label class="field-label">Icon</label>
+            <label class="field-label" for="f-icon-search">Icon</label>
+            <input id="f-icon-search" type="search" placeholder="Search icons\u2026 (e.g. coffee, schlafen)" autocomplete="off">
             <div id="f-icons" class="chip-row"></div>
+            <p id="f-icons-empty" class="cal-hint" hidden>No icons match \u2014 clear the search to see all.</p>
 
             <label class="field-label">Color</label>
             <div id="f-colors" class="chip-row"></div>
@@ -152,7 +154,7 @@
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
-                    <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
+                    <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
                     <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
@@ -163,6 +165,12 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.9 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>An icon for everything.</p>
+                    <ul>
+                        <li><strong>24 new hand-drawn icons</strong> — the habit icon set grows from 16 to 40: heart, heartbeat, music, sleep, medication, water glass, coffee, less-screen-time, quit-smoking, alcohol-free, leaf, walking shoe, swimming, kettlebell, idea bulb, camera, paint brush, saving (€), pet paw, flower, mountain, conversation, cold shower (snowflake), and stairs — all in the same wobbly ink style.</li>
+                        <li><strong>Icon search</strong> — a search field above the icon picker filters by name and keywords in both English and German (“kaffee”, “schlafen”, “rauchen”, “swim”…), so the right icon is three letters away.</li>
+                    </ul>
                     <h4>v1.8.1 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>More habits per screen.</p>
                     <ul>
@@ -346,7 +354,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=14"></script>
-    <script src="js/app.js?v=14"></script>
+    <script src="js/icons.js?v=15"></script>
+    <script src="js/app.js?v=15"></script>
 </body>
 </html>

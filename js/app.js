@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.9.1';
+const APP_VERSION = '1.10';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -249,6 +249,20 @@ function completionStats(habit) {
 }
 
 /* ================= timer helpers ================= */
+
+/* Per-day totals of finished fasts (keyed by end day) and whether the goal was met */
+function fastDayStats(habit) {
+    const ms = {};
+    const met = {};
+    (habit.sessions || []).forEach(s => {
+        if (!s.e) return;
+        const k = dateKey(new Date(s.e));
+        ms[k] = (ms[k] || 0) + (s.e - s.s);
+        const g = s.g || habit.goalHours;
+        if (!g || s.e - s.s >= g * 3600e3) met[k] = true;
+    });
+    return { ms, met };
+}
 
 function activeSession(habit) {
     return (habit.sessions || []).find(s => !s.e) || null;
@@ -739,6 +753,7 @@ function buildHistoryCard(habit) {
     });
 
     const done = doneSet(habit);
+    const fastDay = habit.type === 'timer' ? fastDayStats(habit) : null;
     const todayKey = dateKey(now);
     const first = new Date(calMonth.y, calMonth.m, 1);
     for (let i = 0; i < weekdayIdx(first); i++) {
@@ -753,19 +768,43 @@ function buildHistoryCard(habit) {
         el.textContent = day;
         const skip = skipSet(habit);
         const notes = habit.notes || {};
+        const isTimer = habit.type === 'timer';
+        if (isTimer) el.classList.add('cal-fast');
         if (key > todayKey) {
             el.disabled = true;
+            if (isTimer) el.innerHTML = `<span class="cf-date">${day}</span><span class="cf-hours future"></span>`;
         } else {
-            if (done[key]) {
-                el.classList.add('on');
-                el.style.background = habit.color;
-            } else if (skip[key]) {
-                el.classList.add('skipped');
-                el.style.color = habit.color;
-            } else if (!isScheduled(habit, d)) {
-                el.classList.add('off-day');
+            if (isTimer) {
+                // date above, fasted hours in a colored circle below (like the app Martin likes)
+                const activeToday = key === todayKey && activeSession(habit);
+                let circle;
+                if (done[key]) {
+                    const h = Math.round((fastDay.ms[key] || 0) / 3600e3);
+                    const cls = !habit.goalHours || fastDay.met[key] ? 'met' : 'under';
+                    circle = `<span class="cf-hours ${cls}">${h}</span>`;
+                } else if (activeToday) {
+                    const h = Math.round((Date.now() - activeToday.s) / 3600e3);
+                    circle = `<span class="cf-hours running">${h}</span>`;
+                } else if (skip[key]) {
+                    el.classList.add('skipped-fast');
+                    circle = `<span class="cf-hours skipday" style="border-color:${habit.color}"></span>`;
+                } else {
+                    circle = '<span class="cf-hours none"></span>';
+                }
+                el.innerHTML = `<span class="cf-date">${day}</span>` + circle;
+                if (key === todayKey) el.classList.add('cf-today');
+            } else {
+                if (done[key]) {
+                    el.classList.add('on');
+                    el.style.background = habit.color;
+                } else if (skip[key]) {
+                    el.classList.add('skipped');
+                    el.style.color = habit.color;
+                } else if (!isScheduled(habit, d)) {
+                    el.classList.add('off-day');
+                }
+                if (key === todayKey) el.style.boxShadow = `inset 0 0 0 2px ${habit.color}`;
             }
-            if (key === todayKey) el.style.boxShadow = `inset 0 0 0 2px ${habit.color}`;
             if (notes[key]) el.classList.add('has-note');
             el.addEventListener('click', () => {
                 if (noteMode) editDayNote(habit, d);
@@ -945,9 +984,12 @@ function buildSessionCard(habit) {
         const durations = finished.map(s => s.e - s.s);
         const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
         const max = Math.max(...durations);
+        const goalMetDays = Object.keys(fastDayStats(habit).met).length;
         const rows = document.createElement('div');
         rows.className = 'stat-rows';
-        [['Average', fmtDuration(avg) + ' h'], ['Longest', fmtDuration(max) + ' h'], ['Total fasts', String(finished.length)]]
+        [['Average', fmtDuration(avg) + ' h'], ['Longest', fmtDuration(max) + ' h'],
+         ['Goal met', `${goalMetDays} ${goalMetDays === 1 ? 'day' : 'days'}`],
+         ['Total fasts', String(finished.length)]]
             .forEach(([k, v]) => {
                 const row = document.createElement('div');
                 row.className = 'stat-row';

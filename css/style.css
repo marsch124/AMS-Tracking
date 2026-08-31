@@ -990,3 +990,50 @@ html, body {
     -webkit-appearance: none;
 }
 #f-icon-search:focus { border-color: var(--accent); }
+
+/* ---------- v1.10: fasting calendar with hours per day ---------- */
+
+.cal-day.cal-fast {
+    background: transparent;
+    aspect-ratio: auto;
+    height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 3px;
+    padding: 2px 0 0;
+    border-radius: 10px;
+}
+
+.cf-date {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    line-height: 1;
+}
+
+.cal-fast.cf-today .cf-date { color: var(--text); }
+
+.cf-hours {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.cf-hours.met { background: #2fa96d; color: #fff; }
+.cf-hours.under { background: var(--border); color: var(--text); }
+.cf-hours.running { background: #d9463e; color: #fff; }
+.cf-hours.skipday { border: 2px dashed currentColor; opacity: 0.75; }
+.cf-hours.none { box-shadow: inset 0 0 0 1.5px var(--border); }
+.cf-hours.future { box-shadow: inset 0 0 0 1.5px var(--border); opacity: 0.35; }
+
+.cal-fast.cf-today .cf-hours.none { box-shadow: inset 0 0 0 2px var(--text-dim); }
+.cal-day.cal-fast:disabled { background: transparent; }
+.cal-day.cal-fast.has-note::after { bottom: -1px; }

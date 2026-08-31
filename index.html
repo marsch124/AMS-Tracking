@@ -12,19 +12,12 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=20">
+    <link rel="stylesheet" href="css/style.css?v=21">
 </head>
 <body>
 
     <!-- ============ TODAY (main) SCREEN ============ -->
     <main id="screen-today" class="screen">
-        <header class="topbar">
-            <div class="topbar-group">
-                <button id="btn-settings" class="pill-btn icon-only" aria-label="Settings"><span data-hi="sliders"></span></button>
-                <button id="btn-stats" class="pill-btn icon-only" aria-label="Statistics"><span data-hi="chart"></span></button>
-            </div>
-            <button id="btn-add" class="pill-btn icon-only accent" aria-label="Add habit"><span data-hi="plus"></span></button>
-        </header>
         <h1 class="page-title">Today</h1>
         <p id="today-date" class="page-subtitle"></p>
         <div id="day-progress" class="day-progress" hidden>
@@ -33,6 +26,12 @@
         </div>
 
         <div id="habit-list" class="habit-list"></div>
+
+        <nav class="bottom-bar">
+            <button id="btn-settings" class="pill-btn icon-only" aria-label="Settings"><span data-hi="sliders"></span></button>
+            <button id="btn-stats" class="pill-btn icon-only" aria-label="Statistics"><span data-hi="chart"></span></button>
+            <button id="btn-add" class="pill-btn icon-only accent" aria-label="Add habit"><span data-hi="plus"></span></button>
+        </nav>
 
         <div id="empty-state" class="empty-state" hidden>
             <div class="empty-icon" data-hi="sprout"></div>
@@ -156,7 +155,7 @@
                     <p><strong>Tonight's goal</strong> — press-and-hold the fasting habit's start button to pick a goal for just this fast (13/15/16/18h or the habit's default) before it starts. You can also change the running fast's goal by tapping it in the detail list. The ring, countdown, and goal time follow the per-fast goal.</p>
                     <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Small letters mark where each month begins, and tapping any pixel shows that day's date, status, and note. Timer habits also list recent fasts with average and longest duration.</p>
                     <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
-                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today.</p>
+                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today, and the settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
@@ -171,6 +170,11 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.11.2 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Buttons where the thumb lives.</p>
+                    <ul>
+                        <li><strong>Bottom bar</strong> — the settings, stats, and add buttons moved from the top of the Today screen into a floating bar at the bottom, within one-handed reach. The habit list gets extra bottom room so the last card never hides behind it, and the Undo bar now appears just above it.</li>
+                    </ul>
                     <h4>v1.11.1 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>Never destructive on a tap.</p>
                     <ul>
@@ -391,7 +395,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=20"></script>
-    <script src="js/app.js?v=20"></script>
+    <script src="js/icons.js?v=21"></script>
+    <script src="js/app.js?v=21"></script>
 </body>
 </html>

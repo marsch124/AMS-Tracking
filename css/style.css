@@ -1097,3 +1097,33 @@ html, body {
 #detail-title.title-xs { font-size: 23px; }
 #detail-title.title-sm .habit-icon .hi { width: 27px; height: 27px; }
 #detail-title.title-xs .habit-icon .hi { width: 23px; height: 23px; }
+
+/* ---------- v1.11.2: bottom bar on Today ---------- */
+
+.bottom-bar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    padding: 7px 9px;
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+    z-index: 40;
+}
+
+.bottom-bar .pill-btn {
+    box-shadow: none;
+    width: 48px;
+    height: 48px;
+}
+
+.bottom-bar .pill-btn.accent { box-shadow: 0 3px 10px rgba(59, 112, 240, 0.4); }
+
+#screen-today { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); }
+
+/* keep the undo toast clear of the bar */
+.toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }

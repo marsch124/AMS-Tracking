@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.8.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [

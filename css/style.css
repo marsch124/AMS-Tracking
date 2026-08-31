@@ -50,10 +50,10 @@
 }
 
 .pill-btn .hi { width: 21px; height: 21px; }
-.habit-action .hi { width: 27px; height: 27px; }
-.habit-name .hi { width: 21px; height: 21px; vertical-align: -4px; margin-right: 2px; }
+.habit-action .hi { width: 23px; height: 23px; }
+.habit-name .hi { width: 19px; height: 19px; vertical-align: -4px; margin-right: 2px; }
 .page-title .habit-icon .hi { width: 34px; height: 34px; vertical-align: -4px; margin-right: 6px; }
-.stat-number .hi.flame { width: 20px; height: 20px; margin-left: 3px; vertical-align: -2px; }
+.stat-number .hi.flame { width: 18px; height: 18px; margin-left: 3px; vertical-align: -2px; }
 .chip .hi { width: 25px; height: 25px; }
 .type-icon .hi { width: 23px; height: 23px; color: var(--accent); }
 .list-btn .hi, .fold-title .hi { width: 20px; height: 20px; vertical-align: -4px; margin-right: 7px; }
@@ -134,15 +134,15 @@ html, body {
 .habit-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
 }
 
 .habit-card {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 18px 16px;
-    border-radius: 22px;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 20px;
     background: var(--card-fallback);
     box-shadow: var(--shadow);
     cursor: pointer;
@@ -153,8 +153,8 @@ html, body {
 /* big round action button (check / fasting toggle) */
 .habit-action {
     flex: 0 0 auto;
-    width: 58px;
-    height: 58px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     border: none;
     display: flex;
@@ -187,9 +187,9 @@ html, body {
 }
 
 .habit-name {
-    font-size: 19px;
+    font-size: 17px;
     font-weight: 700;
-    margin: 0 0 7px;
+    margin: 0 0 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -204,8 +204,8 @@ html, body {
 }
 
 .wd {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     font-size: 10px;
     font-weight: 700;
@@ -232,7 +232,7 @@ html, body {
 }
 
 .stat-number {
-    font-size: 27px;
+    font-size: 24px;
     font-weight: 800;
     letter-spacing: -0.5px;
     line-height: 1.05;
@@ -242,7 +242,7 @@ html, body {
 .stat-number .flame { font-size: 20px; }
 
 .stat-label {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.8px;
     color: var(--text-dim);
@@ -628,8 +628,8 @@ html, body {
 .action-wrap {
     position: relative;
     flex: 0 0 auto;
-    width: 66px;
-    height: 66px;
+    width: 56px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -717,8 +717,8 @@ html, body {
 .habit-card.gcard {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    padding: 15px 14px;
+    gap: 8px;
+    padding: 12px 13px;
     min-width: 0; /* let the grid track shrink below the nowrap name */
     overflow: hidden;
 }

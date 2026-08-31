@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.10';
+const APP_VERSION = '1.10.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -787,7 +787,7 @@ function buildHistoryCard(habit) {
                     circle = `<span class="cf-hours running">${h}</span>`;
                 } else if (skip[key]) {
                     el.classList.add('skipped-fast');
-                    circle = `<span class="cf-hours skipday" style="border-color:${habit.color}"></span>`;
+                    circle = `<span class="cf-hours skipday" style="border-color:${habit.color};color:${habit.color}">\u2013</span>`;
                 } else {
                     circle = '<span class="cf-hours none"></span>';
                 }

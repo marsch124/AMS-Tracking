@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 
@@ -147,7 +147,7 @@
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? In the habit's detail view, tap any fast in the list (including the one in progress) to correct its start and end times, or delete it.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a filled day removes that day's fast. Use the arrows to move back through months; future days are locked. Streaks and stats update immediately.</p>
-                    <p><strong>The fasting calendar</strong> — for a fasting habit, each calendar day shows the date with the fasted hours in a circle beneath: green when that day's goal was met, gray when the fast fell short of it, red with a live count for today's fast in progress, dashed for skip days. The Fasts card counts how many days met the goal.</p>
+                    <p><strong>The fasting calendar</strong> — for a fasting habit, each calendar day shows the date with the fasted hours in a circle beneath: green when that day's goal was met, gray when the fast fell short of it, red with a live count for today's fast in progress, and a dashed circle with a dash (–) for skip days. The Fasts card counts how many days met the goal.</p>
                     <p><strong>Day notes</strong> — tap the pencil in the calendar header to enter note mode, then tap any day to write a short note (“skipped, travel day”, “hard fast”). Days with notes get a mark, and the month's notes are listed under the calendar; tap one to edit it.</p>
                     <p><strong>Tonight's goal</strong> — press-and-hold the fasting habit's start button to pick a goal for just this fast (13/15/16/18h or the habit's default) before it starts. You can also change the running fast's goal by tapping it in the detail list. The ring, countdown, and goal time follow the per-fast goal.</p>
                     <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Small letters mark where each month begins, and tapping any pixel shows that day's date, status, and note. Timer habits also list recent fasts with average and longest duration.</p>
@@ -166,6 +166,11 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.10.1 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Skip days, unmistakable.</p>
+                    <ul>
+                        <li><strong>Clearer skip-day cue</strong> — on the fasting calendar, a skip day now shows a bold dash inside its dashed circle in the habit's color at full strength, so it can't be confused with an empty day's faint ring.</li>
+                    </ul>
                     <h4>v1.10 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>The fasting month, in hours.</p>
                     <ul>
@@ -367,7 +372,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=17"></script>
-    <script src="js/app.js?v=17"></script>
+    <script src="js/icons.js?v=18"></script>
+    <script src="js/app.js?v=18"></script>
 </body>
 </html>

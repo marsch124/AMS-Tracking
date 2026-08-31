@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.5.4';
+const APP_VERSION = '1.6';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -96,6 +96,14 @@ function doneSet(habit) {
     return set;
 }
 
+function skipSet(habit) { return habit.skip || {}; }
+
+/* A fast may carry its own goal for the night (session.g, hours) */
+function goalMsFor(habit, session) {
+    const h = (session && session.g) || habit.goalHours;
+    return h ? h * 3600e3 : null;
+}
+
 function isScheduled(habit, d) {
     if (habit.type !== 'daily') return true;
     const days = habit.days || [true, true, true, true, true, true, true];
@@ -115,6 +123,14 @@ function weekDoneCount(habit, ws) {
     return n;
 }
 
+function weekHasSkip(habit, ws) {
+    const skip = skipSet(habit);
+    for (let i = 0; i < 7; i++) {
+        if (skip[dateKey(addDays(ws, i))]) return true;
+    }
+    return false;
+}
+
 function weeklyStreak(habit) {
     const target = habit.target || 1;
     let w = weekStart(new Date());
@@ -124,7 +140,7 @@ function weeklyStreak(habit) {
     w = addDays(w, -7);
     for (let i = 0; i < 530; i++) {
         if (weekDoneCount(habit, w) >= target) streak++;
-        else break;
+        else if (!weekHasSkip(habit, w)) break; // skip-marked weeks are excused
         w = addDays(w, -7);
     }
     return streak;
@@ -145,9 +161,10 @@ function weeklyStats(habit) {
     for (let i = 0; i < 530 && w <= thisWeek; i++) {
         const met = weekDoneCount(habit, w) >= target;
         const inProgress = w.getTime() === thisWeek.getTime();
-        if (!inProgress || met) weeksTotal++;
+        const excused = !met && weekHasSkip(habit, w);
+        if ((!inProgress || met) && !excused) weeksTotal++;
         if (met) { weeksMet++; run++; best = Math.max(best, run); }
-        else if (!inProgress) run = 0;
+        else if (!inProgress && !excused) run = 0;
         w = addDays(w, 7);
     }
     return { weeksMet, weeksTotal, best };
@@ -159,11 +176,13 @@ function currentStreak(habit) {
     let d = new Date(today);
     // Today doesn't break the streak while it's still pending
     if (isScheduled(habit, d) && !done[dateKey(d)]) d = addDays(d, -1);
+    const skip = skipSet(habit);
     let streak = 0;
     for (let i = 0; i < 3700; i++) {
         if (isScheduled(habit, d)) {
-            if (done[dateKey(d)]) streak++;
-            else break;
+            const k = dateKey(d);
+            if (done[k]) streak++;
+            else if (!skip[k]) break; // skipped days are excused
         }
         d = addDays(d, -1);
     }
@@ -178,10 +197,12 @@ function longestStreak(habit) {
     let d = keyToDate(keys[0]);
     const end = new Date();
     let run = 0;
+    const skip = skipSet(habit);
     for (let i = 0; i < 3700 && d <= end; i++) {
         if (isScheduled(habit, d)) {
-            if (done[dateKey(d)]) { run++; best = Math.max(best, run); }
-            else run = 0;
+            const k = dateKey(d);
+            if (done[k]) { run++; best = Math.max(best, run); }
+            else if (!skip[k]) run = 0;
         }
         d = addDays(d, 1);
     }
@@ -194,10 +215,11 @@ function completionStats(habit) {
     let start = keyToDate(habit.createdAt || dateKey(new Date()));
     if (keys.length && keyToDate(keys[0]) < start) start = keyToDate(keys[0]);
     const today = new Date();
+    const skip = skipSet(habit);
     let scheduled = 0;
     let d = new Date(start);
     for (let i = 0; i < 3700 && d <= today; i++) {
-        if (isScheduled(habit, d)) scheduled++;
+        if (isScheduled(habit, d) && !skip[dateKey(d)]) scheduled++;
         d = addDays(d, 1);
     }
     const doneCount = keys.length;
@@ -353,15 +375,32 @@ function buildCard(habit) {
     }
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (btn.dataset.lp) { delete btn.dataset.lp; return; } // long-press consumed this tap
         if (habit.type === 'timer') toggleTimer(habit);
         else toggleToday(habit);
     });
 
+    // long-press on an idle fasting button picks tonight's goal before starting
+    if (habit.type === 'timer' && !active) {
+        let lpTimer = null;
+        btn.addEventListener('pointerdown', () => {
+            lpTimer = setTimeout(() => {
+                lpTimer = null;
+                btn.dataset.lp = '1';
+                openStartGoalSheet(habit);
+            }, 500);
+        });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+            btn.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }));
+        btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
     const wrap = document.createElement('div');
     wrap.className = 'action-wrap';
-    if (active && habit.goalHours) {
+    const activeGoalMs = active ? goalMsFor(habit, active) : null;
+    if (active && activeGoalMs) {
         const C = 188.5; // circumference of the r=30 ring
-        const progress = Math.min(1, (Date.now() - active.s) / (habit.goalHours * 3600e3));
+        const progress = Math.min(1, (Date.now() - active.s) / activeGoalMs);
         wrap.innerHTML = `<svg class="ring" viewBox="0 0 66 66">` +
             `<circle class="track" cx="33" cy="33" r="30" fill="none" stroke-width="4"/>` +
             `<circle class="ring-progress${progress >= 1 ? ' done' : ''}" cx="33" cy="33" r="30" fill="none" ` +
@@ -402,7 +441,7 @@ function buildCard(habit) {
         if (active) {
             const elapsed = Date.now() - active.s;
             num.textContent = fmtDuration(elapsed);
-            const goalMs = habit.goalHours ? habit.goalHours * 3600e3 : null;
+            const goalMs = goalMsFor(habit, active);
             if (goalMs && elapsed >= goalMs) {
                 num.classList.add('goal-reached');
                 label.classList.add('goal-reached');
@@ -452,18 +491,23 @@ function buildWeekDots(habit, done) {
     const monday = addDays(today, -weekdayIdx(today));
     let doneCount = 0;
     let scheduledCount = 0;
+    const skip = skipSet(habit);
     for (let i = 0; i < 7; i++) {
         const d = addDays(monday, i);
+        const key = dateKey(d);
         const el = document.createElement('span');
         el.className = 'wd';
         el.textContent = DAY_NAMES[i];
         const scheduled = isScheduled(habit, d);
         if (!scheduled) el.classList.add('off-day');
-        else scheduledCount++;
-        if (done[dateKey(d)]) {
+        else if (!skip[key]) scheduledCount++;
+        if (done[key]) {
             el.classList.add('on');
             el.style.background = habit.color;
             doneCount++;
+        } else if (skip[key]) {
+            el.classList.add('wd-skip');
+            el.style.color = habit.color;
         }
         row.appendChild(el);
     }
@@ -479,6 +523,7 @@ function buildWeekDots(habit, done) {
 function toggleToday(habit) {
     const key = dateKey(new Date());
     habit.done = habit.done || {};
+    if (habit.skip && habit.skip[key]) delete habit.skip[key];
     if (habit.done[key]) delete habit.done[key];
     else habit.done[key] = 1;
     save();
@@ -504,16 +549,44 @@ function toggleTimer(habit) {
             celebrate('Personal best fast!', habit.color, fmtDuration(duration) + ' h \u00b7 ' + habit.name);
         }
     } else {
-        const session = { s: Date.now(), e: null };
-        habit.sessions.push(session);
+        startFast(habit, null);
+    }
+}
+
+function startFast(habit, goalH) {
+    habit.sessions = habit.sessions || [];
+    const session = { s: Date.now(), e: null };
+    if (goalH) session.g = goalH;
+    habit.sessions.push(session);
+    save();
+    renderToday();
+    showToast(goalH ? `Fast started \u2014 goal ${goalH}h` : 'Fast started', () => {
+        habit.sessions = habit.sessions.filter(x => x !== session);
         save();
         renderToday();
-        showToast('Fast started', () => {
-            habit.sessions = habit.sessions.filter(x => x !== session);
-            save();
-            renderToday();
+    });
+}
+
+let startGoalHabitId = null;
+
+function openStartGoalSheet(habit) {
+    startGoalHabitId = habit.id;
+    const row = $('#startgoal-chips');
+    row.innerHTML = '';
+    const options = [[null, habit.goalHours ? `${habit.goalHours}h` : 'no goal'],
+        ...FAST_GOAL_PRESETS.filter(h => h !== habit.goalHours).map(h => [h, `${h}h`])];
+    options.forEach(([g, text]) => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip goal-chip' + (g === null ? ' sel' : '');
+        c.textContent = text;
+        c.addEventListener('click', () => {
+            $('#sheet-startgoal').hidden = true;
+            startFast(habit, g);
         });
-    }
+        row.appendChild(c);
+    });
+    $('#sheet-startgoal').hidden = false;
 }
 
 /* Live tick for running timers */
@@ -532,11 +605,13 @@ document.addEventListener('visibilitychange', () => {
 
 let detailId = null;
 let calMonth = null; // {y, m} shown in the history calendar
+let noteMode = false;
 
 function openDetail(id, keepMonth) {
     if (!keepMonth || detailId !== id) {
         const now = new Date();
         calMonth = { y: now.getFullYear(), m: now.getMonth() };
+        noteMode = false;
     }
     detailId = id;
     const habit = state.habits.find(h => h.id === id);
@@ -611,11 +686,23 @@ function buildHistoryCard(habit) {
     head.appendChild(nav);
     card.appendChild(head);
 
+    const note = document.createElement('button');
+    note.className = 'pill-btn icon-only cal-nav-btn' + (noteMode ? ' note-on' : '');
+    note.innerHTML = icon('pen');
+    note.setAttribute('aria-label', 'Note mode');
+    note.addEventListener('click', () => {
+        noteMode = !noteMode;
+        openDetail(habit.id, true);
+    });
+    nav.insertBefore(note, prev);
+
     const hint = document.createElement('p');
     hint.className = 'cal-hint';
-    hint.textContent = habit.type === 'timer'
-        ? 'Tap a day to record a forgotten fast, or to remove one.'
-        : 'Tap a day to check it off late, or to remove a mistake.';
+    hint.textContent = noteMode
+        ? 'Note mode: tap a day to write or edit its note.'
+        : habit.type === 'timer'
+            ? 'Tap a day to record a forgotten fast (0 hours marks a skip day), or to remove one.'
+            : 'Tap a day to cycle: done \u2192 skip day \u2192 empty.';
     card.appendChild(hint);
 
     const grid = document.createElement('div');
@@ -640,30 +727,72 @@ function buildHistoryCard(habit) {
         const el = document.createElement('button');
         el.className = 'cal-day';
         el.textContent = day;
+        const skip = skipSet(habit);
+        const notes = habit.notes || {};
         if (key > todayKey) {
             el.disabled = true;
         } else {
             if (done[key]) {
                 el.classList.add('on');
                 el.style.background = habit.color;
+            } else if (skip[key]) {
+                el.classList.add('skipped');
+                el.style.color = habit.color;
             } else if (!isScheduled(habit, d)) {
                 el.classList.add('off-day');
             }
             if (key === todayKey) el.style.boxShadow = `inset 0 0 0 2px ${habit.color}`;
-            el.addEventListener('click', () => toggleHistoryDay(habit, d, !!done[key]));
+            if (notes[key]) el.classList.add('has-note');
+            el.addEventListener('click', () => {
+                if (noteMode) editDayNote(habit, d);
+                else toggleHistoryDay(habit, d, !!done[key]);
+            });
         }
         grid.appendChild(el);
     }
     card.appendChild(grid);
+
+    // notes for the shown month
+    const notes = habit.notes || {};
+    const monthPrefix = calMonth.y + '-' + pad(calMonth.m + 1);
+    const monthNotes = Object.keys(notes).filter(k => k.startsWith(monthPrefix)).sort();
+    if (monthNotes.length) {
+        const list = document.createElement('div');
+        list.className = 'note-list';
+        monthNotes.forEach(k => {
+            const row = document.createElement('div');
+            row.className = 'note-row';
+            row.innerHTML = `<span class="note-day" style="color:${habit.color}">${Number(k.slice(8))}</span>` +
+                `<span class="note-text">${escapeHtml(notes[k])}</span>`;
+            row.addEventListener('click', () => editDayNote(habit, keyToDate(k)));
+            list.appendChild(row);
+        });
+        card.appendChild(list);
+    }
     return card;
+}
+
+function editDayNote(habit, d) {
+    const key = dateKey(d);
+    habit.notes = habit.notes || {};
+    const answer = prompt(`Note for ${d.toLocaleDateString()}:`, habit.notes[key] || '');
+    if (answer === null) return;
+    if (answer.trim()) habit.notes[key] = answer.trim().slice(0, 200);
+    else delete habit.notes[key];
+    save();
+    openDetail(habit.id, true);
 }
 
 function toggleHistoryDay(habit, d, wasDone) {
     const key = dateKey(d);
     if (habit.type !== 'timer') {
         habit.done = habit.done || {};
-        if (wasDone) delete habit.done[key];
-        else habit.done[key] = 1;
+        habit.skip = habit.skip || {};
+        if (wasDone) { delete habit.done[key]; habit.skip[key] = 1; } // done -> skip
+        else if (habit.skip[key]) delete habit.skip[key];             // skip -> empty
+        else habit.done[key] = 1;                                     // empty -> done
+    } else if (!wasDone && habit.skip && habit.skip[key]) {
+        delete habit.skip[key];
     } else if (wasDone) {
         const victims = (habit.sessions || []).filter(s => s.e && dateKey(new Date(s.e)) === key);
         habit.sessions = habit.sessions.filter(s => !victims.includes(s));
@@ -677,9 +806,16 @@ function toggleHistoryDay(habit, d, wasDone) {
         });
         return;
     } else {
-        const answer = prompt(`How many hours did you fast on ${d.toLocaleDateString()}?`, '16');
+        const answer = prompt(`How many hours did you fast on ${d.toLocaleDateString()}?\n(Enter 0 to mark a skip day.)`, '16');
         if (answer === null) return;
         const hours = parseFloat(String(answer).replace(',', '.'));
+        if (hours === 0) {
+            habit.skip = habit.skip || {};
+            habit.skip[key] = 1;
+            save();
+            openDetail(habit.id, true);
+            return;
+        }
         if (!isFinite(hours) || hours <= 0 || hours > 48) {
             alert('Please enter a fast length between 0 and 48 hours.');
             return;
@@ -861,14 +997,38 @@ function toLocalInput(ms) {
     return dateKey(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
+const FAST_GOAL_PRESETS = [13, 15, 16, 18];
+
 function openFastSheet(habit, session) {
-    fastEdit = { habitId: habit.id, session };
+    fastEdit = { habitId: habit.id, session, goal: session.g || null };
     $('#fast-sheet-title').textContent = session.e ? 'Edit fast' : 'Fast in progress';
     $('#fast-start').value = toLocalInput(session.s);
     $('#fast-end-wrap').hidden = !session.e;
     if (session.e) $('#fast-end').value = toLocalInput(session.e);
+    $('#fast-goal-wrap').hidden = !!session.e;
+    if (!session.e) renderFastGoalChips(habit);
     updateFastNote();
     $('#sheet-fast').hidden = false;
+}
+
+function renderFastGoalChips(habit) {
+    const row = $('#fast-goal');
+    row.innerHTML = '';
+    const def = document.createElement('button');
+    def.type = 'button';
+    def.className = 'chip goal-chip' + (fastEdit.goal === null ? ' sel' : '');
+    def.textContent = habit.goalHours ? `${habit.goalHours}h` : '\u2014';
+    def.title = 'Habit default';
+    def.addEventListener('click', () => { fastEdit.goal = null; renderFastGoalChips(habit); });
+    row.appendChild(def);
+    FAST_GOAL_PRESETS.filter(h => h !== habit.goalHours).forEach(h => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip goal-chip' + (fastEdit.goal === h ? ' sel' : '');
+        c.textContent = `${h}h`;
+        c.addEventListener('click', () => { fastEdit.goal = h; renderFastGoalChips(habit); });
+        row.appendChild(c);
+    });
 }
 
 function updateFastNote() {
@@ -878,6 +1038,11 @@ function updateFastNote() {
     $('#fast-duration-note').textContent =
         isFinite(s) && isFinite(e) && e > s ? `Duration: ${fmtDuration(e - s)} h` : '';
 }
+
+$('#btn-startgoal-cancel').addEventListener('click', () => { $('#sheet-startgoal').hidden = true; });
+$('#sheet-startgoal').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-startgoal')) $('#sheet-startgoal').hidden = true;
+});
 
 $('#fast-start').addEventListener('input', updateFastNote);
 $('#fast-end').addEventListener('input', updateFastNote);
@@ -902,6 +1067,10 @@ $('#btn-fast-save').addEventListener('click', () => {
         session.e = end;
     }
     session.s = start;
+    if (!session.e) {
+        if (fastEdit.goal) session.g = fastEdit.goal;
+        else delete session.g;
+    }
     habit.sessions.sort((a, b) => a.s - b.s);
     save();
     $('#sheet-fast').hidden = true;

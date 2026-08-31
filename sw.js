@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ams-tracking-v21';
+const CACHE_NAME = 'ams-tracking-v22';
 
 const urlsToCache = [
     '/AMS-Tracking/',
@@ -48,6 +48,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+
+    // Version probes must always reach the network and never be cached
+    if (new URL(event.request.url).searchParams.has('vercheck')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
 
     // Network-first for page navigations so app updates (with fresh ?v=
     // asset links) are picked up; cached copy is the offline fallback.

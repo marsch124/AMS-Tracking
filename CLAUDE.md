@@ -18,6 +18,8 @@ app on his iPhone as the real test environment.
    Never rewrite old entries (they are history); only add.
 3. **Bump versions together**:
    - `APP_VERSION` in `js/app.js` (shown in Settings)
+   - `version.json` (drives the in-app update check — forgetting it means
+     users never see the Update button)
    - `?v=N` query on all asset links in `index.html`
    - `CACHE_NAME` in `sw.js` (`ams-tracking-vN`)
 4. **Test in Chromium via Playwright before pushing** (executable at

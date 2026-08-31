@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=21">
+    <link rel="stylesheet" href="css/style.css?v=22">
 </head>
 <body>
 
@@ -135,6 +135,7 @@
             <button id="btn-export" class="list-btn"><span data-hi="export"></span> Export backup (JSON)</button>
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
+            <button id="btn-update" class="list-btn"><span data-hi="sunrise"></span> Check for app update</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
             <button id="btn-layout" class="list-btn"><span data-hi="grid"></span> <span id="layout-label">Layout: list</span></button>
@@ -163,6 +164,7 @@
                     <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
+                    <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. Settings → Check for app update asks immediately.</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it — and the app asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
             </details>
@@ -170,6 +172,12 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.11.3 <span class="vh-date">— 31 Aug 2026</span></h4>
+                    <p>Updates that announce themselves.</p>
+                    <ul>
+                        <li><strong>Self-update check</strong> — the app now compares its version against the server when opened (and whenever it returns to the foreground, at most every 5 minutes). When a newer version is live, a bar appears with an <strong>Update</strong> button; one tap fetches and loads it. No more force-quitting to get updates.</li>
+                        <li><strong>Manual check</strong> — Settings → “Check for app update” asks the server immediately and reports either the update bar or “You're on the latest version”.</li>
+                    </ul>
                     <h4>v1.11.2 <span class="vh-date">— 31 Aug 2026</span></h4>
                     <p>Buttons where the thumb lives.</p>
                     <ul>
@@ -395,7 +403,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=21"></script>
-    <script src="js/app.js?v=21"></script>
+    <script src="js/icons.js?v=22"></script>
+    <script src="js/app.js?v=22"></script>
 </body>
 </html>

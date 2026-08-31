@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.11.2';
+const APP_VERSION = '1.11.3';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -350,15 +350,54 @@ function maybeCelebrateStreak(habit) {
 
 let toastTimer = null;
 
-function showToast(msg, undoFn) {
+function showToast(msg, actionFn, actionLabel, duration) {
     const t = document.querySelector('#toast');
     t.querySelector('#toast-msg').textContent = msg;
-    t.querySelector('#toast-undo').hidden = !undoFn;
-    t._undo = undoFn || null;
+    const btn = t.querySelector('#toast-undo');
+    btn.hidden = !actionFn;
+    btn.textContent = actionLabel || 'Undo';
+    t._undo = actionFn || null;
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+    toastTimer = setTimeout(() => { t.hidden = true; }, duration || 5000);
 }
+
+/* ================= self-update check ================= */
+
+let lastUpdateCheck = 0;
+
+async function checkForUpdate(manual) {
+    const nowMs = Date.now();
+    if (!manual && nowMs - lastUpdateCheck < 5 * 60000) return;
+    lastUpdateCheck = nowMs;
+    try {
+        const res = await fetch('version.json?vercheck=' + nowMs, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.version && data.version !== APP_VERSION) {
+            showToast(`Version ${data.version} is ready`, applyUpdate, 'Update', 12000);
+        } else if (manual) {
+            showToast(`You're on the latest version (v${APP_VERSION})`);
+        }
+    } catch (e) {
+        if (manual) showToast('Update check failed \u2014 are you online?');
+    }
+}
+
+function applyUpdate() {
+    const reload = () => location.reload();
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+        navigator.serviceWorker.getRegistration()
+            .then(r => r && r.update())
+            .then(reload, reload);
+    } else {
+        reload();
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkForUpdate(false);
+});
 
 /* ================= today screen ================= */
 
@@ -1825,6 +1864,12 @@ function setupSheetDismiss() {
         });
 }
 setupSheetDismiss();
+
+$('#btn-update').addEventListener('click', () => {
+    $('#sheet-settings').hidden = true;
+    checkForUpdate(true);
+});
+setTimeout(() => checkForUpdate(false), 2500);
 
 applyTheme();
 if (navigator.storage && navigator.storage.persist) {

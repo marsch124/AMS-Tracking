@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.12.2';
+const APP_VERSION = '1.12.3';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -546,6 +546,11 @@ function buildCard(habit) {
         if (active) {
             const elapsed = Date.now() - active.s;
             num.textContent = fmtDuration(elapsed);
+            num.style.cursor = 'pointer';
+            num.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openFastSheet(habit, active, true);
+            });
             const goalMs = goalMsFor(habit, active);
             if (goalMs && elapsed >= goalMs) {
                 num.classList.add('goal-reached');
@@ -1175,8 +1180,8 @@ function toLocalInput(ms) {
 
 const FAST_GOAL_PRESETS = [13, 15, 16, 18];
 
-function openFastSheet(habit, session) {
-    fastEdit = { habitId: habit.id, session, goal: session.g || null };
+function openFastSheet(habit, session, fromToday) {
+    fastEdit = { habitId: habit.id, session, goal: session.g || null, fromToday: !!fromToday };
     $('#fast-sheet-title').textContent = session.e ? 'Edit fast' : 'Fast in progress';
     $('#fast-start').value = toLocalInput(session.s);
     $('#fast-end-wrap').hidden = !session.e;
@@ -1250,21 +1255,25 @@ $('#btn-fast-save').addEventListener('click', () => {
     habit.sessions.sort((a, b) => a.s - b.s);
     save();
     $('#sheet-fast').hidden = true;
-    openDetail(habit.id, true);
+    if (fastEdit.fromToday) renderToday();
+    else openDetail(habit.id, true);
 });
 
 $('#btn-fast-delete').addEventListener('click', () => {
     const habit = state.habits.find(h => h.id === fastEdit.habitId);
     const session = fastEdit.session;
     habit.sessions = habit.sessions.filter(x => x !== session);
+    const fromToday = fastEdit.fromToday;
     save();
     $('#sheet-fast').hidden = true;
-    openDetail(habit.id, true);
+    if (fromToday) renderToday();
+    else openDetail(habit.id, true);
     showToast(session.e ? 'Fast deleted' : 'Running fast deleted', () => {
         habit.sessions.push(session);
         habit.sessions.sort((a, b) => a.s - b.s);
         save();
-        openDetail(habit.id, true);
+        if (fromToday) renderToday();
+        else openDetail(habit.id, true);
     });
 });
 

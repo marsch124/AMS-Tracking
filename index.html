@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=34">
+    <link rel="stylesheet" href="css/style.css?v=35">
 </head>
 <body>
 
@@ -74,6 +74,8 @@
         <div class="sheet">
             <div class="sheet-handle"></div>
             <h2 id="sheet-title">New habit</h2>
+
+            <div id="sheet-preview" class="sheet-preview" aria-hidden="true"></div>
 
             <label class="field-label" for="f-name">Name</label>
             <input id="f-name" type="text" maxlength="40" placeholder="e.g. Meditate" autocomplete="off">
@@ -166,11 +168,11 @@
                     <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Small letters mark where each month begins, and tapping any pixel shows that day's date, status, and note. Timer habits also list recent fasts with average and longest duration.</p>
                     <p><strong>Year poster</strong> — the share button <span data-hi="export" class="hi-inline"></span> next to a year heading in the detail view turns that year into a poster image: the habit's icon and name, all 365 days as a month-by-month pixel grid in the habit's color (skip days dashed), and the year's headline stats underneath. On iPhone it opens the share sheet, so the picture can go straight to Messages, Photos, or Instagram; elsewhere it downloads as a PNG. Past years get their own poster with days-done totals.</p>
                     <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
-                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today, and the settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
+                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today — and when the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
-                    <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
+                    <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). A live preview at the top of the sheet shows the card exactly as it will look on the Today screen — it follows every keystroke of the name and every icon, color, type, and weekday choice. Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
                     <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit. At the top, the <strong>Achievements</strong> card keeps what the confetti celebrated: earned streak milestones per habit, your longest fast, best streak, and total days tracked.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
@@ -184,6 +186,13 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.19 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>The feel, part two.</p>
+                    <ul>
+                        <li><strong>Day-complete moment</strong> — checking off the last scheduled habit of the day makes the progress bar pop briefly, glow, and draw a small hand-drawn checkmark next to “All N done”. Ending the day's fast counts too. Purely celebratory, fires once per completion, and stays still when the system's reduce-motion setting is on.</li>
+                        <li><strong>Native-feeling screen changes</strong> — opening a habit's details or the stats screen now slides in from the right, and going back slides home from the left, like iOS push/pop navigation. Short, subtle, and disabled under reduced motion.</li>
+                        <li><strong>Live preview when adding or editing</strong> — the add/edit sheet opens with a mini Today card at the top that updates with every keystroke and every icon, color, type, and weekday pick, so you see exactly what the card will look like before saving.</li>
+                    </ul>
                     <h4>v1.18 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>Find your way.</p>
                     <ul>
@@ -554,7 +563,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=34"></script>
-    <script src="js/app.js?v=34"></script>
+    <script src="js/icons.js?v=35"></script>
+    <script src="js/app.js?v=35"></script>
 </body>
 </html>

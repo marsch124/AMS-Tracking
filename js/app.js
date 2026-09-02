@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.18';
+const APP_VERSION = '1.19';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -432,10 +432,17 @@ function renderToday() {
         const all = doneToday === scheduledToday.length;
         $('#dp-fill').style.width = Math.round(100 * doneToday / scheduledToday.length) + '%';
         $('#dp-fill').classList.toggle('complete', all);
-        $('#dp-text').textContent = all
-            ? `All ${scheduledToday.length} done`
+        $('#dp-text').innerHTML = all
+            ? icon('check', 'dp-check') + `All ${scheduledToday.length} done`
             : `${doneToday} of ${scheduledToday.length} done`;
+        // the last check-off of the day earns a short flourish (once per completion)
+        dp.classList.remove('dp-celebrate');
+        if (all && dayJustCompleted) {
+            void dp.offsetWidth; // restart the animation on repeat completions
+            dp.classList.add('dp-celebrate');
+        }
     }
+    dayJustCompleted = false;
 
     visible.forEach(habit => list.appendChild(buildCard(habit)));
 }
@@ -779,6 +786,15 @@ function renderWeekReview() {
 }
 
 let justChecked = null; // habit id whose checkmark should draw itself
+let dayJustCompleted = false; // set when a live action finishes the day
+
+/* True when every habit scheduled (and not skip-marked) today is done */
+function dayComplete() {
+    const todayKey = dateKey(new Date());
+    const sched = state.habits.filter(h => !h.archived &&
+        isScheduled(h, new Date()) && !skipSet(h)[todayKey]);
+    return sched.length > 0 && sched.every(h => doneSet(h)[todayKey]);
+}
 
 function toggleToday(habit) {
     const key = dateKey(new Date());
@@ -786,7 +802,10 @@ function toggleToday(habit) {
     if (habit.skip && habit.skip[key]) delete habit.skip[key];
     if (habit.done[key]) delete habit.done[key];
     else habit.done[key] = 1;
-    if (habit.done[key]) justChecked = habit.id;
+    if (habit.done[key]) {
+        justChecked = habit.id;
+        if (dayComplete()) dayJustCompleted = true;
+    }
     save();
     renderToday();
     if (habit.done[key]) maybeCelebrateStreak(habit);
@@ -818,6 +837,7 @@ function toggleTimer(habit) {
     const active = activeSession(habit);
     if (active) {
         active.e = Date.now();
+        if (dayComplete()) dayJustCompleted = true;
         save();
         renderToday();
         showToast(`Fast ended \u2014 ${fmtDuration(active.e - active.s)} h`, () => {
@@ -1910,12 +1930,24 @@ $('#btn-delete').addEventListener('click', () => {
 
 $('#btn-edit').addEventListener('click', () => openSheet(detailId));
 
+let currentScreen = 'today';
+
 function showScreen(which) {
+    const from = currentScreen;
+    currentScreen = which;
     $('#screen-today').hidden = which !== 'today';
     $('#screen-detail').hidden = which !== 'detail';
     $('#screen-stats').hidden = which !== 'stats';
     if (which === 'today') renderToday();
     if (which === 'stats') renderStats();
+    // slide the incoming screen: deeper views arrive from the right,
+    // going home slides back in from the left (iOS push/pop feel)
+    const el = $('#screen-' + which);
+    el.classList.remove('screen-fwd', 'screen-back');
+    if (from !== which) {
+        void el.offsetWidth;
+        el.classList.add(which === 'today' ? 'screen-back' : 'screen-fwd');
+    }
     window.scrollTo(0, 0);
 }
 
@@ -2100,6 +2132,34 @@ function openSheet(editId) {
     if (!habit) setTimeout(() => $('#f-name').focus(), 250);
 }
 
+/* Mini Today card at the top of the add/edit sheet, redrawn on every
+   name keystroke and chip choice so the pick is judged in context. */
+function renderSheetPreview() {
+    const box = $('#sheet-preview');
+    const nm = $('#f-name').value.trim() || 'Your habit';
+    const nameCls = nm.length > 24 ? ' name-xs' : nm.length > 15 ? ' name-sm' : '';
+    const todayIdx = weekdayIdx(new Date());
+    let dots = '';
+    for (let i = 0; i < 7; i++) {
+        const offDay = sheet.type === 'daily' && !sheet.days[i];
+        const on = i === todayIdx && !offDay;
+        dots += `<span class="wd${on ? ' on' : ''}${offDay ? ' off-day' : ''}"` +
+            (on ? ` style="background:${sheet.color}"` : '') + `>${DAY_NAMES[i]}</span>`;
+    }
+    const timer = sheet.type === 'timer';
+    const statNum = timer ? icon('play') : '1' + icon('flame', 'flame');
+    const statLbl = timer ? 'tap to start' : sheet.type === 'weekly' ? 'week' : 'day';
+    box.innerHTML =
+        `<div class="habit-card" style="background:${tint(sheet.color, 10)}">` +
+        `<div class="action-wrap"><button class="habit-action undone" tabindex="-1" ` +
+        `style="color:${sheet.color}">${timer ? icon('play') : ''}</button></div>` +
+        `<div class="habit-main"><p class="habit-name${nameCls}">` +
+        `<span class="habit-icon" style="color:${sheet.color}">${icon(sheet.icon)}</span>${escapeHtml(nm)}</p>` +
+        `<div class="week-dots">${dots}</div></div>` +
+        `<div class="habit-stat"><div class="stat-number" style="color:${sheet.color}">${statNum}</div>` +
+        `<div class="stat-label">${statLbl}</div></div></div>`;
+}
+
 function renderSheetChips() {
     // icons, filtered by the search box (names + English/German keywords)
     const q = ($('#f-icon-search').value || '').trim().toLowerCase();
@@ -2165,9 +2225,12 @@ function renderSheetChips() {
         });
         dayRow.appendChild(c);
     });
+
+    renderSheetPreview();
 }
 
 $('#f-icon-search').addEventListener('input', renderSheetChips);
+$('#f-name').addEventListener('input', renderSheetPreview);
 
 $('#btn-add').addEventListener('click', () => openSheet(null));
 $('#btn-sheet-cancel').addEventListener('click', () => { $('#sheet-edit').hidden = true; });

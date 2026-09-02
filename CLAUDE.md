@@ -83,6 +83,11 @@ app on his iPhone as the real test environment.
   calendar header (off-month only), fasting-calendar legend, tappable
   week dots (openDetailAt + cal-flash highlight), today's-note dot on
   Today cards with toast + Edit.
+- v1.19 "The feel, part two" — SHIPPED: day-complete flourish on the
+  progress bar (dayComplete()/dp-celebrate, fires on the last live
+  check-off or fast stop), iOS-style push/pop screen slides
+  (screen-fwd/screen-back in showScreen), live mini-card preview in
+  the add/edit sheet (renderSheetPreview). All reduced-motion safe.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -103,19 +108,12 @@ cabinet as v1.17 (current: CACHE_NAME ams-tracking-v33, asset links
 
 **APPROVED and in progress (2 Sep 2026): ten UI improvements, Martin
 said "All ten in sensible batches please." Ship as three releases,
-each through the full release checklist above. v1.18 has shipped;
-v1.19 and v1.20 remain.**
+each through the full release checklist above. v1.18 and v1.19 have
+shipped; v1.20 remains.**
 
 v1.18 "Find your way" — SHIPPED (see roadmap above).
 
-v1.19 "The feel, part two":
-5. Day-complete moment: when the last scheduled habit of the day is
-   checked off, the day-progress bar fills with a short flourish and
-   a hand-drawn checkmark; honor prefers-reduced-motion.
-6. Screen transitions: slide-in/out between Today <-> detail/stats,
-   native-iOS feel, reduced-motion safe.
-7. Live preview in the habit add/edit sheet: a mini Today card at the
-   top of the sheet updates as name/icon/color are chosen.
+v1.19 "The feel, part two" — SHIPPED (see roadmap above).
 
 v1.20 "Your hands, your eyes" (gesture-heavy + layout-wide, together
 so the gestures don't conflict):

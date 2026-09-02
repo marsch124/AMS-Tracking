@@ -1375,3 +1375,58 @@ html, body {
     background: currentColor;
     box-shadow: 0 0 0 2.5px color-mix(in srgb, currentColor 25%, transparent);
 }
+
+/* ---------- v1.19: the feel, part two ---------- */
+
+/* day-complete moment: bar pops, the checkmark draws itself */
+.dp-check {
+    width: 15px;
+    height: 15px;
+    vertical-align: -3px;
+    margin-right: 4px;
+    color: #2fa96d;
+}
+.dp-celebrate .dp-bar { animation: dp-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes dp-pop {
+    0% { transform: scaleY(1); }
+    35% { transform: scaleY(1.9); }
+    100% { transform: scaleY(1); }
+}
+.dp-celebrate .dp-fill { animation: dp-shine 0.7s ease; }
+@keyframes dp-shine {
+    0% { filter: brightness(1); }
+    40% { filter: brightness(1.45); }
+    100% { filter: brightness(1); }
+}
+.dp-celebrate .dp-check path {
+    stroke-dasharray: 30;
+    stroke-dashoffset: 30;
+    animation: ink-draw 0.35s ease-out 0.25s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+    .dp-celebrate .dp-bar, .dp-celebrate .dp-fill { animation: none; }
+    .dp-celebrate .dp-check path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* screen transitions: push in from the right, pop back from the left */
+.screen-fwd { animation: screen-fwd 0.24s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.screen-back { animation: screen-back 0.24s cubic-bezier(0.3, 0.8, 0.3, 1); }
+@keyframes screen-fwd {
+    from { transform: translateX(64px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes screen-back {
+    from { transform: translateX(-64px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .screen-fwd, .screen-back { animation: none; }
+}
+
+/* live mini-card preview in the add/edit sheet */
+.sheet-preview { pointer-events: none; }
+.sheet-preview .habit-card {
+    cursor: default;
+    box-shadow: var(--shadow);
+    margin: 2px 0 4px;
+}

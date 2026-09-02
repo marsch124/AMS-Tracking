@@ -1070,20 +1070,18 @@ html, body {
 
 .dp-bar {
     flex: 1;
-    height: 6px;
-    border-radius: 3px;
+    height: 7px;
+    display: flex;
+    gap: 3px;
+}
+
+/* v1.22: one segment per habit scheduled today */
+.dp-seg {
+    flex: 1;
+    border-radius: 3.5px;
     background: var(--border);
-    overflow: hidden;
+    transition: background 0.25s ease;
 }
-
-.dp-fill {
-    height: 100%;
-    border-radius: 3px;
-    background: var(--accent);
-    transition: width 0.3s ease, background 0.3s ease;
-}
-
-.dp-fill.complete { background: #2fa96d; }
 
 .dp-text {
     font-size: 0.7353rem;
@@ -1406,7 +1404,7 @@ html, body {
     35% { transform: scaleY(1.9); }
     100% { transform: scaleY(1); }
 }
-.dp-celebrate .dp-fill { animation: dp-shine 0.7s ease; }
+.dp-celebrate .dp-seg.filled { animation: dp-shine 0.7s ease; }
 @keyframes dp-shine {
     0% { filter: brightness(1); }
     40% { filter: brightness(1.45); }
@@ -1418,7 +1416,7 @@ html, body {
     animation: ink-draw 0.35s ease-out 0.25s forwards;
 }
 @media (prefers-reduced-motion: reduce) {
-    .dp-celebrate .dp-bar, .dp-celebrate .dp-fill { animation: none; }
+    .dp-celebrate .dp-bar, .dp-celebrate .dp-seg.filled { animation: none; }
     .dp-celebrate .dp-check path { animation: none; stroke-dashoffset: 0; }
 }
 
@@ -1486,14 +1484,18 @@ html, body {
 }
 .version-pill:active { transform: scale(0.94); }
 
-/* tiny words under the fasting card's tap areas */
-.habit-card.zoned { flex-wrap: wrap; }
+/* tiny words under the fasting card's tap areas — laid over the card's
+   bottom padding so the card itself stays a single line (v1.21 wrapped) */
+.habit-card.zoned { position: relative; padding-bottom: 23px; }
 .zone-labels {
-    flex: 1 1 100%;
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 4px;
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 1px 0 -3px;
+    pointer-events: none;
 }
 .zone-labels span {
     font-size: 0.5294rem;

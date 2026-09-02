@@ -105,6 +105,22 @@ app on his iPhone as the real test environment.
   fasting card (.zone-labels: start/stop under the button, stats under
   the middle, edit under the running timer — edit only while a fast
   runs, matching when that zone exists).
+- v1.22 "Fast to start, honest offline, segmented day bar" — SHIPPED
+  (hotfix + Martin's request after live testing): sw.js overhaul —
+  install uses cache:'reload' so the versioned cache can NEVER be
+  filled from the HTTP cache (GitHub Pages max-age=600 caused the
+  2 Sep white screen: stale/mismatched files right after a deploy),
+  navigations revalidate (cache:'no-cache') and are capped at 2s
+  before the cached app shows (NAV_TIMEOUT), assets are cache-first
+  with ignoreSearch (?v= requests now hit the pre-cached files ->
+  instant startup, offline-proof), and a failed asset is never
+  answered with index.html anymore. Zoned fasting card back to ONE
+  line (labels absolutely positioned over bottom padding instead of
+  flex-wrap — v1.21 regression). Day bar segmented: one .dp-seg per
+  scheduled habit, filled ones colored hsl(10..125) red->green with
+  progress, #2fa96d when complete; flourish kept. Update-path tests
+  live in the session scratchpad (v1.17->new through the real SW,
+  plus offline relaunch with the server killed).
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -127,6 +143,7 @@ All ten UI improvements Martin approved on 2 Sep 2026 ("All ten in
 sensible batches please") have shipped as three releases: v1.18
 "Find your way", v1.19 "The feel, part two", and v1.20 "Your hands,
 your eyes", followed by Martin's v1.21 version-pill + zone-label
-request (current: CACHE_NAME ams-tracking-v37, asset links ?v=37).
-Details in the roadmap above. Awaiting Martin's on-phone feedback;
-nothing else is queued.
+request and the v1.22 hotfix + segmented day bar (current:
+CACHE_NAME ams-tracking-v38, asset links ?v=38). Details in the
+roadmap above. Awaiting Martin's on-phone feedback; nothing else is
+queued.

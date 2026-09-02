@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.21';
+const APP_VERSION = '1.22';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -430,8 +430,18 @@ function renderToday() {
     dp.hidden = scheduledToday.length === 0;
     if (scheduledToday.length) {
         const all = doneToday === scheduledToday.length;
-        $('#dp-fill').style.width = Math.round(100 * doneToday / scheduledToday.length) + '%';
-        $('#dp-fill').classList.toggle('complete', all);
+        // one segment per scheduled habit; the filled ones walk the traffic
+        // light from red (first check-off) to green (day complete)
+        const bar = $('#dp-bar');
+        bar.innerHTML = '';
+        const p = scheduledToday.length > 1 ? (doneToday - 1) / (scheduledToday.length - 1) : 1;
+        const color = all ? '#2fa96d' : `hsl(${Math.round(10 + 115 * p)}, 62%, 46%)`;
+        scheduledToday.forEach((h, i) => {
+            const seg = document.createElement('span');
+            seg.className = 'dp-seg' + (i < doneToday ? ' filled' : '');
+            if (i < doneToday) seg.style.background = color;
+            bar.appendChild(seg);
+        });
         $('#dp-text').innerHTML = all
             ? icon('check', 'dp-check') + `All ${scheduledToday.length} done`
             : `${doneToday} of ${scheduledToday.length} done`;

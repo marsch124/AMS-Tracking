@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=37">
+    <link rel="stylesheet" href="css/style.css?v=38">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
         </div>
         <p id="today-date" class="page-subtitle"></p>
         <div id="day-progress" class="day-progress" hidden>
-            <div class="dp-bar"><div id="dp-fill" class="dp-fill"></div></div>
+            <div id="dp-bar" class="dp-bar"></div>
             <span id="dp-text" class="dp-text"></span>
         </div>
 
@@ -174,7 +174,7 @@
                     <p><strong>Swipe to act</strong> — on the Today screen, swipe a card to the right to mark the habit done for today (for fasting: it stops a running fast, or opens the record-hours sheet when none is running), or swipe left to excuse today as a skip day. A colored ring shows when the swipe is far enough to fire, and every swipe action has the usual Undo bar. Days already done or skipped just tell you so instead of double-applying.</p>
                     <p><strong>Drag to reorder</strong> — press and hold a card until it lifts, then drag it up or down the list (works in the grid too) and let go. The new order is saved immediately, with Undo in the bar; Settings → Reorder habits still exists for precise arrow-button moves. The press-and-hold shortcuts on the round button itself (yesterday done, tonight's goal) are untouched — the drag starts on the card body.</p>
                     <p><strong>Text size</strong> — the app follows the iPhone's Display &amp; Text Size setting: make text larger (or smaller) there and every screen scales with it, icons and buttons included.</p>
-                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today — and when the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
+                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
@@ -192,6 +192,15 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.22 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>Fast to start, honest offline, and a day bar with segments.</p>
+                    <ul>
+                        <li><strong>Segmented day progress</strong> — the “3 of 5 done” bar is now made of one segment per habit scheduled today, so you can count the filled pieces at a glance. It adapts automatically when habits are added, removed, archived, or skip-marked. The filled part walks the traffic light as the day progresses — red when the day has barely started, amber in the middle, green when everything is done — and the completion flourish stays.</li>
+                        <li><strong>Much faster startup</strong> — the offline cache now answers requests for the app's style and code files directly instead of asking the network on every launch, and a slow connection can no longer hold up the start: after 2 seconds the stored app appears immediately while the network update finishes in the background for next time.</li>
+                        <li><strong>Update mismatches fixed</strong> — the updater could fill its offline store with files from the previous version, because the web server is allowed to answer from a 10-minute cache right after a release. Installing now demands truly fresh files, which is what broke today's update on the phone.</li>
+                        <li><strong>White-screen fix</strong> — when a style or code file failed to load over a bad connection, the app used to answer with the wrong content, which could paint everything white and drop the icons (as seen right after today's update). A failed file now fails honestly and comes from the offline cache instead, so this can't happen again.</li>
+                        <li><strong>Fasting card back on one line</strong> — v1.21's tap-area words made the card wrap on narrower screens; the labels now sit in the card's bottom edge and the card is a single line again.</li>
+                    </ul>
                     <h4>v1.21 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>Signed and signposted.</p>
                     <ul>
@@ -583,7 +592,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=37"></script>
-    <script src="js/app.js?v=37"></script>
+    <script src="js/icons.js?v=38"></script>
+    <script src="js/app.js?v=38"></script>
 </body>
 </html>

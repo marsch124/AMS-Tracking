@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ams-tracking-v37';
+const CACHE_NAME = 'ams-tracking-v38';
 
 const urlsToCache = [
     '/AMS-Tracking/',
@@ -14,14 +14,19 @@ const urlsToCache = [
     '/AMS-Tracking/icons/favicon-64.png'
 ];
 
+/* cache: 'reload' bypasses the HTTP cache (GitHub Pages caches for 10
+   minutes), so a fresh install can never fill the versioned cache with
+   files from the PREVIOUS deploy — that mismatch broke the 2 Sep update. */
+const freshRequests = (urls) => urls.map((u) => new Request(u, { cache: 'reload' }));
+
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(urlsToCache).catch((error) => {
+            return cache.addAll(freshRequests(urlsToCache)).catch((error) => {
                 console.error('Cache addAll error:', error);
-                return cache.addAll(urlsToCache.filter((url) => {
+                return cache.addAll(freshRequests(urlsToCache.filter((url) => {
                     return url !== '/AMS-Tracking/';
-                }));
+                })));
             });
         })
     );
@@ -46,6 +51,8 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+const NAV_TIMEOUT = 2000; // ms a launch may wait on the network before the cached app shows
+
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
@@ -55,42 +62,53 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Network-first for page navigations so app updates (with fresh ?v=
-    // asset links) are picked up; cached copy is the offline fallback.
+    // Navigations: network-first so updates arrive, but capped at NAV_TIMEOUT —
+    // on a slow connection the cached app appears at once and the network
+    // response only refreshes the cache for the next launch.
     if (event.request.mode === 'navigate') {
-        event.respondWith(
-            fetch(event.request)
-                .then((response) => {
-                    if (response && response.status === 200) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseClone);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() =>
-                    caches.match(event.request).then((r) =>
-                        r || caches.match('/AMS-Tracking/index.html')))
-        );
+        event.respondWith((async () => {
+            const cached = await caches.match(event.request, { ignoreSearch: true }) ||
+                await caches.match('/AMS-Tracking/index.html');
+            const network = fetch(event.request.url, { cache: 'no-cache' }).then((response) => {
+                if (response && response.status === 200) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                }
+                return response;
+            });
+            try {
+                const response = cached
+                    ? await Promise.race([
+                        network.catch(() => null),
+                        new Promise((resolve) => setTimeout(() => resolve(null), NAV_TIMEOUT))
+                    ])
+                    : await network;
+                if (response && response.status === 200) return response;
+                if (cached) return cached;
+                return response || Response.error();
+            } catch (e) {
+                if (cached) return cached;
+                throw e;
+            }
+        })());
         return;
     }
 
+    // Assets: cache-first. Entries live in a per-version cache that is rebuilt
+    // on every update, so ignoring the ?v= query is safe — and it means CSS,
+    // JS, and icons load instantly from disk instead of hitting the network
+    // on every launch. A failed asset fails honestly: it is NEVER answered
+    // with index.html (that once painted the whole app white).
     event.respondWith(
-        caches.match(event.request).then((response) => {
+        caches.match(event.request, { ignoreSearch: true }).then((response) => {
             if (response) return response;
-
-            return fetch(event.request)
-                .then((response) => {
-                    if (response && response.status === 200) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseClone);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() => caches.match('/AMS-Tracking/index.html'));
+            return fetch(event.request).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const clone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                }
+                return networkResponse;
+            });
         })
     );
 });

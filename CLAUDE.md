@@ -95,7 +95,48 @@ All five features Martin approved on 2 Sep 2026 ("all five in
 sequence") have shipped: eating-window countdown + forgotten-stop
 guard as v1.16, and hours/note sheets + history import + trophy
 cabinet as v1.17 (current: CACHE_NAME ams-tracking-v33, asset links
-?v=33). The pipeline is empty — gather Martin's on-phone feedback and
-agree on new ideas with him before building anything further. Follow the
-release checklist above for every future release; the self-updater
-shows Martin the Update button automatically.
+?v=33).
+
+**APPROVED and in progress (2 Sep 2026): ten UI improvements, Martin
+said "All ten in sensible batches please." Ship as three releases,
+each through the full release checklist above. Nothing built yet.**
+
+v1.18 "Find your way" — four small wins:
+1. Jump-to-today button in the detail month calendar header, shown
+   only when the viewed month (calMonth, js/app.js ~line 881) is not
+   the current month; resets calMonth and re-renders.
+2. One-line legend under the fasting (timer) calendar explaining the
+   circles: green = goal met, gray = fell short, red = running,
+   dashed = skip day. Timer habits only.
+3. Tappable week dots on Today cards (.week-dots built ~line 624 in
+   buildCard): tapping a dot opens that habit's detail with calMonth
+   set to that day's month and briefly highlights the day cell.
+4. Note indicator on Today cards when habit.notes[todayKey] exists: a
+   small dot; tapping shows the note in a toast with an Edit action
+   that opens the note sheet (editDayNote).
+
+v1.19 "The feel, part two":
+5. Day-complete moment: when the last scheduled habit of the day is
+   checked off, the day-progress bar fills with a short flourish and
+   a hand-drawn checkmark; honor prefers-reduced-motion.
+6. Screen transitions: slide-in/out between Today <-> detail/stats,
+   native-iOS feel, reduced-motion safe.
+7. Live preview in the habit add/edit sheet: a mini Today card at the
+   top of the sheet updates as name/icon/color are chosen.
+
+v1.20 "Your hands, your eyes" (gesture-heavy + layout-wide, together
+so the gestures don't conflict):
+8. Drag-to-reorder habits on the Today list via long-press drag;
+   persist order in state (habit order in state.habits).
+9. Swipe actions on Today cards: swipe right = mark done, swipe
+   left = mark today skipped, both with the usual undo toast. Must
+   coexist with the long-press drag and existing long-press handlers
+   (also-yesterday, per-fast goal).
+10. Respect the iPhone text-size setting: move fixed px font sizes to
+    scalable units (rem with -apple-system text sizing) so the iOS
+    Display & Text Size preference scales the app without breaking
+    layouts; audit both themes for contrast while in there.
+
+Follow the release checklist above for every release; the
+self-updater shows Martin the Update button automatically. Present
+each release to Martin for on-phone feedback as it ships.

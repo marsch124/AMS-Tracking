@@ -61,6 +61,10 @@ app on his iPhone as the real test environment.
 - v1.13 "Life happens — in bulk" — SHIPPED: vacation range (bulk skip
   with apply-to-all, future months navigable, tappable future skip
   days) and also-yesterday long-press on check circles.
+- v1.14 "Know where you stand" — SHIPPED: weekly Monday review card
+  (per-habit last week + streak delta + avg fast vs prior week,
+  dismissable via settings.lastReviewWeek) and fasting-stages track
+  in the fasting detail (live marker, not-medical-advice hint).
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -73,22 +77,10 @@ app on his iPhone as the real test environment.
 
 ## Proposed next features (suggested to Martin 31 Aug 2026)
 
-Batch (1+3) shipped as v1.13 on 2 Sep 2026 (CACHE_NAME ams-tracking-v27,
-asset links ?v=27). Remaining suggested batching: (2+4), then (5).
-Martin picked 1+3 explicitly; ask before building 2, 4 or 5.
-
-2. **Fasting stages** — in the fasting detail (and/or under the running
-   timer), show commonly-cited fast phases with the current one
-   highlighted: 0-4h digestion, 4-12h transition, 12-16h fat burning,
-   16h+ deep/ketosis territory. Draw as a horizontal hand-drawn track
-   with markers; MUST carry a visible "popular approximation, not
-   medical advice" hint. Live-updates with the existing 20s tick.
-
-4. **Week in review** — on first open in a new ISO week (store
-   settings.lastReviewWeek = weekStart key), show a dismissable card
-   above the habit list: per habit last week's done/scheduled, streak
-   delta, avg fast h vs week before. Pure derived data, no schema
-   change except settings.lastReviewWeek.
+Batches (1+3) and (2+4) shipped as v1.13 and v1.14 on 2 Sep 2026
+(current: CACHE_NAME ams-tracking-v28, asset links ?v=28). Only (5)
+remains; Martin picked the shipped batches explicitly — ask before
+building 5.
 
 5. **Year-poster export** — button in habit detail renders the year
    pixel grid + name + streak stats to a canvas (~1080x1350) in app

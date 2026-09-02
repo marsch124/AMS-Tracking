@@ -1175,3 +1175,60 @@ html, body {
     height: 20px;
     accent-color: var(--accent);
 }
+
+/* ---------- v1.14: week in review + fasting stages ---------- */
+
+.wr-card {
+    background: var(--surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 12px 16px 6px;
+    margin-bottom: 14px;
+}
+.wr-head { display: flex; align-items: center; gap: 8px; }
+.wr-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+.wr-range { flex: 1; color: var(--text-dim); font-size: 13px; }
+.wr-close {
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    cursor: pointer;
+}
+.wr-close .hi { width: 16px; height: 16px; }
+.wr-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    font-size: 14.5px;
+    cursor: pointer;
+}
+.wr-row .habit-icon .hi { width: 18px; height: 18px; }
+.wr-name {
+    flex: 1;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wr-mid { color: var(--text-dim); white-space: nowrap; }
+.wr-right { font-weight: 800; white-space: nowrap; min-width: 40px; text-align: right; }
+.wr-right.up { color: #2fa96d; }
+.wr-right.down { color: #d9463e; }
+.wr-right.flat { color: var(--text-dim); }
+.wr-flame { width: 13px; height: 13px; vertical-align: -2px; margin-left: 1px; }
+
+.stage-track { width: 100%; height: auto; margin-top: 2px; }
+.stage-now { margin: 2px 0 8px; font-size: 14.5px; font-weight: 600; }
+.stage-rows { border-top: 1px solid var(--border); }
+.stage-row { display: flex; gap: 10px; padding: 7px 0; align-items: flex-start; }
+.stage-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: none; }
+.stages-active .stage-row:not(.cur) { opacity: 0.55; }
+.stage-name { font-weight: 700; font-size: 14.5px; }
+.stage-range { color: var(--text-dim); font-size: 13px; font-weight: 600; margin-left: 5px; }
+.stage-desc { display: block; color: var(--text-dim); font-size: 13px; }

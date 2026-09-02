@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -159,9 +159,10 @@ function weekHasSkip(habit, ws) {
     return false;
 }
 
-function weeklyStreak(habit) {
+/* ref (optional) computes the streak as of that day instead of today */
+function weeklyStreak(habit, ref) {
     const target = habit.target || 1;
-    let w = weekStart(new Date());
+    let w = weekStart(ref || new Date());
     let streak = 0;
     // the week in progress counts once met, but never breaks the streak
     if (weekDoneCount(habit, w) >= target) streak++;
@@ -198,10 +199,10 @@ function weeklyStats(habit) {
     return { weeksMet, weeksTotal, best };
 }
 
-function currentStreak(habit) {
+/* ref (optional) computes the streak as of that day instead of today */
+function currentStreak(habit, ref) {
     const done = doneSet(habit);
-    const today = new Date();
-    let d = new Date(today);
+    let d = ref ? new Date(ref) : new Date();
     // Today doesn't break the streak while it's still pending
     if (isScheduled(habit, d) && !done[dateKey(d)]) d = addDays(d, -1);
     const skip = skipSet(habit);
@@ -411,6 +412,8 @@ function renderToday() {
     $('#today-date').textContent = new Date().toLocaleDateString(undefined, {
         weekday: 'long', day: 'numeric', month: 'long'
     });
+
+    renderWeekReview();
 
     const list = $('#habit-list');
     list.innerHTML = '';
@@ -632,6 +635,111 @@ function buildWeekDots(habit, done) {
     return row;
 }
 
+/* ================= week in review ================= */
+
+/* Finished fasts that ENDED within the week starting at ws */
+function weekFastStats(habit, ws) {
+    const we = addDays(ws, 7);
+    const durs = (habit.sessions || [])
+        .filter(s => s.e && new Date(s.e) >= ws && new Date(s.e) < we)
+        .map(s => s.e - s.s);
+    return { n: durs.length, avg: durs.length ? durs.reduce((a, b) => a + b, 0) / durs.length : null };
+}
+
+/* Once per ISO week: how last week went, per habit. Dismiss stores the
+   week key so the card stays away until the next Monday. Derived data
+   only — the sole stored value is settings.lastReviewWeek. */
+function renderWeekReview() {
+    const box = $('#week-review');
+    box.hidden = true;
+    box.innerHTML = '';
+    const thisWs = weekStart(new Date());
+    const thisKey = dateKey(thisWs);
+    if (state.settings.lastReviewWeek === thisKey) return;
+    const habits = state.habits.filter(h =>
+        !h.archived && (!h.createdAt || keyToDate(h.createdAt) < thisWs));
+    // nothing to review on a fresh install or an empty last week
+    const hasHistory = habits.some(h =>
+        Object.keys(doneSet(h)).some(k => k < thisKey) ||
+        Object.keys(skipSet(h)).some(k => k < thisKey));
+    if (!habits.length || !hasHistory) return;
+
+    const lastWs = addDays(thisWs, -7);
+    const endLast = addDays(thisWs, -1);   // Sunday of last week
+    const endPrev = addDays(thisWs, -8);   // Sunday of the week before
+    const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+    const card = document.createElement('div');
+    card.className = 'wr-card';
+    const head = document.createElement('div');
+    head.className = 'wr-head';
+    head.innerHTML = `<h3>Last week</h3>` +
+        `<span class="wr-range">${fmtD(lastWs)} \u2013 ${fmtD(endLast)}</span>`;
+    const close = document.createElement('button');
+    close.className = 'wr-close';
+    close.innerHTML = icon('x');
+    close.setAttribute('aria-label', 'Dismiss week review');
+    close.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.settings.lastReviewWeek = thisKey;
+        save();
+        renderToday();
+    });
+    head.appendChild(close);
+    card.appendChild(head);
+
+    habits.forEach(h => {
+        const done = doneSet(h);
+        let mid = '';
+        let right = '';
+        let rightCls = 'flat';
+        if (h.type === 'timer') {
+            const cur = weekFastStats(h, lastWs);
+            const prev = weekFastStats(h, addDays(lastWs, -7));
+            mid = cur.n
+                ? `${cur.n} fast${cur.n === 1 ? '' : 's'} \u00b7 \u00d8 ${fmtDuration(cur.avg)} h`
+                : 'no fasts';
+            if (cur.avg != null && prev.avg != null) {
+                const d = cur.avg - prev.avg;
+                right = (d < 0 ? '\u2013' : '+') + fmtDuration(Math.abs(d));
+                rightCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+            }
+        } else {
+            if (h.type === 'weekly') {
+                mid = `${weekDoneCount(h, lastWs)}/${h.target || 1}\u00d7`;
+            } else {
+                let sched = 0;
+                let dn = 0;
+                const skip = skipSet(h);
+                for (let i = 0; i < 7; i++) {
+                    const d = addDays(lastWs, i);
+                    const k = dateKey(d);
+                    if (done[k]) dn++;
+                    if (isScheduled(h, d) && !skip[k]) sched++;
+                }
+                mid = `${dn}/${sched} days`;
+            }
+            const delta = h.type === 'weekly'
+                ? weeklyStreak(h, endLast) - weeklyStreak(h, endPrev)
+                : currentStreak(h, endLast) - currentStreak(h, endPrev);
+            right = (delta < 0 ? '\u2013' : delta > 0 ? '+' : '\u00b1') + Math.abs(delta) +
+                icon('flame', 'wr-flame');
+            rightCls = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+        }
+        const row = document.createElement('div');
+        row.className = 'wr-row';
+        row.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
+            `<span class="wr-name">${escapeHtml(h.name)}</span>` +
+            `<span class="wr-mid">${mid}</span>` +
+            `<span class="wr-right ${rightCls}">${right}</span>`;
+        row.addEventListener('click', () => openDetail(h.id));
+        card.appendChild(row);
+    });
+
+    box.appendChild(card);
+    box.hidden = false;
+}
+
 let justChecked = null; // habit id whose checkmark should draw itself
 
 function toggleToday(habit) {
@@ -732,6 +840,15 @@ setInterval(() => {
     if (todayVisible && state.habits.some(h => h.type === 'timer' && activeSession(h))) {
         renderToday();
     }
+    // keep the stages track and the calendar's hour count live mid-fast
+    if (!document.querySelector('#screen-detail').hidden && detailId) {
+        const h = state.habits.find(x => x.id === detailId);
+        if (h && h.type === 'timer' && activeSession(h)) {
+            const sy = window.scrollY;
+            openDetail(detailId, true);
+            window.scrollTo(0, sy);
+        }
+    }
 }, 20000);
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) renderToday();
@@ -770,8 +887,9 @@ function openDetail(id, keepMonth) {
     // --- editable history calendar ---
     body.appendChild(buildHistoryCard(habit));
 
-    // --- timer: session history ---
+    // --- timer: fasting stages + session history ---
     if (habit.type === 'timer') {
+        body.appendChild(buildStagesCard(habit));
         body.appendChild(buildSessionCard(habit));
     }
 
@@ -1169,6 +1287,84 @@ function buildYearCard(habit, done, year) {
         rows.appendChild(row);
     });
     card.appendChild(rows);
+    return card;
+}
+
+/* ================= fasting stages ================= */
+
+/* Commonly-cited fast phases — a popular rule of thumb, not medical advice */
+const FAST_STAGES = [
+    { from: 0,  to: 4,  name: 'Digestion',   desc: 'the body is still processing the last meal', color: '#d9463e' },
+    { from: 4,  to: 12, name: 'Settling in', desc: 'blood sugar and insulin drift down',          color: '#e0a80f' },
+    { from: 12, to: 16, name: 'Fat burning', desc: 'the body leans on its fat stores',            color: '#7bc496' },
+    { from: 16, to: 20, name: 'Deep fast',   desc: 'ketosis territory for many people',           color: '#2fa96d' }
+];
+
+function buildStagesCard(habit) {
+    const card = document.createElement('div');
+    card.className = 'detail-card';
+    const h = document.createElement('h3');
+    h.textContent = 'Fasting stages';
+    card.appendChild(h);
+
+    const active = activeSession(habit);
+    const elapsedH = active ? (Date.now() - active.s) / 3600e3 : null;
+    const stage = active ? FAST_STAGES.filter(s => elapsedH >= s.from).pop() : null;
+
+    // hand-drawn horizontal track, 0-20h, with the elapsed marker while fasting
+    const W = 320, TRACK_MAX = 20;
+    const x = hr => 10 + Math.min(hr, TRACK_MAX) / TRACK_MAX * 300;
+    let marks = '';
+    FAST_STAGES.forEach(s => {
+        const x1 = x(s.from) + (s.from ? 1 : 0);
+        const x2 = x(s.to) - (s.to < TRACK_MAX ? 1 : 0);
+        marks += `<rect x="${x1.toFixed(1)}" y="16" width="${(x2 - x1).toFixed(1)}" height="12" rx="6" ` +
+            `fill="${s.color}" opacity="${!active || stage === s ? 1 : 0.3}"/>`;
+    });
+    [0, 4, 12, 16].forEach(hb => {
+        marks += `<text x="${x(hb).toFixed(1)}" y="42" text-anchor="middle" class="chart-label">${hb}h</text>`;
+    });
+    marks += `<text x="${x(TRACK_MAX).toFixed(1)}" y="42" text-anchor="end" class="chart-label">${TRACK_MAX}h+</text>`;
+    if (active) {
+        const mx = x(elapsedH);
+        marks += `<path d="M${mx.toFixed(1)} 5 L${mx.toFixed(1)} 31" stroke="var(--text)" ` +
+            `stroke-width="2.4" stroke-linecap="round"/>` +
+            `<circle cx="${mx.toFixed(1)}" cy="5" r="2.6" fill="var(--text)"/>`;
+    }
+    const track = document.createElement('div');
+    track.innerHTML = `<svg class="stage-track" viewBox="0 0 ${W} 48" role="img" ` +
+        `aria-label="Fasting stages track">${marks}</svg>`;
+    card.appendChild(track);
+
+    const now = document.createElement('p');
+    now.className = 'stage-now';
+    if (active) {
+        now.innerHTML = `Now: <strong style="color:${stage.color}">${stage.name}</strong> \u00b7 ${fmtDuration(Date.now() - active.s)} h`;
+    } else {
+        now.className = 'cal-hint';
+        now.textContent = 'While a fast runs, a marker shows which stage you are in.';
+    }
+    card.appendChild(now);
+
+    const rows = document.createElement('div');
+    rows.className = 'stage-rows' + (active ? ' stages-active' : '');
+    FAST_STAGES.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'stage-row' + (stage === s ? ' cur' : '');
+        const range = s.to >= TRACK_MAX ? `${s.from}h+` : `${s.from}\u2013${s.to}h`;
+        row.innerHTML = `<span class="stage-dot" style="background:${s.color}"></span>` +
+            `<span class="stage-text"><span class="stage-name">${s.name}</span>` +
+            `<span class="stage-range">${range}</span>` +
+            `<span class="stage-desc">${s.desc}</span></span>`;
+        rows.appendChild(row);
+    });
+    card.appendChild(rows);
+
+    const hint = document.createElement('p');
+    hint.className = 'cal-hint';
+    hint.style.marginBottom = '0';
+    hint.textContent = 'A popular approximation from fasting literature \u2014 every body is different. Not medical advice.';
+    card.appendChild(hint);
     return card;
 }
 

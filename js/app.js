@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.20';
+const APP_VERSION = '1.21';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -629,10 +629,17 @@ function buildCard(habit) {
         card.appendChild(main);
         card.appendChild(stat);
         // faint dashed dividers hint at the card's separate tap areas:
-        // button | details, and while fasting also | timer number (fix start)
+        // button | details, and while fasting also | timer number (fix start).
+        // v1.21: each area also gets a tiny word saying what it does.
         if (habit.type === 'timer') {
             card.classList.add('zoned');
             if (active) card.classList.add('zoned-3');
+            const zl = document.createElement('div');
+            zl.className = 'zone-labels';
+            zl.innerHTML = `<span class="zl-btn">${active ? 'stop' : 'start'}</span>` +
+                `<span class="zl-mid">stats</span>` +
+                (active ? '<span class="zl-edit">edit</span>' : '');
+            card.appendChild(zl);
         }
     }
     card.dataset.id = habit.id;
@@ -2631,6 +2638,8 @@ $('#sheet-settings').addEventListener('click', (e) => {
     if (e.target === $('#sheet-settings')) $('#sheet-settings').hidden = true;
 });
 $('#app-version').textContent = 'AMS Tracking v' + APP_VERSION;
+$('#version-pill').textContent = 'v' + APP_VERSION;
+$('#version-pill').addEventListener('click', () => checkForUpdate(true));
 
 $('#btn-export').addEventListener('click', async () => {
     const json = JSON.stringify(state, null, 2);

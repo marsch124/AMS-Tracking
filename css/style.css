@@ -1460,3 +1460,49 @@ html, body {
 /* swipe feedback: a ring in the action's color once the swipe would fire */
 .habit-card.swipe-armed-r { box-shadow: 0 0 0 2.5px #2fa96d, var(--shadow); }
 .habit-card.swipe-armed-l { box-shadow: 0 0 0 2.5px var(--text-dim), var(--shadow); }
+
+/* ---------- v1.21: version pill + fasting-zone labels ---------- */
+
+.today-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+/* the blue slot: current version at a glance, tap to check for updates */
+.version-pill {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.7059rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+}
+.version-pill:active { transform: scale(0.94); }
+
+/* tiny words under the fasting card's tap areas */
+.habit-card.zoned { flex-wrap: wrap; }
+.zone-labels {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 1px 0 -3px;
+}
+.zone-labels span {
+    font-size: 0.5294rem;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    opacity: 0.8;
+}
+.zl-btn { flex: 0 0 3.2941rem; text-align: center; } /* under .action-wrap */
+.zl-mid { flex: 1 1 auto; }
+.zl-edit { text-align: right; padding-right: 2px; }

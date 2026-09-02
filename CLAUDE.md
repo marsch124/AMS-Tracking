@@ -99,6 +99,12 @@ app on his iPhone as the real test environment.
   base 17px; week dots wrap at large sizes). Contrast audit: light
   --text-dim #7a7f8a→#656d7a, stale amber via --stale token per theme
   (WCAG 4.5:1 met in both themes).
+- v1.21 "Signed and signposted" — SHIPPED (Martin's ask after v1.20,
+  with screenshot): blue version pill top-right on Today (#version-pill,
+  shows vX.Y, tap = manual update check) and tiny zone labels on the
+  fasting card (.zone-labels: start/stop under the button, stats under
+  the middle, edit under the running timer — edit only while a fast
+  runs, matching when that zone exists).
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -120,6 +126,7 @@ cabinet as v1.17 (current: CACHE_NAME ams-tracking-v33, asset links
 All ten UI improvements Martin approved on 2 Sep 2026 ("All ten in
 sensible batches please") have shipped as three releases: v1.18
 "Find your way", v1.19 "The feel, part two", and v1.20 "Your hands,
-your eyes" (current: CACHE_NAME ams-tracking-v36, asset links
-?v=36). Details in the roadmap above. Awaiting Martin's on-phone
-feedback; nothing else is queued.
+your eyes", followed by Martin's v1.21 version-pill + zone-label
+request (current: CACHE_NAME ams-tracking-v37, asset links ?v=37).
+Details in the roadmap above. Awaiting Martin's on-phone feedback;
+nothing else is queued.

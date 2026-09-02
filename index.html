@@ -12,17 +12,16 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=40">
+    <link rel="stylesheet" href="css/style.css?v=41">
 </head>
 <body>
 
     <!-- ============ TODAY (main) SCREEN ============ -->
     <main id="screen-today" class="screen">
         <div class="today-head">
-            <h1 class="page-title">Today</h1>
+            <h1 id="today-title" class="page-title">Today</h1>
             <button id="version-pill" class="version-pill" aria-label="App version — tap to check for updates"></button>
         </div>
-        <p id="today-date" class="page-subtitle"></p>
         <div id="day-progress" class="day-progress" hidden>
             <div id="dp-bar" class="dp-bar"></div>
             <span id="dp-text" class="dp-text"></span>
@@ -183,7 +182,7 @@
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
                     <p><strong>Voice commands (Siri)</strong> — as of iOS 2026 releases, Shortcuts cannot open an installed web app: the “Open App” action doesn't list it, and “Open URLs” lands in Safari, which keeps a completely separate copy of your data — so a voice or Lock Screen launcher isn't possible yet. The practical setup is the app icon in the Dock; the icon badge shows the day's status before you even tap. Worth re-trying after each iOS update: if “Tracking” ever appears in the Shortcuts “Open App” picker, a “Hey Siri, Fasten” shortcut and a Lock Screen button will work immediately. (The <code>?fast=start/stop/toggle</code> web commands exist for platforms where links open in the installed app.)</p>
-                    <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. The blue version pill at the top right of the Today screen always shows which version you're on — tapping it checks for an update immediately, as does Settings → Check for app update.</p>
+                    <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. The faint version number at the top right of the Today screen always shows which version you're on — tapping it checks for an update immediately, as does Settings → Check for app update.</p>
                     <p><strong>Old history</strong> — switching from another fasting app? Settings → “Import fasting history” accepts pasted rows (day + hours, or start + end times, or this app's own CSV), previews what it found, and adds them as fasts — days that already have a fast are left untouched, and the import can be undone.</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it — and the app asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
@@ -192,6 +191,13 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.23.2 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>A quieter header.</p>
+                    <ul>
+                        <li><strong>The heading greets the time of day</strong> — instead of “Today”, the main screen now says <em>Morning</em>, <em>Afternoon</em>, or <em>Evening</em>, matching the clock. The date line underneath is gone — your phone already knows the date, and the screen is about what to do, not when it is. Requested by Martin.</li>
+                        <li><strong>Washed-out version number</strong> — the bright blue version pill is now a faint gray number that stays out of the way. It still shows which version you're on and a tap still checks for an update immediately.</li>
+                    </ul>
+
                     <h4>v1.23.1 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>Less counting, more looking.</p>
                     <ul>
@@ -606,7 +612,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=40"></script>
-    <script src="js/app.js?v=40"></script>
+    <script src="js/icons.js?v=41"></script>
+    <script src="js/app.js?v=41"></script>
 </body>
 </html>

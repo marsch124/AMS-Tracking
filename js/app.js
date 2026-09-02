@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.23.1';
+const APP_VERSION = '1.23.2';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -411,9 +411,11 @@ function tint(color, pct) {
 }
 
 function renderToday() {
-    $('#today-date').textContent = new Date().toLocaleDateString(undefined, {
-        weekday: 'long', day: 'numeric', month: 'long'
-    });
+    // the heading greets the time of day instead of restating the date
+    const hour = new Date().getHours();
+    $('#today-title').textContent =
+        hour >= 5 && hour < 12 ? 'Morning' :
+        hour >= 12 && hour < 18 ? 'Afternoon' : 'Evening';
 
     renderWeekReview();
 

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.15.2';
+const APP_VERSION = '1.16';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -557,7 +557,12 @@ function buildCard(habit) {
                 openFastSheet(habit, active, true);
             });
             const goalMs = goalMsFor(habit, active);
-            if (goalMs && elapsed >= goalMs) {
+            if (elapsed > 24 * 3600e3) {
+                // almost certainly a forgotten stop
+                num.classList.add('overlong');
+                label.classList.add('overlong');
+                label.innerHTML = 'still fasting?<br>tap timer to fix';
+            } else if (goalMs && elapsed >= goalMs) {
                 num.classList.add('goal-reached');
                 label.classList.add('goal-reached');
                 label.textContent = 'goal reached';
@@ -570,7 +575,16 @@ function buildCard(habit) {
             }
         } else {
             const last = lastFinishedSession(habit);
-            if (last) {
+            const sinceEnd = last ? Date.now() - last.e : null;
+            if (last && habit.goalHours && sinceEnd < 24 * 3600e3) {
+                // the eating window is the other half of the fasting rhythm
+                num.textContent = fmtDuration(sinceEnd);
+                const nextStart = last.e + Math.max(0, 24 - habit.goalHours) * 3600e3;
+                const d = new Date(nextStart);
+                label.innerHTML = 'eating<br>' + (nextStart > Date.now()
+                    ? `<span style="color:${habit.color}">next fast ${pad(d.getHours())}:${pad(d.getMinutes())}</span>`
+                    : `<span style="color:${habit.color}">next fast now</span>`);
+            } else if (last) {
                 num.textContent = fmtDuration(last.e - last.s);
                 label.textContent = 'last fast';
             } else {
@@ -843,7 +857,8 @@ function openStartGoalSheet(habit) {
 setInterval(() => {
     if (document.hidden) return;
     const todayVisible = !document.querySelector('#screen-today').hidden;
-    if (todayVisible && state.habits.some(h => h.type === 'timer' && activeSession(h))) {
+    if (todayVisible && state.habits.some(h => h.type === 'timer' && !h.archived &&
+        (activeSession(h) || lastFinishedSession(h)))) {
         renderToday();
     }
     // keep the stages track and the calendar's hour count live mid-fast

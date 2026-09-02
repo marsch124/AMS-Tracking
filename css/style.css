@@ -1259,3 +1259,8 @@ html, body {
     height: 40px;
     border-left: 1.5px dashed color-mix(in srgb, var(--text) 22%, transparent);
 }
+
+/* ---------- v1.16: overlong-fast guard ---------- */
+
+.stat-number.overlong { color: #e0a80f !important; }
+.stat-label.overlong { color: #e0a80f !important; }

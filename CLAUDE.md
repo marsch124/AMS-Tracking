@@ -88,6 +88,17 @@ app on his iPhone as the real test environment.
   check-off or fast stop), iOS-style push/pop screen slides
   (screen-fwd/screen-back in showScreen), live mini-card preview in
   the add/edit sheet (renderSheetPreview). All reduced-motion safe.
+- v1.20 "Your hands, your eyes" — SHIPPED: swipe right/left on Today
+  cards = done / skip today (setupCardGestures, swipeDone/swipeSkip,
+  armed-ring feedback, undo toasts; idle fasting opens the hours
+  sheet from Today), long-press drag-to-reorder (startDrag/moveDrag/
+  endDrag, live DOM reorder, persists to state.habits with undo;
+  coexists with the button long-presses which stay untouched), and
+  iOS Display & Text Size support (html { font: -apple-system-body }
+  behind @supports; ALL font sizes + icon/circle/button boxes in rem,
+  base 17px; week dots wrap at large sizes). Contrast audit: light
+  --text-dim #7a7f8a→#656d7a, stale amber via --stale token per theme
+  (WCAG 4.5:1 met in both themes).
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -106,28 +117,9 @@ guard as v1.16, and hours/note sheets + history import + trophy
 cabinet as v1.17 (current: CACHE_NAME ams-tracking-v33, asset links
 ?v=33).
 
-**APPROVED and in progress (2 Sep 2026): ten UI improvements, Martin
-said "All ten in sensible batches please." Ship as three releases,
-each through the full release checklist above. v1.18 and v1.19 have
-shipped; v1.20 remains.**
-
-v1.18 "Find your way" — SHIPPED (see roadmap above).
-
-v1.19 "The feel, part two" — SHIPPED (see roadmap above).
-
-v1.20 "Your hands, your eyes" (gesture-heavy + layout-wide, together
-so the gestures don't conflict):
-8. Drag-to-reorder habits on the Today list via long-press drag;
-   persist order in state (habit order in state.habits).
-9. Swipe actions on Today cards: swipe right = mark done, swipe
-   left = mark today skipped, both with the usual undo toast. Must
-   coexist with the long-press drag and existing long-press handlers
-   (also-yesterday, per-fast goal).
-10. Respect the iPhone text-size setting: move fixed px font sizes to
-    scalable units (rem with -apple-system text sizing) so the iOS
-    Display & Text Size preference scales the app without breaking
-    layouts; audit both themes for contrast while in there.
-
-Follow the release checklist above for every release; the
-self-updater shows Martin the Update button automatically. Present
-each release to Martin for on-phone feedback as it ships.
+All ten UI improvements Martin approved on 2 Sep 2026 ("All ten in
+sensible batches please") have shipped as three releases: v1.18
+"Find your way", v1.19 "The feel, part two", and v1.20 "Your hands,
+your eyes" (current: CACHE_NAME ams-tracking-v36, asset links
+?v=36). Details in the roadmap above. Awaiting Martin's on-phone
+feedback; nothing else is queued.

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.19';
+const APP_VERSION = '1.20';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -635,8 +635,184 @@ function buildCard(habit) {
             if (active) card.classList.add('zoned-3');
         }
     }
-    card.addEventListener('click', () => openDetail(habit.id));
+    card.dataset.id = habit.id;
+    card.addEventListener('click', () => {
+        if (card.dataset.lp) { delete card.dataset.lp; return; } // a gesture consumed this tap
+        openDetail(habit.id);
+    });
+    setupCardGestures(card, habit);
     return card;
+}
+
+/* ================= v1.20: card gestures (swipe + drag reorder) ================= */
+
+let dragCtx = null; // { card, startOrder } while a long-press drag runs
+
+function startDrag(card) {
+    dragCtx = { card, startOrder: state.habits.map(h => h.id) };
+    card.classList.add('dragging');
+}
+
+/* Live-reorder the DOM while the finger moves; state follows on drop */
+function moveDrag(card, x, y) {
+    const list = card.parentElement;
+    const over = document.elementFromPoint(x, y);
+    const target = over && over.closest ? over.closest('.habit-card') : null;
+    if (!target || target === card || target.parentElement !== list) return;
+    const cards = [...list.children];
+    if (cards.indexOf(card) < cards.indexOf(target)) target.after(card);
+    else target.before(card);
+}
+
+function endDrag(card, cancel) {
+    card.classList.remove('dragging');
+    if (!dragCtx) return;
+    const { startOrder } = dragCtx;
+    dragCtx = null;
+    if (cancel) { renderToday(); return; }
+    const visibleIds = [...card.parentElement.querySelectorAll('.habit-card')].map(el => el.dataset.id);
+    const prevVisible = startOrder.filter(id => visibleIds.includes(id));
+    if (visibleIds.join() === prevVisible.join()) return; // nothing moved
+    const byId = {};
+    state.habits.forEach(h => { byId[h.id] = h; });
+    const rest = state.habits.filter(h => !visibleIds.includes(h.id)); // archived keep their spot at the end
+    state.habits = [...visibleIds.map(id => byId[id]), ...rest];
+    save();
+    renderToday();
+    showToast('Habits reordered', () => {
+        state.habits = startOrder.map(id => byId[id]);
+        save();
+        renderToday();
+    });
+}
+
+/* Swipe right: mark today done (for fasting, stop the running fast or
+   open the record sheet). Everything undoable, nothing double-applied. */
+function swipeDone(habit) {
+    const key = dateKey(new Date());
+    if (doneSet(habit)[key]) { showToast('Already done today'); return; }
+    if (habit.type === 'timer') {
+        if (activeSession(habit)) toggleTimer(habit); // stop -> today's fast, own undo toast
+        else openHoursSheet(habit, new Date(), true);
+        return;
+    }
+    const wasSkip = !!(habit.skip && habit.skip[key]);
+    if (wasSkip) delete habit.skip[key];
+    habit.done = habit.done || {};
+    habit.done[key] = 1;
+    justChecked = habit.id;
+    if (dayComplete()) dayJustCompleted = true;
+    save();
+    renderToday();
+    showToast('Marked done', () => {
+        delete habit.done[key];
+        if (wasSkip) { habit.skip = habit.skip || {}; habit.skip[key] = 1; }
+        save();
+        renderToday();
+    });
+    maybeCelebrateStreak(habit);
+}
+
+/* Swipe left: excuse today as a skip day */
+function swipeSkip(habit) {
+    const key = dateKey(new Date());
+    if (doneSet(habit)[key]) { showToast('Already done today — nothing to skip'); return; }
+    if (habit.skip && habit.skip[key]) { showToast('Today is already a skip day'); return; }
+    if (habit.type === 'timer' && activeSession(habit)) {
+        showToast('A fast is running — stop it first');
+        return;
+    }
+    habit.skip = habit.skip || {};
+    habit.skip[key] = 1;
+    save();
+    renderToday();
+    showToast('Today marked as skip day', () => {
+        delete habit.skip[key];
+        save();
+        renderToday();
+    });
+}
+
+const SWIPE_TRIGGER = 72; // px of horizontal travel that arms the action
+
+/* One finger, three verbs: horizontal swipe acts, a long-press drags to
+   reorder, everything else stays a scroll or a tap. Gestures never start
+   on the action button / week dots / note dot, so their long-presses
+   (also-yesterday, tonight's goal) keep working unchanged. */
+function setupCardGestures(card, habit) {
+    let sx = null, sy = null, dx = 0, mode = null, lpTimer = null;
+    const cancelLp = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+    const swallowTap = () => {
+        card.dataset.lp = '1';
+        setTimeout(() => delete card.dataset.lp, 400);
+    };
+
+    card.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        if (e.target.closest('.habit-action, .wd, .note-ind')) return;
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+        dx = 0;
+        mode = null;
+        lpTimer = setTimeout(() => {
+            lpTimer = null;
+            mode = 'drag';
+            startDrag(card);
+        }, 450);
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+        if (sx === null) return;
+        const t = e.touches[0];
+        dx = t.clientX - sx;
+        const dy = t.clientY - sy;
+        if (mode === 'drag') {
+            if (e.cancelable) e.preventDefault();
+            moveDrag(card, t.clientX, t.clientY);
+            return;
+        }
+        if (!mode) {
+            if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.6) { mode = 'swipe'; cancelLp(); }
+            else if (Math.abs(dy) > 10) { mode = 'scroll'; cancelLp(); }
+            else if (Math.abs(dx) > 10) cancelLp();
+        }
+        if (mode === 'swipe') {
+            if (e.cancelable) e.preventDefault();
+            card.style.transform = `translateX(${Math.max(-120, Math.min(120, dx))}px)`;
+            card.classList.toggle('swipe-armed-r', dx > SWIPE_TRIGGER);
+            card.classList.toggle('swipe-armed-l', dx < -SWIPE_TRIGGER);
+        }
+    }, { passive: false });
+
+    card.addEventListener('touchend', () => {
+        if (sx === null) return;
+        cancelLp();
+        if (mode === 'drag') {
+            endDrag(card);
+            swallowTap();
+        } else if (mode === 'swipe') {
+            card.style.transition = 'transform 0.18s ease';
+            card.style.transform = '';
+            card.classList.remove('swipe-armed-r', 'swipe-armed-l');
+            setTimeout(() => { card.style.transition = ''; }, 220);
+            swallowTap();
+            if (dx > SWIPE_TRIGGER) swipeDone(habit);
+            else if (dx < -SWIPE_TRIGGER) swipeSkip(habit);
+        } else if (mode === 'scroll') {
+            swallowTap();
+        }
+        sx = null;
+        mode = null;
+    });
+
+    card.addEventListener('touchcancel', () => {
+        cancelLp();
+        if (mode === 'drag') endDrag(card, true);
+        card.style.transform = '';
+        card.classList.remove('swipe-armed-r', 'swipe-armed-l');
+        sx = null;
+        mode = null;
+    });
 }
 
 function buildWeekDots(habit, done) {
@@ -1323,10 +1499,10 @@ function toggleHistoryDay(habit, d, wasDone) {
 
 /* ================= record-fast sheet (backfill) ================= */
 
-let hoursCtx = null; // { habitId, key, date }
+let hoursCtx = null; // { habitId, key, date, fromToday }
 
-function openHoursSheet(habit, d) {
-    hoursCtx = { habitId: habit.id, key: dateKey(d), date: d };
+function openHoursSheet(habit, d, fromToday) {
+    hoursCtx = { habitId: habit.id, key: dateKey(d), date: d, fromToday: !!fromToday };
     $('#hours-title').textContent = 'Fast on ' +
         d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
     $('#hours-input').value = '';
@@ -1357,9 +1533,11 @@ function saveBackfillFast(hours) {
     habit.sessions = habit.sessions || [];
     habit.sessions.push({ s: end - hours * 3600e3, e: end });
     habit.sessions.sort((a, b) => a.s - b.s);
+    if (hoursCtx.fromToday && dayComplete()) dayJustCompleted = true;
     save();
     $('#sheet-hours').hidden = true;
-    openDetail(habit.id, true);
+    if (hoursCtx.fromToday) renderToday();
+    else openDetail(habit.id, true);
 }
 
 $('#btn-hours-save').addEventListener('click', () => {
@@ -1373,7 +1551,8 @@ $('#btn-hours-skip').addEventListener('click', () => {
         save();
     }
     $('#sheet-hours').hidden = true;
-    if (habit) openDetail(habit.id, true);
+    if (habit && hoursCtx.fromToday) renderToday();
+    else if (habit) openDetail(habit.id, true);
 });
 $('#btn-hours-cancel').addEventListener('click', () => { $('#sheet-hours').hidden = true; });
 $('#sheet-hours').addEventListener('click', (e) => {

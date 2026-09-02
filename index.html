@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=35">
+    <link rel="stylesheet" href="css/style.css?v=36">
 </head>
 <body>
 
@@ -168,6 +168,9 @@
                     <p><strong>Details</strong> — tap anywhere else on a card for the year-by-year pixel grid, current and longest streak, and completion&nbsp;%. Small letters mark where each month begins, and tapping any pixel shows that day's date, status, and note. Timer habits also list recent fasts with average and longest duration.</p>
                     <p><strong>Year poster</strong> — the share button <span data-hi="export" class="hi-inline"></span> next to a year heading in the detail view turns that year into a poster image: the habit's icon and name, all 365 days as a month-by-month pixel grid in the habit's color (skip days dashed), and the year's headline stats underneath. On iPhone it opens the share sheet, so the picture can go straight to Messages, Photos, or Instagram; elsewhere it downloads as a PNG. Past years get their own poster with days-done totals.</p>
                     <p><strong>Undo</strong> — starting or ending a fast, and removing entries, can be taken back for a few seconds via the Undo bar at the bottom of the screen, so a stray tap never costs you anything.</p>
+                    <p><strong>Swipe to act</strong> — on the Today screen, swipe a card to the right to mark the habit done for today (for fasting: it stops a running fast, or opens the record-hours sheet when none is running), or swipe left to excuse today as a skip day. A colored ring shows when the swipe is far enough to fire, and every swipe action has the usual Undo bar. Days already done or skipped just tell you so instead of double-applying.</p>
+                    <p><strong>Drag to reorder</strong> — press and hold a card until it lifts, then drag it up or down the list (works in the grid too) and let go. The new order is saved immediately, with Undo in the bar; Settings → Reorder habits still exists for precise arrow-button moves. The press-and-hold shortcuts on the round button itself (yesterday done, tonight's goal) are untouched — the drag starts on the card body.</p>
+                    <p><strong>Text size</strong> — the app follows the iPhone's Display &amp; Text Size setting: make text larger (or smaller) there and every screen scales with it, icons and buttons included.</p>
                     <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows a progress bar of how many scheduled habits are done today — and when the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
@@ -186,6 +189,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.20 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>Your hands, your eyes.</p>
+                    <ul>
+                        <li><strong>Swipe actions on Today cards</strong> — swipe right to mark today done (a running fast is stopped; an idle fasting habit opens the record-hours sheet), swipe left to excuse today as a skip day. A green or gray ring appears once the swipe is far enough to fire, releasing earlier cancels, and both actions come with the Undo bar. Already-done or already-skipped days answer with a note instead of changing anything.</li>
+                        <li><strong>Drag to reorder</strong> — press and hold a Today card until it lifts, drag it to its new spot (list or grid), and release; the order is saved with Undo. The reorder sheet in Settings stays for button-based moves, and the round button's own press-and-hold shortcuts still work exactly as before.</li>
+                        <li><strong>Respects your iPhone text size</strong> — all type, icons, buttons, dots, and calendar circles now scale with the system's Display &amp; Text Size preference instead of being frozen at one size. This closes the ten-improvement batch approved on 2 September.</li>
+                        <li><strong>Easier-to-read gray text</strong> — the dim gray used for hints, labels, and dates is darker in the light theme (and the “backup is old” amber deeper), meeting the WCAG 4.5:1 contrast guideline in both themes.</li>
+                    </ul>
                     <h4>v1.19 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>The feel, part two.</p>
                     <ul>
@@ -563,7 +574,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=35"></script>
-    <script src="js/app.js?v=35"></script>
+    <script src="js/icons.js?v=36"></script>
+    <script src="js/app.js?v=36"></script>
 </body>
 </html>

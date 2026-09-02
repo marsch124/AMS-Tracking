@@ -1242,3 +1242,20 @@ html, body {
     margin-bottom: 10px;
 }
 .year-head h3 { margin: 0; }
+
+/* ---------- v1.15.2: touch-zone hints on the fasting card ---------- */
+
+/* faint dashed dividers marking the card's separate tap areas:
+   button | card body (details); while fasting also | timer (fix start) */
+.habit-card.zoned .habit-main,
+.habit-card.zoned .habit-stat { position: relative; }
+.habit-card.zoned .habit-main::before,
+.habit-card.zoned.zoned-3 .habit-stat::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 40px;
+    border-left: 1.5px dashed color-mix(in srgb, var(--text) 22%, transparent);
+}

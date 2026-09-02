@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=30">
+    <link rel="stylesheet" href="css/style.css?v=31">
 </head>
 <body>
 
@@ -152,6 +152,7 @@
                     <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over.</p>
                     <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; afterwards it shows how long your last fast was. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit: a ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? While fasting, simply tap the running timer number on the Today card to correct the start time. All fasts can also be edited from the detail view's list (including the one in progress) — start, end, or delete.</p>
+                    <p><strong>The fasting card's tap areas</strong> — faint dashed lines on the fasting card mark its separate touch zones: left of the first line is the start/stop button, the middle opens the habit's details, and — while a fast runs — right of the second line the timer number fixes the start time. The lines are only a hint; the zones themselves are unchanged.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move through months — up to a year ahead, so a planned vacation is visible; future days are locked except vacation-marked skip days, which a tap un-marks. Streaks and stats update immediately.</p>
                     <p><strong>Vacations &amp; sick weeks</strong> — under the month calendar, “Skip several days” marks a whole date range as skip days at once: pick the first and last day (future dates included, up to 92 days), and tick “Apply to all habits” when the whole life pauses, not just one habit. Days already done stay done, and the Undo bar takes back exactly the days the range added. A planned range shows up on the calendar right away and can be checked in the months ahead.</p>
@@ -181,6 +182,11 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.15.2 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>Three taps, made visible.</p>
+                    <ul>
+                        <li><strong>Touch-zone hints on the fasting card</strong> — the fasting tile always had three tap areas (the start/stop button on the left, the card body opening the details, and the running timer number fixing the start time), but nothing showed where one ended and the next began. Two very faint dashed vertical lines now mark the boundaries: the first is always there, the second appears only while a fast is running — matching when the timer becomes tappable. Purely visual; every tap works exactly as before. Requested by Martin after a day of live use.</li>
+                    </ul>
                     <h4>v1.15.1 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>The review, where and when you want it.</p>
                     <ul>
@@ -477,7 +483,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=30"></script>
-    <script src="js/app.js?v=30"></script>
+    <script src="js/icons.js?v=31"></script>
+    <script src="js/app.js?v=31"></script>
 </body>
 </html>

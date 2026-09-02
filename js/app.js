@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.15.1';
+const APP_VERSION = '1.15.2';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -594,6 +594,12 @@ function buildCard(habit) {
         card.appendChild(wrap);
         card.appendChild(main);
         card.appendChild(stat);
+        // faint dashed dividers hint at the card's separate tap areas:
+        // button | details, and while fasting also | timer number (fix start)
+        if (habit.type === 'timer') {
+            card.classList.add('zoned');
+            if (active) card.classList.add('zoned-3');
+        }
     }
     card.addEventListener('click', () => openDetail(habit.id));
     return card;

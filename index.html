@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=32">
+    <link rel="stylesheet" href="css/style.css?v=33">
 </head>
 <body>
 
@@ -137,6 +137,7 @@
             <button id="btn-export" class="list-btn"><span data-hi="export"></span> Export backup (JSON)</button>
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
+            <button id="btn-histimport" class="list-btn"><span data-hi="timer"></span> Import fasting history</button>
             <button id="btn-update" class="list-btn"><span data-hi="sunrise"></span> Check for app update</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
@@ -154,7 +155,7 @@
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? While fasting, simply tap the running timer number on the Today card to correct the start time. All fasts can also be edited from the detail view's list (including the one in progress) — start, end, or delete.</p>
                     <p><strong>The fasting card's tap areas</strong> — faint dashed lines on the fasting card mark its separate touch zones: left of the first line is the start/stop button, the middle opens the habit's details, and — while a fast runs — right of the second line the timer number fixes the start time. The lines are only a hint; the zones themselves are unchanged.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled, and the ratio (e.g. 5/7) is completed / scheduled this week.</p>
-                    <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day asks how long the fast was (entering 0 marks a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move through months — up to a year ahead, so a planned vacation is visible; future days are locked except vacation-marked skip days, which a tap un-marks. Streaks and stats update immediately.</p>
+                    <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day opens a small sheet to pick or type the hours (or mark a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move through months — up to a year ahead, so a planned vacation is visible; future days are locked except vacation-marked skip days, which a tap un-marks. Streaks and stats update immediately.</p>
                     <p><strong>Vacations &amp; sick weeks</strong> — under the month calendar, “Skip several days” marks a whole date range as skip days at once: pick the first and last day (future dates included, up to 92 days), and tick “Apply to all habits” when the whole life pauses, not just one habit. Days already done stay done, and the Undo bar takes back exactly the days the range added. A planned range shows up on the calendar right away and can be checked in the months ahead.</p>
                     <p><strong>Forgot yesterday?</strong> — press-and-hold the check circle of a daily or weekly habit to mark <em>yesterday</em> done, without opening the calendar. A short Undo bar confirms it (or tells you yesterday was already done). A normal tap still checks off today. Backfilled days never trigger milestone celebrations.</p>
                     <p><strong>Week in review</strong> — each Monday, a “Last week” card appears under the habit list on the Today screen: per habit, how many scheduled days (or weekly-target check-offs) you managed, how your streak changed over the week (green +, red −), and for fasting the number of fasts with the average length and how it compares to the week before. Tap a row to jump to that habit; the <span data-hi="x" class="hi-inline"></span> dismisses the card until the next week starts, and Settings → “Show week in review” brings it back any time. It's pure summary — nothing about your data changes.</p>
@@ -170,11 +171,12 @@
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
-                    <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit.</p>
+                    <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit. At the top, the <strong>Achievements</strong> card keeps what the confetti celebrated: earned streak milestones per habit, your longest fast, best streak, and total days tracked.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
                     <p><strong>Voice commands (Siri)</strong> — as of iOS 2026 releases, Shortcuts cannot open an installed web app: the “Open App” action doesn't list it, and “Open URLs” lands in Safari, which keeps a completely separate copy of your data — so a voice or Lock Screen launcher isn't possible yet. The practical setup is the app icon in the Dock; the icon badge shows the day's status before you even tap. Worth re-trying after each iOS update: if “Tracking” ever appears in the Shortcuts “Open App” picker, a “Hey Siri, Fasten” shortcut and a Lock Screen button will work immediately. (The <code>?fast=start/stop/toggle</code> web commands exist for platforms where links open in the installed app.)</p>
                     <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. Settings → Check for app update asks immediately.</p>
+                    <p><strong>Old history</strong> — switching from another fasting app? Settings → “Import fasting history” accepts pasted rows (day + hours, or start + end times, or this app's own CSV), previews what it found, and adds them as fasts — days that already have a fast are left untouched, and the import can be undone.</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it — and the app asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
             </details>
@@ -182,6 +184,13 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.17 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>History, trophies, and no more gray boxes.</p>
+                    <ul>
+                        <li><strong>Import fasting history</strong> — Settings → Import fasting history takes pasted rows from another app (day + hours like “2026-08-15;14”, start/end pairs, or this app's own fasts.csv), shows a live preview of what it can read, skips days that already have a fast, and imports with one tap — undoable from the bar.</li>
+                        <li><strong>Achievements</strong> — the Stats screen now opens with a trophy card: every earned streak milestone per habit (with the next one shown hollow), plus longest fast ever, best streak, and total days tracked.</li>
+                        <li><strong>Proper sheets instead of browser pop-ups</strong> — recording a forgotten fast now opens a sheet with hour chips (13/15/16/18 or a typed value) and a “skip day” option, and day notes get a real editor with save and delete. Validation messages moved from pop-ups to the bar at the bottom.</li>
+                    </ul>
                     <h4>v1.16 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>The whole rhythm.</p>
                     <ul>
@@ -474,6 +483,54 @@
         </div>
     </div>
 
+    <!-- ============ RECORD-FAST SHEET (backfill hours) ============ -->
+    <div id="sheet-hours" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2 id="hours-title">Record a fast</h2>
+            <label class="field-label">How many hours?</label>
+            <div id="hours-chips" class="chip-row"></div>
+            <input id="hours-input" type="number" inputmode="decimal" min="0.5" max="48" step="0.5" placeholder="Or type the hours…">
+            <button id="btn-hours-skip" class="archive-btn">Mark as skip day instead</button>
+            <div class="sheet-actions">
+                <button id="btn-hours-cancel" class="ghost-btn">Cancel</button>
+                <button id="btn-hours-save" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ DAY-NOTE SHEET ============ -->
+    <div id="sheet-note" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2 id="note-title">Note</h2>
+            <textarea id="note-input" maxlength="200" rows="3" placeholder="e.g. skipped, travel day"></textarea>
+            <button id="btn-note-delete" class="danger-btn" hidden>Delete this note</button>
+            <div class="sheet-actions">
+                <button id="btn-note-cancel" class="ghost-btn">Cancel</button>
+                <button id="btn-note-save" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ FASTING-HISTORY IMPORT SHEET ============ -->
+    <div id="sheet-histimport" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2>Import fasting history</h2>
+            <p class="cal-hint">Paste rows from another app's export. Understood formats, one fast per line:<br>
+                • <code>2026-08-15;14</code> (day; hours — also with , . or tab)<br>
+                • <code>2026-08-15 19:00;2026-08-16 11:00</code> (start; end)<br>
+                • rows from this app's own fasts.csv</p>
+            <textarea id="hist-input" rows="6" placeholder="2026-08-01;13&#10;2026-08-02;14,5&#10;…"></textarea>
+            <p id="hist-preview" class="cal-hint"></p>
+            <div class="sheet-actions">
+                <button id="btn-hist-cancel" class="ghost-btn">Cancel</button>
+                <button id="btn-hist-save" class="primary-btn" disabled>Import</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ MILESTONE CELEBRATION ============ -->
     <div id="celebrate" class="celebrate" hidden>
         <div class="celebrate-card">
@@ -489,7 +546,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=32"></script>
-    <script src="js/app.js?v=32"></script>
+    <script src="js/icons.js?v=33"></script>
+    <script src="js/app.js?v=33"></script>
 </body>
 </html>

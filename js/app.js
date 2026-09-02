@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.16';
+const APP_VERSION = '1.17';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1123,16 +1123,43 @@ function buildHistoryCard(habit) {
     return card;
 }
 
+let noteCtx = null; // { habitId, key }
+
 function editDayNote(habit, d) {
     const key = dateKey(d);
     habit.notes = habit.notes || {};
-    const answer = prompt(`Note for ${d.toLocaleDateString()}:`, habit.notes[key] || '');
-    if (answer === null) return;
-    if (answer.trim()) habit.notes[key] = answer.trim().slice(0, 200);
-    else delete habit.notes[key];
+    noteCtx = { habitId: habit.id, key };
+    $('#note-title').textContent = 'Note for ' +
+        d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    $('#note-input').value = habit.notes[key] || '';
+    $('#btn-note-delete').hidden = !habit.notes[key];
+    $('#sheet-note').hidden = false;
+    if (!habit.notes[key]) setTimeout(() => $('#note-input').focus(), 250);
+}
+
+function closeNoteSheet(apply, remove) {
+    const habit = state.habits.find(h => h.id === (noteCtx && noteCtx.habitId));
+    $('#sheet-note').hidden = true;
+    if (!habit) return;
+    if (apply) {
+        const text = $('#note-input').value.trim().slice(0, 200);
+        if (text) habit.notes[noteCtx.key] = text;
+        else delete habit.notes[noteCtx.key];
+    } else if (remove) {
+        delete habit.notes[noteCtx.key];
+    } else {
+        return;
+    }
     save();
     openDetail(habit.id, true);
 }
+
+$('#btn-note-save').addEventListener('click', () => closeNoteSheet(true, false));
+$('#btn-note-delete').addEventListener('click', () => closeNoteSheet(false, true));
+$('#btn-note-cancel').addEventListener('click', () => closeNoteSheet(false, false));
+$('#sheet-note').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-note')) closeNoteSheet(false, false);
+});
 
 /* ================= vacation range (bulk skip) ================= */
 
@@ -1157,12 +1184,12 @@ $('#btn-skiprange-save').addEventListener('click', () => {
     if (!habit) { $('#sheet-skiprange').hidden = true; return; }
     const fromV = $('#skip-from').value;
     const toV = $('#skip-to').value;
-    if (!fromV || !toV) { alert('Please pick a first and a last day.'); return; }
+    if (!fromV || !toV) { showToast('Please pick a first and a last day.'); return; }
     const from = keyToDate(fromV);
     const to = keyToDate(toV);
-    if (to < from) { alert('The last day must not be before the first day.'); return; }
+    if (to < from) { showToast('The last day must not be before the first day.'); return; }
     const days = Math.round((to - from) / 86400e3) + 1;
-    if (days > 92) { alert('A range can cover at most 92 days (about 3 months).'); return; }
+    if (days > 92) { showToast('A range can cover at most 92 days (about 3 months).'); return; }
     const targets = $('#skip-all').checked
         ? state.habits.filter(h => !h.archived)
         : [habit];
@@ -1208,29 +1235,71 @@ function toggleHistoryDay(habit, d, wasDone) {
         if (dayFasts.length) openFastSheet(habit, dayFasts[dayFasts.length - 1]);
         return;
     } else {
-        const answer = prompt(`How many hours did you fast on ${d.toLocaleDateString()}?\n(Enter 0 to mark a skip day.)`, '16');
-        if (answer === null) return;
-        const hours = parseFloat(String(answer).replace(',', '.'));
-        if (hours === 0) {
-            habit.skip = habit.skip || {};
-            habit.skip[key] = 1;
-            save();
-            openDetail(habit.id, true);
-            return;
-        }
-        if (!isFinite(hours) || hours <= 0 || hours > 48) {
-            alert('Please enter a fast length between 0 and 48 hours.');
-            return;
-        }
-        // Record it as ending at noon of that day, so it counts for that day
-        const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).getTime();
-        habit.sessions = habit.sessions || [];
-        habit.sessions.push({ s: end - hours * 3600e3, e: end });
-        habit.sessions.sort((a, b) => a.s - b.s);
+        openHoursSheet(habit, d);
+        return;
     }
     save();
     openDetail(habit.id, true);
 }
+
+/* ================= record-fast sheet (backfill) ================= */
+
+let hoursCtx = null; // { habitId, key, date }
+
+function openHoursSheet(habit, d) {
+    hoursCtx = { habitId: habit.id, key: dateKey(d), date: d };
+    $('#hours-title').textContent = 'Fast on ' +
+        d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    $('#hours-input').value = '';
+    const row = $('#hours-chips');
+    row.innerHTML = '';
+    const presets = [...new Set([habit.goalHours, ...FAST_GOAL_PRESETS])].filter(Boolean);
+    presets.forEach(h => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip goal-chip';
+        c.textContent = `${h}h`;
+        c.addEventListener('click', () => saveBackfillFast(h));
+        row.appendChild(c);
+    });
+    $('#sheet-hours').hidden = false;
+}
+
+function saveBackfillFast(hours) {
+    const habit = state.habits.find(h => h.id === hoursCtx.habitId);
+    if (!habit) { $('#sheet-hours').hidden = true; return; }
+    if (!isFinite(hours) || hours <= 0 || hours > 48) {
+        showToast('Please enter a fast length between 0 and 48 hours.');
+        return;
+    }
+    const d = hoursCtx.date;
+    // Record it as ending at noon of that day, so it counts for that day
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).getTime();
+    habit.sessions = habit.sessions || [];
+    habit.sessions.push({ s: end - hours * 3600e3, e: end });
+    habit.sessions.sort((a, b) => a.s - b.s);
+    save();
+    $('#sheet-hours').hidden = true;
+    openDetail(habit.id, true);
+}
+
+$('#btn-hours-save').addEventListener('click', () => {
+    saveBackfillFast(parseFloat(String($('#hours-input').value).replace(',', '.')));
+});
+$('#btn-hours-skip').addEventListener('click', () => {
+    const habit = state.habits.find(h => h.id === hoursCtx.habitId);
+    if (habit) {
+        habit.skip = habit.skip || {};
+        habit.skip[hoursCtx.key] = 1;
+        save();
+    }
+    $('#sheet-hours').hidden = true;
+    if (habit) openDetail(habit.id, true);
+});
+$('#btn-hours-cancel').addEventListener('click', () => { $('#sheet-hours').hidden = true; });
+$('#sheet-hours').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-hours')) $('#sheet-hours').hidden = true;
+});
 
 function buildYearCard(habit, done, year) {
     const card = document.createElement('div');
@@ -1729,14 +1798,14 @@ $('#btn-fast-save').addEventListener('click', () => {
     const session = fastEdit.session;
     if (!habit || !habit.sessions.includes(session)) { $('#sheet-fast').hidden = true; return; }
     const start = new Date($('#fast-start').value).getTime();
-    if (!isFinite(start)) { alert('Please enter a valid start time.'); return; }
-    if (start > Date.now()) { alert("The start can't be in the future."); return; }
+    if (!isFinite(start)) { showToast('Please enter a valid start time.'); return; }
+    if (start > Date.now()) { showToast("The start can't be in the future."); return; }
     if (session.e) {
         const end = new Date($('#fast-end').value).getTime();
-        if (!isFinite(end)) { alert('Please enter a valid end time.'); return; }
-        if (end <= start) { alert('The end must be after the start.'); return; }
-        if (end - start > 48 * 3600e3) { alert('A fast can be at most 48 hours.'); return; }
-        if (end > Date.now() + 60000) { alert("The end can't be in the future."); return; }
+        if (!isFinite(end)) { showToast('Please enter a valid end time.'); return; }
+        if (end <= start) { showToast('The end must be after the start.'); return; }
+        if (end - start > 48 * 3600e3) { showToast('A fast can be at most 48 hours.'); return; }
+        if (end > Date.now() + 60000) { showToast("The end can't be in the future."); return; }
         session.e = end;
     }
     session.s = start;
@@ -1814,6 +1883,71 @@ function monthStats(habit, y, m) {
     return { dn, sched, pct: sched ? Math.round(100 * dn / sched) : 0 };
 }
 
+/* The trophy cabinet at the bottom of Stats: totals across every habit,
+   then the streak milestones each habit has actually reached (and the next
+   one as a hollow chip, so there is always something to aim for). */
+function buildTrophyCard(habits) {
+    const card = document.createElement('div');
+    card.className = 'detail-card stats-card trophy-card';
+    const h = document.createElement('h3');
+    h.innerHTML = icon('trophy') + 'Achievements';
+    card.appendChild(h);
+
+    let daysTracked = 0;
+    let bestStreakDays = 0;
+    let longestFastMs = 0;
+    habits.forEach(habit => {
+        daysTracked += Object.keys(doneSet(habit)).length;
+        if (habit.type !== 'weekly') bestStreakDays = Math.max(bestStreakDays, longestStreak(habit));
+        (habit.sessions || []).forEach(s => {
+            if (s.e) longestFastMs = Math.max(longestFastMs, s.e - s.s);
+        });
+    });
+
+    const tiles = document.createElement('div');
+    tiles.className = 'tile-row';
+    [[String(daysTracked), 'days tracked'],
+     [bestStreakDays + 'd', 'best streak'],
+     [longestFastMs ? fmtDuration(longestFastMs) + 'h' : '–', 'longest fast']].forEach(([v, l]) => {
+        const t = document.createElement('div');
+        t.className = 'tile';
+        t.innerHTML = `<div class="tile-num" style="color:#c9a227">${v}</div>` +
+            `<div class="tile-lbl">${l}</div>`;
+        tiles.appendChild(t);
+    });
+    card.appendChild(tiles);
+
+    habits.forEach(habit => {
+        const weekly = habit.type === 'weekly';
+        const best = weekly ? weeklyStats(habit).best : longestStreak(habit);
+        const list = weekly ? WEEK_MILESTONES : DAY_MILESTONES;
+        const earned = list.filter(m => best >= m);
+        const next = list.find(m => best < m);
+        const row = document.createElement('div');
+        row.className = 'trophy-row';
+        const name = document.createElement('div');
+        name.className = 'trophy-name';
+        name.innerHTML = `<span style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+        row.appendChild(name);
+        const unit = weekly ? 'w' : 'd';
+        earned.forEach(m => {
+            const c = document.createElement('span');
+            c.className = 'trophy-chip';
+            c.style.background = habit.color;
+            c.textContent = m + unit;
+            row.appendChild(c);
+        });
+        if (next) {
+            const c = document.createElement('span');
+            c.className = 'trophy-chip next';
+            c.textContent = next + unit;
+            row.appendChild(c);
+        }
+        card.appendChild(row);
+    });
+    return card;
+}
+
 function renderStats() {
     const body = $('#stats-body');
     body.innerHTML = '';
@@ -1872,6 +2006,7 @@ function renderStats() {
         card.addEventListener('click', () => openDetail(habit.id));
         body.appendChild(card);
     });
+    body.appendChild(buildTrophyCard(habits));
 }
 
 $('#btn-stats').addEventListener('click', () => showScreen('stats'));
@@ -2272,6 +2407,103 @@ async function exportCsv() {
 
 $('#btn-csv').addEventListener('click', exportCsv);
 
+/* ---- fasting-history import (paste from another app) ---- */
+
+function parseHistoryText(text) {
+    const dt = (v) => {
+        const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/);
+        return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : null;
+    };
+    const sessions = [];
+    let bad = 0;
+    String(text).split(/\r?\n/).forEach(line => {
+        const t = line.trim();
+        if (!t) return;
+        if (/date|start|habit|hours/i.test(t) && !/^\d/.test(t)) return; // header row
+        let parts = t.includes(';') ? t.split(';') : t.includes('\t') ? t.split('\t') : t.split(',');
+        parts = parts.map(x => x.trim()).filter(Boolean);
+        // comma-separated with a decimal-comma hour: "2026-08-15,14,5"
+        if (!t.includes(';') && !t.includes('\t') && parts.length === 3 &&
+            /^\d{1,2}$/.test(parts[1]) && /^\d{1,2}$/.test(parts[2])) {
+            parts = [parts[0], parts[1] + '.' + parts[2]];
+        }
+        let sess = null;
+        if (parts.length >= 3 && dt(parts[1]) && dt(parts[2])) {
+            sess = { s: dt(parts[1]), e: dt(parts[2]) };            // fasts.csv row
+        } else if (parts.length >= 2 && dt(parts[0]) && dt(parts[1])) {
+            sess = { s: dt(parts[0]), e: dt(parts[1]) };            // start;end
+        } else if (parts.length >= 2 && /^\d{4}-\d{2}-\d{2}$/.test(parts[0])) {
+            const h = parseFloat(parts[1].replace(',', '.'));       // day;hours
+            if (isFinite(h) && h > 0 && h <= 48) {
+                const [y, mo, da] = parts[0].split('-').map(Number);
+                const end = new Date(y, mo - 1, da, 12).getTime();
+                sess = { s: end - h * 3600e3, e: end };
+            }
+        }
+        if (sess && sess.e > sess.s && sess.e - sess.s <= 48 * 3600e3 && sess.e <= Date.now()) {
+            sessions.push(sess);
+        } else {
+            bad++;
+        }
+    });
+    return { sessions, bad };
+}
+
+function updateHistPreview() {
+    const habit = state.habits.find(h => h.type === 'timer' && !h.archived);
+    const { sessions, bad } = parseHistoryText($('#hist-input').value);
+    const existing = habit ? fastDayStats(habit).ms : {};
+    const fresh = sessions.filter(s => !existing[dateKey(new Date(s.e))]);
+    const dupes = sessions.length - fresh.length;
+    let msg;
+    if (!habit) msg = 'No fasting habit to import into.';
+    else if (!sessions.length && !bad) msg = '';
+    else msg = `Found ${fresh.length} new fast${fresh.length === 1 ? '' : 's'}` +
+        (dupes ? ` \u00b7 ${dupes} already recorded` : '') +
+        (bad ? ` \u00b7 ${bad} unreadable line${bad === 1 ? '' : 's'}` : '') + '.';
+    $('#hist-preview').textContent = msg;
+    $('#btn-hist-save').disabled = !habit || !fresh.length;
+    return { habit, fresh };
+}
+
+$('#btn-histimport').addEventListener('click', () => {
+    $('#sheet-settings').hidden = true;
+    $('#hist-input').value = '';
+    $('#hist-preview').textContent = '';
+    $('#btn-hist-save').disabled = true;
+    $('#sheet-histimport').hidden = false;
+});
+$('#hist-input').addEventListener('input', updateHistPreview);
+$('#btn-hist-cancel').addEventListener('click', () => { $('#sheet-histimport').hidden = true; });
+$('#sheet-histimport').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-histimport')) $('#sheet-histimport').hidden = true;
+});
+
+$('#btn-hist-save').addEventListener('click', () => {
+    const { habit, fresh } = updateHistPreview();
+    if (!habit || !fresh.length) return;
+    // one fast per day: keep the first parsed entry for each end-day
+    const seen = {};
+    const added = fresh.filter(s => {
+        const k = dateKey(new Date(s.e));
+        if (seen[k]) return false;
+        seen[k] = true;
+        return true;
+    });
+    habit.sessions = habit.sessions || [];
+    habit.sessions.push(...added);
+    habit.sessions.sort((a, b) => a.s - b.s);
+    save();
+    $('#sheet-histimport').hidden = true;
+    renderToday();
+    showToast(`${added.length} fast${added.length === 1 ? '' : 's'} imported`, () => {
+        habit.sessions = habit.sessions.filter(s => !added.includes(s));
+        save();
+        if (!$('#screen-detail').hidden) openDetail(detailId, true);
+        else renderToday();
+    });
+});
+
 function updateBackupNote() {
     const el = $('#backup-note');
     const last = state.settings.lastBackup;
@@ -2334,7 +2566,7 @@ $('#toast-undo').addEventListener('click', () => {
 function setupSheetDismiss() {
     [['#sheet-edit', null], ['#sheet-settings', null], ['#sheet-fast', null],
      ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null], ['#sheet-startgoal', null],
-     ['#sheet-skiprange', null]]
+     ['#sheet-skiprange', null], ['#sheet-hours', null], ['#sheet-note', null], ['#sheet-histimport', null]]
         .forEach(([sel, after]) => {
             const backdrop = document.querySelector(sel);
             const sheetEl = backdrop.querySelector('.sheet');

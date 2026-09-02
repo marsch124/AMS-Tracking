@@ -1264,3 +1264,53 @@ html, body {
 
 .stat-number.overlong { color: #e0a80f !important; }
 .stat-label.overlong { color: #e0a80f !important; }
+
+/* ---------- v1.17: sheets, import, achievements ---------- */
+
+#hours-input, #note-input, #hist-input {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    margin-top: 10px;
+    resize: vertical;
+}
+#hours-input:focus, #note-input:focus, #hist-input:focus { border-color: var(--accent); }
+#hist-input { font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.trophy-card h3 .hi { width: 22px; height: 22px; vertical-align: -4px; margin-right: 6px; color: #c9a227; }
+
+.trophy-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    flex-wrap: wrap;
+}
+.trophy-name {
+    flex: 1 1 100%;
+    font-size: 14px;
+    font-weight: 700;
+}
+.trophy-name .hi { width: 17px; height: 17px; vertical-align: -3.5px; margin-right: 5px; }
+.trophy-chip {
+    min-width: 34px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.trophy-chip.next {
+    background: transparent !important;
+    border: 1.5px dashed var(--text-dim);
+    color: var(--text-dim);
+    font-weight: 700;
+}

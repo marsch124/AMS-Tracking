@@ -218,10 +218,10 @@ html, body {
 
 .wd {
     flex: 0 0 auto;
-    width: 1.0588rem;
-    height: 1.0588rem;
+    width: 0.9412rem;
+    height: 0.9412rem;
     border-radius: 50%;
-    font-size: 0.5882rem;
+    font-size: 0.5294rem;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -1487,6 +1487,17 @@ html, body {
 /* tiny words under the fasting card's tap areas — laid over the card's
    bottom padding so the card itself stays a single line (v1.21 wrapped) */
 .habit-card.zoned { position: relative; padding-bottom: 23px; }
+
+/* the fasting card's right side is wide (eating window / goal times), so
+   its day dots get one size smaller to keep all seven on one line (v1.23) */
+.habit-card.zoned .week-dots { gap: 3px; }
+.habit-card.zoned .wd {
+    width: 0.8235rem;
+    height: 0.8235rem;
+    font-size: 0.4706rem;
+}
+.habit-card.zoned .wd-ratio { font-size: 0.6471rem; margin-left: 2px; }
+
 .zone-labels {
     position: absolute;
     left: 14px;

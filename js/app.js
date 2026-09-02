@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.22';
+const APP_VERSION = '1.23';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -404,8 +404,10 @@ document.addEventListener('visibilitychange', () => {
 
 const $ = (sel) => document.querySelector(sel);
 
+/* oklab keeps the hue visible in pale mixes — srgb washed the purples
+   out to near-white and their cards vanished against the page (v1.23) */
 function tint(color, pct) {
-    return `color-mix(in srgb, ${color} ${pct}%, var(--card-fallback))`;
+    return `color-mix(in oklab, ${color} ${pct}%, var(--card-fallback))`;
 }
 
 function renderToday() {
@@ -460,7 +462,7 @@ function renderToday() {
 function buildCard(habit) {
     const card = document.createElement('div');
     card.className = 'habit-card';
-    card.style.background = tint(habit.color, 10);
+    card.style.background = tint(habit.color, 17);
 
     const done = doneSet(habit);
     const todayKey = dateKey(new Date());
@@ -606,6 +608,14 @@ function buildCard(habit) {
         } else {
             const last = lastFinishedSession(habit);
             const sinceEnd = last ? Date.now() - last.e : null;
+            if (last) {
+                // the idle number is the last fast's story — tap it to fix that fast
+                num.style.cursor = 'pointer';
+                num.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openFastSheet(habit, last, true);
+                });
+            }
             if (last && habit.goalHours && sinceEnd < 24 * 3600e3) {
                 // the eating window is the other half of the fasting rhythm
                 num.textContent = fmtDuration(sinceEnd);
@@ -643,12 +653,16 @@ function buildCard(habit) {
         // v1.21: each area also gets a tiny word saying what it does.
         if (habit.type === 'timer') {
             card.classList.add('zoned');
-            if (active) card.classList.add('zoned-3');
+            // the number is tappable while running AND while idle with a
+            // recorded fast (it opens that fast's editor), so the edit
+            // zone and its label follow the same rule (v1.23)
+            const canEdit = active || lastFinishedSession(habit);
+            if (canEdit) card.classList.add('zoned-3');
             const zl = document.createElement('div');
             zl.className = 'zone-labels';
             zl.innerHTML = `<span class="zl-btn">${active ? 'stop' : 'start'}</span>` +
                 `<span class="zl-mid">stats</span>` +
-                (active ? '<span class="zl-edit">edit</span>' : '');
+                (canEdit ? '<span class="zl-edit">edit</span>' : '');
             card.appendChild(zl);
         }
     }

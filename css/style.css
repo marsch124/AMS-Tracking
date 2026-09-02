@@ -1314,3 +1314,64 @@ html, body {
     color: var(--text-dim);
     font-weight: 700;
 }
+
+/* ---------- v1.18: find your way ---------- */
+
+/* with the jump-to-today button the header holds four buttons */
+.cal-head.crowded h3 { font-size: 18px; }
+
+/* legend under the fasting calendar, mirroring the .cf-hours states */
+.cal-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 12px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+.cal-legend .lg {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    margin-right: 4px;
+    flex: none;
+}
+.cal-legend .lg.met { background: #2fa96d; }
+.cal-legend .lg.under { background: var(--border); }
+.cal-legend .lg.running { background: #d9463e; }
+.cal-legend .lg.skipday { border: 1.5px dashed currentColor; }
+
+/* week dots double as shortcuts into the calendar */
+.wd { cursor: pointer; }
+
+/* the tapped day flashes once so the eye lands on it */
+.cal-day.cal-flash { animation: cal-flash 0.9s ease 0.25s 1; }
+@keyframes cal-flash {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+    35% { transform: scale(1.18); box-shadow: 0 0 0 3px var(--accent); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cal-day.cal-flash { animation: none; box-shadow: 0 0 0 2.5px var(--accent); }
+}
+
+/* today's-note dot next to the habit name */
+.note-ind {
+    border: none;
+    background: transparent;
+    padding: 0 6px;
+    margin-left: 2px;
+    cursor: pointer;
+    vertical-align: 1px;
+}
+.note-ind::after {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 2.5px color-mix(in srgb, currentColor 25%, transparent);
+}

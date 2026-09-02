@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.17';
+const APP_VERSION = '1.18';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -525,6 +525,19 @@ function buildCard(habit) {
     name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
     if (habit.name.length > 24) name.classList.add('name-xs');
     else if (habit.name.length > 15) name.classList.add('name-sm');
+    // today's note peeks out as a small dot next to the name
+    const todayNote = (habit.notes || {})[todayKey];
+    if (todayNote) {
+        const ni = document.createElement('button');
+        ni.className = 'note-ind';
+        ni.style.color = habit.color;
+        ni.setAttribute('aria-label', "Show today's note");
+        ni.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showToast(todayNote, () => editDayNote(habit, new Date(), true), 'Edit', 7000);
+        });
+        name.appendChild(ni);
+    }
     main.appendChild(name);
     main.appendChild(buildWeekDots(habit, done));
 
@@ -644,6 +657,11 @@ function buildWeekDots(habit, done) {
             el.classList.add('wd-skip');
             el.style.color = habit.color;
         }
+        // a dot is a shortcut into that day on the history calendar
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openDetailAt(habit.id, d);
+        });
         row.appendChild(el);
     }
     const ratio = document.createElement('span');
@@ -880,6 +898,17 @@ document.addEventListener('visibilitychange', () => {
 let detailId = null;
 let calMonth = null; // {y, m} shown in the history calendar
 let noteMode = false;
+let highlightDayKey = null; // day cell to flash once after opening
+
+/* Open a habit's detail with the calendar on a specific day's month,
+   flashing that day so the eye lands on it (week-dot shortcut). */
+function openDetailAt(id, d) {
+    detailId = id;
+    calMonth = { y: d.getFullYear(), m: d.getMonth() };
+    noteMode = false;
+    highlightDayKey = dateKey(d);
+    openDetail(id, true);
+}
 
 function openDetail(id, keepMonth) {
     if (!keepMonth || detailId !== id) {
@@ -965,6 +994,21 @@ function buildHistoryCard(habit) {
     prev.addEventListener('click', goPrev);
     next.addEventListener('click', goNext);
 
+    // when the view has wandered off, one tap brings the current month back
+    const isCurMonth = calMonth.y === now.getFullYear() && calMonth.m === now.getMonth();
+    if (!isCurMonth) {
+        const todayBtn = document.createElement('button');
+        todayBtn.className = 'pill-btn icon-only cal-nav-btn';
+        todayBtn.innerHTML = icon('target');
+        todayBtn.setAttribute('aria-label', 'Jump to today');
+        todayBtn.addEventListener('click', () => {
+            calMonth = { y: now.getFullYear(), m: now.getMonth() };
+            openDetail(habit.id, true);
+        });
+        nav.appendChild(todayBtn);
+        head.classList.add('crowded');
+    }
+
     // swipe left/right on the calendar card changes the month
     let swX = null, swY = null;
     card.addEventListener('touchstart', (e) => {
@@ -1028,6 +1072,7 @@ function buildHistoryCard(habit) {
         const el = document.createElement('button');
         el.className = 'cal-day';
         el.textContent = day;
+        if (key === highlightDayKey) el.classList.add('cal-flash');
         const skip = skipSet(habit);
         const notes = habit.notes || {};
         const isTimer = habit.type === 'timer';
@@ -1094,7 +1139,20 @@ function buildHistoryCard(habit) {
         }
         grid.appendChild(el);
     }
+    highlightDayKey = null; // flash only on the render right after the jump
     card.appendChild(grid);
+
+    // one-line key to the hour circles (timer habits only)
+    if (habit.type === 'timer') {
+        const legend = document.createElement('p');
+        legend.className = 'cal-legend';
+        legend.innerHTML =
+            `<span class="lg met"></span>goal met` +
+            `<span class="lg under"></span>fell short` +
+            `<span class="lg running"></span>running` +
+            `<span class="lg skipday" style="color:${habit.color}"></span>skip day`;
+        card.appendChild(legend);
+    }
 
     // vacation helper: mark a whole range of days as skip in one go
     const rangeBtn = document.createElement('button');
@@ -1123,12 +1181,12 @@ function buildHistoryCard(habit) {
     return card;
 }
 
-let noteCtx = null; // { habitId, key }
+let noteCtx = null; // { habitId, key, fromToday }
 
-function editDayNote(habit, d) {
+function editDayNote(habit, d, fromToday) {
     const key = dateKey(d);
     habit.notes = habit.notes || {};
-    noteCtx = { habitId: habit.id, key };
+    noteCtx = { habitId: habit.id, key, fromToday: !!fromToday };
     $('#note-title').textContent = 'Note for ' +
         d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
     $('#note-input').value = habit.notes[key] || '';
@@ -1151,7 +1209,8 @@ function closeNoteSheet(apply, remove) {
         return;
     }
     save();
-    openDetail(habit.id, true);
+    if (noteCtx.fromToday) renderToday();
+    else openDetail(habit.id, true);
 }
 
 $('#btn-note-save').addEventListener('click', () => closeNoteSheet(true, false));

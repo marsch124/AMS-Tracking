@@ -79,6 +79,10 @@ app on his iPhone as the real test environment.
   live preview, dedupe by end-day, undo toast), Achievements card at
   the bottom of Stats (global totals + per-habit milestone chips,
   next milestone hollow), remaining validation alerts → toasts.
+- v1.18 "Find your way" — SHIPPED: jump-to-today button in the
+  calendar header (off-month only), fasting-calendar legend, tappable
+  week dots (openDetailAt + cal-flash highlight), today's-note dot on
+  Today cards with toast + Edit.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -99,21 +103,10 @@ cabinet as v1.17 (current: CACHE_NAME ams-tracking-v33, asset links
 
 **APPROVED and in progress (2 Sep 2026): ten UI improvements, Martin
 said "All ten in sensible batches please." Ship as three releases,
-each through the full release checklist above. Nothing built yet.**
+each through the full release checklist above. v1.18 has shipped;
+v1.19 and v1.20 remain.**
 
-v1.18 "Find your way" — four small wins:
-1. Jump-to-today button in the detail month calendar header, shown
-   only when the viewed month (calMonth, js/app.js ~line 881) is not
-   the current month; resets calMonth and re-renders.
-2. One-line legend under the fasting (timer) calendar explaining the
-   circles: green = goal met, gray = fell short, red = running,
-   dashed = skip day. Timer habits only.
-3. Tappable week dots on Today cards (.week-dots built ~line 624 in
-   buildCard): tapping a dot opens that habit's detail with calMonth
-   set to that day's month and briefly highlights the day cell.
-4. Note indicator on Today cards when habit.notes[todayKey] exists: a
-   small dot; tapping shows the note in a toast with an Edit action
-   that opens the note sheet (editDayNote).
+v1.18 "Find your way" — SHIPPED (see roadmap above).
 
 v1.19 "The feel, part two":
 5. Day-complete moment: when the last scheduled habit of the day is

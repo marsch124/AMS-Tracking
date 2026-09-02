@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.14';
+const APP_VERSION = '1.15';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1214,9 +1214,18 @@ function toggleHistoryDay(habit, d, wasDone) {
 function buildYearCard(habit, done, year) {
     const card = document.createElement('div');
     card.className = 'detail-card';
+    const head = document.createElement('div');
+    head.className = 'year-head';
     const h = document.createElement('h3');
     h.textContent = year;
-    card.appendChild(h);
+    const share = document.createElement('button');
+    share.className = 'pill-btn icon-only cal-nav-btn';
+    share.innerHTML = icon('export');
+    share.setAttribute('aria-label', `Share ${year} as a poster`);
+    share.addEventListener('click', () => exportYearPoster(habit, year));
+    head.appendChild(h);
+    head.appendChild(share);
+    card.appendChild(head);
 
     const grid = document.createElement('div');
     grid.className = 'pixel-grid';
@@ -1288,6 +1297,163 @@ function buildYearCard(habit, done, year) {
     });
     card.appendChild(rows);
     return card;
+}
+
+/* ================= year poster export ================= */
+
+function posterFileName(habit, year) {
+    const slug = habit.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'habit';
+    return `ams-tracking-${slug}-${year}.png`;
+}
+
+/* 1080x1350 (4:5) share image in app style: icon + name, the year as a
+   month-by-day pixel grid, and the year card's stats as big tiles.
+   Always drawn on the light palette so posters look alike everywhere. */
+async function renderYearPoster(habit, year) {
+    const W = 1080;
+    const H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const BG = '#f2f4f8', CARD = '#ffffff', TEXT = '#16181d', DIM = '#7a7f8a', EMPTY = '#e8ebf1';
+    const FONT = "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif";
+    const rr = (x, y, w, h, r) => {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else ctx.rect(x, y, w, h);
+    };
+
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = CARD;
+    rr(50, 50, W - 100, H - 100, 44);
+    ctx.fill();
+
+    // the hand-drawn habit icon, rasterized from its SVG in the habit color
+    await new Promise(resolve => {
+        const svg = icon(habit.icon)
+            .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+            .replace('stroke="currentColor"', `stroke="${habit.color}"`);
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, 106, 104, 96, 96); resolve(); };
+        img.onerror = resolve;
+        setTimeout(resolve, 1500); // never hang the export on a bad icon
+        img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    });
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    let size = 66;
+    do { ctx.font = `800 ${size}px ${FONT}`; size -= 2; }
+    while (ctx.measureText(habit.name).width > 730 && size > 30);
+    ctx.fillStyle = TEXT;
+    ctx.fillText(habit.name, 228, 162);
+    ctx.font = `800 42px ${FONT}`;
+    ctx.fillStyle = DIM;
+    ctx.fillText(String(year), 228, 220);
+
+    // month rows x day columns, matching the year grid's states
+    const done = doneSet(habit);
+    const skip = skipSet(habit);
+    const today = new Date();
+    const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    const gx = 156, gw = 866, cell = 22, gapX = (gw - 31 * cell) / 30;
+    const gy = 306, rowPitch = 46;
+    for (let m = 0; m < 12; m++) {
+        const y = gy + m * rowPitch;
+        ctx.font = `700 26px ${FONT}`;
+        ctx.fillStyle = DIM;
+        ctx.fillText(MONTHS[m], 106, y + cell - 3);
+        const daysInMonth = new Date(year, m + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, m, day);
+            const k = dateKey(date);
+            const x = gx + (day - 1) * (cell + gapX);
+            if (done[k]) {
+                ctx.fillStyle = habit.color;
+                rr(x, y, cell, cell, 6);
+                ctx.fill();
+            } else if (skip[k] && date <= today) {
+                ctx.strokeStyle = habit.color;
+                ctx.lineWidth = 2.4;
+                ctx.setLineDash([4, 3]);
+                rr(x + 1.5, y + 1.5, cell - 3, cell - 3, 5);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else {
+                ctx.fillStyle = EMPTY;
+                ctx.globalAlpha = date > today ? 0.45 : 1;
+                rr(x, y, cell, cell, 6);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+    }
+
+    // stat tiles, mirroring the year card's numbers
+    const isCurrentYear = year === today.getFullYear();
+    let doneCount = 0;
+    let scheduledPast = 0;
+    for (let d = new Date(year, 0, 1); d <= new Date(year, 11, 31); d = addDays(d, 1)) {
+        const k = dateKey(d);
+        if (done[k]) doneCount++;
+        if (d <= today && isScheduled(habit, d) && !skip[k]) scheduledPast++;
+    }
+    let stats;
+    if (isCurrentYear && habit.type === 'weekly') {
+        const w = weeklyStats(habit);
+        stats = [[String(weeklyStreak(habit)), 'week streak'],
+                 [String(w.best), 'best streak'],
+                 [`${w.weeksMet}/${w.weeksTotal}`, 'weeks met']];
+    } else if (isCurrentYear) {
+        stats = [[String(currentStreak(habit)), 'day streak'],
+                 [String(longestStreak(habit)), 'longest streak'],
+                 [completionStats(habit).pct + '%', 'completion']];
+    } else {
+        stats = [[String(doneCount), 'days done'],
+                 [String(scheduledPast), 'days scheduled']];
+    }
+    ctx.textAlign = 'center';
+    const tileW = (W - 160) / stats.length;
+    stats.forEach(([v, l], i) => {
+        const cx = 80 + tileW * (i + 0.5);
+        let ts = 86;
+        do { ctx.font = `800 ${ts}px ${FONT}`; ts -= 4; }
+        while (ctx.measureText(v).width > tileW - 40 && ts > 34);
+        ctx.fillStyle = habit.color;
+        ctx.fillText(v, cx, 1030);
+        ctx.font = `600 30px ${FONT}`;
+        ctx.fillStyle = DIM;
+        ctx.fillText(l, cx, 1080);
+    });
+
+    ctx.font = `600 26px ${FONT}`;
+    ctx.fillStyle = DIM;
+    ctx.fillText(`AMS Tracking \u00b7 ${year}, pixel by pixel`, W / 2, 1236);
+    return canvas;
+}
+
+async function exportYearPoster(habit, year) {
+    try {
+        const canvas = await renderYearPoster(habit, year);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (!blob) throw new Error('could not render the image');
+        const file = new File([blob], posterFileName(habit, year), { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            showToast('Poster shared');
+        } else {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('Poster saved');
+        }
+    } catch (err) {
+        if (!err || err.name !== 'AbortError') alert('Poster export failed: ' + (err && err.message));
+    }
 }
 
 /* ================= fasting stages ================= */

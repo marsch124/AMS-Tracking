@@ -65,6 +65,9 @@ app on his iPhone as the real test environment.
   (per-habit last week + streak delta + avg fast vs prior week,
   dismissable via settings.lastReviewWeek) and fasting-stages track
   in the fasting detail (live marker, not-medical-advice hint).
+- v1.15 "A year on one picture" — SHIPPED: year-poster export
+  (1080x1350 PNG per year card via share sheet / download,
+  renderYearPoster in js/app.js).
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -75,19 +78,11 @@ app on his iPhone as the real test environment.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.
 
-## Proposed next features (suggested to Martin 31 Aug 2026)
+## Feature pipeline
 
-Batches (1+3) and (2+4) shipped as v1.13 and v1.14 on 2 Sep 2026
-(current: CACHE_NAME ams-tracking-v28, asset links ?v=28). Only (5)
-remains; Martin picked the shipped batches explicitly — ask before
-building 5.
-
-5. **Year-poster export** — button in habit detail renders the year
-   pixel grid + name + streak stats to a canvas (~1080x1350) in app
-   style and shares via navigator.share({files:[png]}) with download
-   fallback (same pattern as CSV/backup export).
-
-Implementation reminders for all: follow the release checklist above
-(How-it-works + version history + APP_VERSION + version.json + ?v= +
-CACHE_NAME bumps, Playwright test, push = deploy). The self-updater
+All five features proposed on 31 Aug 2026 have shipped (v1.13-v1.15,
+2 Sep 2026; current: CACHE_NAME ams-tracking-v29, asset links ?v=29).
+The pipeline is empty — gather Martin's on-phone feedback and agree on
+new ideas with him before building anything further. Follow the
+release checklist above for every future release; the self-updater
 shows Martin the Update button automatically.

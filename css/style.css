@@ -1232,3 +1232,13 @@ html, body {
 .stage-name { font-weight: 700; font-size: 14.5px; }
 .stage-range { color: var(--text-dim); font-size: 13px; font-weight: 600; margin-left: 5px; }
 .stage-desc { display: block; color: var(--text-dim); font-size: 13px; }
+
+/* ---------- v1.15: year poster export ---------- */
+
+.year-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.year-head h3 { margin: 0; }

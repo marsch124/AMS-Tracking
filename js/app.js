@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.12.3';
+const APP_VERSION = '1.13';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -481,14 +481,16 @@ function buildCard(habit) {
         else toggleToday(habit);
     });
 
-    // long-press on an idle fasting button picks tonight's goal before starting
-    if (habit.type === 'timer' && !active) {
+    // long-press on an idle fasting button picks tonight's goal before starting;
+    // on a check-off button it marks yesterday done (forgot-to-log catch-up)
+    if ((habit.type === 'timer' && !active) || habit.type !== 'timer') {
         let lpTimer = null;
         btn.addEventListener('pointerdown', () => {
             lpTimer = setTimeout(() => {
                 lpTimer = null;
                 btn.dataset.lp = '1';
-                openStartGoalSheet(habit);
+                if (habit.type === 'timer') openStartGoalSheet(habit);
+                else markYesterday(habit);
             }, 500);
         });
         ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
@@ -644,6 +646,27 @@ function toggleToday(habit) {
     if (habit.done[key]) maybeCelebrateStreak(habit);
 }
 
+/* Long-press backfill: yesterday counts, but milestones never fire from it */
+function markYesterday(habit) {
+    const key = dateKey(addDays(new Date(), -1));
+    habit.done = habit.done || {};
+    if (habit.done[key]) {
+        showToast('Yesterday is already done');
+        return;
+    }
+    const wasSkip = !!(habit.skip && habit.skip[key]);
+    if (wasSkip) delete habit.skip[key];
+    habit.done[key] = 1;
+    save();
+    renderToday();
+    showToast('Yesterday marked done', () => {
+        delete habit.done[key];
+        if (wasSkip) { habit.skip = habit.skip || {}; habit.skip[key] = 1; }
+        save();
+        renderToday();
+    });
+}
+
 function toggleTimer(habit) {
     habit.sessions = habit.sessions || [];
     const active = activeSession(habit);
@@ -785,15 +808,17 @@ function buildHistoryCard(habit) {
     next.innerHTML = icon('chevR');
     next.setAttribute('aria-label', 'Next month');
     const now = new Date();
-    const atCurrentMonth = calMonth.y === now.getFullYear() && calMonth.m === now.getMonth();
-    next.disabled = atCurrentMonth;
+    // months up to a year ahead are viewable, so a planned vacation can be checked
+    const atMaxMonth = new Date(calMonth.y, calMonth.m, 1) >=
+        new Date(now.getFullYear(), now.getMonth() + 12, 1);
+    next.disabled = atMaxMonth;
     const goPrev = () => {
         calMonth.m--;
         if (calMonth.m < 0) { calMonth.m = 11; calMonth.y--; }
         openDetail(habit.id, true);
     };
     const goNext = () => {
-        if (atCurrentMonth) return;
+        if (atMaxMonth) return;
         calMonth.m++;
         if (calMonth.m > 11) { calMonth.m = 0; calMonth.y++; }
         openDetail(habit.id, true);
@@ -869,8 +894,27 @@ function buildHistoryCard(habit) {
         const isTimer = habit.type === 'timer';
         if (isTimer) el.classList.add('cal-fast');
         if (key > todayKey) {
-            el.disabled = true;
-            if (isTimer) el.innerHTML = `<span class="cf-date">${day}</span><span class="cf-hours future"></span>`;
+            if (skip[key]) {
+                // planned vacation day: shown like any skip day, tap to un-mark it
+                if (isTimer) {
+                    el.classList.add('skipped-fast');
+                    el.innerHTML = `<span class="cf-date">${day}</span>` +
+                        `<span class="cf-hours skipday" style="border-color:${habit.color};color:${habit.color}">\u2013</span>`;
+                } else {
+                    el.classList.add('skipped');
+                    el.style.color = habit.color;
+                }
+                if (notes[key]) el.classList.add('has-note');
+                el.addEventListener('click', () => {
+                    if (noteMode) { editDayNote(habit, d); return; }
+                    delete habit.skip[key];
+                    save();
+                    openDetail(habit.id, true);
+                });
+            } else {
+                el.disabled = true;
+                if (isTimer) el.innerHTML = `<span class="cf-date">${day}</span><span class="cf-hours future"></span>`;
+            }
         } else {
             if (isTimer) {
                 // date above, fasted hours in a colored circle below (like the app Martin likes)
@@ -913,6 +957,13 @@ function buildHistoryCard(habit) {
     }
     card.appendChild(grid);
 
+    // vacation helper: mark a whole range of days as skip in one go
+    const rangeBtn = document.createElement('button');
+    rangeBtn.className = 'skip-range-btn';
+    rangeBtn.innerHTML = icon('case') + 'Skip several days (vacation)…';
+    rangeBtn.addEventListener('click', () => openSkipRangeSheet(habit));
+    card.appendChild(rangeBtn);
+
     // notes for the shown month
     const notes = habit.notes || {};
     const monthPrefix = calMonth.y + '-' + pad(calMonth.m + 1);
@@ -943,6 +994,64 @@ function editDayNote(habit, d) {
     save();
     openDetail(habit.id, true);
 }
+
+/* ================= vacation range (bulk skip) ================= */
+
+let skipRangeHabitId = null;
+
+function openSkipRangeSheet(habit) {
+    skipRangeHabitId = habit.id;
+    const today = dateKey(new Date());
+    $('#skip-from').value = today;
+    $('#skip-to').value = today;
+    $('#skip-all').checked = state.habits.filter(h => !h.archived).length > 1;
+    $('#sheet-skiprange').hidden = false;
+}
+
+$('#btn-skiprange-cancel').addEventListener('click', () => { $('#sheet-skiprange').hidden = true; });
+$('#sheet-skiprange').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-skiprange')) $('#sheet-skiprange').hidden = true;
+});
+
+$('#btn-skiprange-save').addEventListener('click', () => {
+    const habit = state.habits.find(h => h.id === skipRangeHabitId);
+    if (!habit) { $('#sheet-skiprange').hidden = true; return; }
+    const fromV = $('#skip-from').value;
+    const toV = $('#skip-to').value;
+    if (!fromV || !toV) { alert('Please pick a first and a last day.'); return; }
+    const from = keyToDate(fromV);
+    const to = keyToDate(toV);
+    if (to < from) { alert('The last day must not be before the first day.'); return; }
+    const days = Math.round((to - from) / 86400e3) + 1;
+    if (days > 92) { alert('A range can cover at most 92 days (about 3 months).'); return; }
+    const targets = $('#skip-all').checked
+        ? state.habits.filter(h => !h.archived)
+        : [habit];
+    const added = []; // only the newly marked [habit, key] pairs, so Undo is exact
+    targets.forEach(h => {
+        const done = doneSet(h);
+        h.skip = h.skip || {};
+        for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
+            const k = dateKey(d);
+            if (done[k] || h.skip[k]) continue; // done days stay done, skips stay
+            h.skip[k] = 1;
+            added.push([h, k]);
+        }
+    });
+    save();
+    $('#sheet-skiprange').hidden = true;
+    openDetail(habit.id, true);
+    const dayWord = days === 1 ? 'day' : 'days';
+    showToast(targets.length > 1
+        ? `${days} ${dayWord} skipped for ${targets.length} habits`
+        : `${days} ${dayWord} skipped`,
+        added.length ? () => {
+            added.forEach(([h, k]) => delete h.skip[k]);
+            save();
+            if (!$('#screen-detail').hidden) openDetail(detailId, true);
+            else renderToday();
+        } : null);
+});
 
 function toggleHistoryDay(habit, d, wasDone) {
     const key = dateKey(d);
@@ -1830,7 +1939,8 @@ $('#toast-undo').addEventListener('click', () => {
 /* drag a bottom sheet down (from its top, or when scrolled to the top) to close it */
 function setupSheetDismiss() {
     [['#sheet-edit', null], ['#sheet-settings', null], ['#sheet-fast', null],
-     ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null], ['#sheet-startgoal', null]]
+     ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null], ['#sheet-startgoal', null],
+     ['#sheet-skiprange', null]]
         .forEach(([sel, after]) => {
             const backdrop = document.querySelector(sel);
             const sheetEl = backdrop.querySelector('.sheet');

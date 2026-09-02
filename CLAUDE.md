@@ -58,6 +58,9 @@ app on his iPhone as the real test environment.
 - v1.11 "The feel release" — SHIPPED: month swipe, sheet drag-dismiss,
   day-progress bar, ink-drawn checkmarks, name auto-fit + status-bar
   theme sync.
+- v1.13 "Life happens — in bulk" — SHIPPED: vacation range (bulk skip
+  with apply-to-all, future months navigable, tappable future skip
+  days) and also-yesterday long-press on check circles.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -68,21 +71,11 @@ app on his iPhone as the real test environment.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.
 
-## Proposed next features (suggested to Martin 31 Aug 2026 — he has NOT
-## yet picked; ask which to build before starting)
+## Proposed next features (suggested to Martin 31 Aug 2026)
 
-Current state when written: v1.12.3 shipped, CACHE_NAME ams-tracking-v26,
-asset links ?v=26. Suggested batching: (1+3) as a quick release, then
-(2+4), then (5).
-
-1. **Vacation range (bulk skip)** — mark a DATE RANGE as skip days
-   instead of tapping each calendar day. Plan: a "Skip several days"
-   affordance in the history-calendar card (e.g. long-press a day →
-   "skip until…" prompt, or a small range sheet with two date inputs);
-   write `habit.skip[key]=1` for each day in range, clear `done` on
-   those days is NOT done (only mark skip where not done); Undo toast
-   restores previous skip-set. Works per habit; consider "apply to all
-   habits" checkbox since vacations affect everything.
+Batch (1+3) shipped as v1.13 on 2 Sep 2026 (CACHE_NAME ams-tracking-v27,
+asset links ?v=27). Remaining suggested batching: (2+4), then (5).
+Martin picked 1+3 explicitly; ask before building 2, 4 or 5.
 
 2. **Fasting stages** — in the fasting detail (and/or under the running
    timer), show commonly-cited fast phases with the current one
@@ -90,13 +83,6 @@ asset links ?v=26. Suggested batching: (1+3) as a quick release, then
    16h+ deep/ketosis territory. Draw as a horizontal hand-drawn track
    with markers; MUST carry a visible "popular approximation, not
    medical advice" hint. Live-updates with the existing 20s tick.
-
-3. **"Also yesterday?" long-press** — long-press the check circle of a
-   DAILY/WEEKLY habit card → marks yesterday done (toast + Undo).
-   Reuse the long-press pattern from the timer start button
-   (pointerdown 500ms, btn.dataset.lp guard vs click). If yesterday
-   already done, toast says so. Do not fire milestones from it
-   (backfill rule).
 
 4. **Week in review** — on first open in a new ISO week (store
    settings.lastReviewWeek = weekStart key), show a dismissable card

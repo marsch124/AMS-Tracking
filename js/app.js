@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.23';
+const APP_VERSION = '1.23.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -851,8 +851,6 @@ function buildWeekDots(habit, done) {
     row.className = 'week-dots';
     const today = new Date();
     const monday = addDays(today, -weekdayIdx(today));
-    let doneCount = 0;
-    let scheduledCount = 0;
     const skip = skipSet(habit);
     for (let i = 0; i < 7; i++) {
         const d = addDays(monday, i);
@@ -860,13 +858,10 @@ function buildWeekDots(habit, done) {
         const el = document.createElement('span');
         el.className = 'wd';
         el.textContent = DAY_NAMES[i];
-        const scheduled = isScheduled(habit, d);
-        if (!scheduled) el.classList.add('off-day');
-        else if (!skip[key]) scheduledCount++;
+        if (!isScheduled(habit, d)) el.classList.add('off-day');
         if (done[key]) {
             el.classList.add('on');
             el.style.background = habit.color;
-            doneCount++;
         } else if (skip[key]) {
             el.classList.add('wd-skip');
             el.style.color = habit.color;
@@ -878,12 +873,6 @@ function buildWeekDots(habit, done) {
         });
         row.appendChild(el);
     }
-    const ratio = document.createElement('span');
-    ratio.className = 'wd-ratio';
-    ratio.textContent = habit.type === 'weekly'
-        ? `${doneCount}/${habit.target || 1}`
-        : `${doneCount}/${scheduledCount}`;
-    row.appendChild(ratio);
     return row;
 }
 

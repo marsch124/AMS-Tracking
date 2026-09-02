@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.15';
+const APP_VERSION = '1.15.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -2103,6 +2103,17 @@ $('#btn-archived').addEventListener('click', () => {
     renderArchived();
     $('#sheet-archived').hidden = false;
 });
+/* bring a dismissed week review back on demand */
+$('#btn-weekreview').addEventListener('click', () => {
+    delete state.settings.lastReviewWeek;
+    save();
+    $('#sheet-settings').hidden = true;
+    renderToday();
+    const box = $('#week-review');
+    if (box.hidden) showToast('Nothing to review yet \u2014 come back after your first tracked week');
+    else box.scrollIntoView({ behavior: 'smooth', block: 'end' });
+});
+
 $('#btn-archived-close').addEventListener('click', () => { $('#sheet-archived').hidden = true; });
 $('#sheet-archived').addEventListener('click', (e) => {
     if (e.target === $('#sheet-archived')) $('#sheet-archived').hidden = true;

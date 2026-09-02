@@ -67,3 +67,49 @@ app on his iPhone as the real test environment.
   Open App shortcut make it work with no app changes.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.
+
+## Proposed next features (suggested to Martin 31 Aug 2026 — he has NOT
+## yet picked; ask which to build before starting)
+
+Current state when written: v1.12.3 shipped, CACHE_NAME ams-tracking-v26,
+asset links ?v=26. Suggested batching: (1+3) as a quick release, then
+(2+4), then (5).
+
+1. **Vacation range (bulk skip)** — mark a DATE RANGE as skip days
+   instead of tapping each calendar day. Plan: a "Skip several days"
+   affordance in the history-calendar card (e.g. long-press a day →
+   "skip until…" prompt, or a small range sheet with two date inputs);
+   write `habit.skip[key]=1` for each day in range, clear `done` on
+   those days is NOT done (only mark skip where not done); Undo toast
+   restores previous skip-set. Works per habit; consider "apply to all
+   habits" checkbox since vacations affect everything.
+
+2. **Fasting stages** — in the fasting detail (and/or under the running
+   timer), show commonly-cited fast phases with the current one
+   highlighted: 0-4h digestion, 4-12h transition, 12-16h fat burning,
+   16h+ deep/ketosis territory. Draw as a horizontal hand-drawn track
+   with markers; MUST carry a visible "popular approximation, not
+   medical advice" hint. Live-updates with the existing 20s tick.
+
+3. **"Also yesterday?" long-press** — long-press the check circle of a
+   DAILY/WEEKLY habit card → marks yesterday done (toast + Undo).
+   Reuse the long-press pattern from the timer start button
+   (pointerdown 500ms, btn.dataset.lp guard vs click). If yesterday
+   already done, toast says so. Do not fire milestones from it
+   (backfill rule).
+
+4. **Week in review** — on first open in a new ISO week (store
+   settings.lastReviewWeek = weekStart key), show a dismissable card
+   above the habit list: per habit last week's done/scheduled, streak
+   delta, avg fast h vs week before. Pure derived data, no schema
+   change except settings.lastReviewWeek.
+
+5. **Year-poster export** — button in habit detail renders the year
+   pixel grid + name + streak stats to a canvas (~1080x1350) in app
+   style and shares via navigator.share({files:[png]}) with download
+   fallback (same pattern as CSV/backup export).
+
+Implementation reminders for all: follow the release checklist above
+(How-it-works + version history + APP_VERSION + version.json + ?v= +
+CACHE_NAME bumps, Playwright test, push = deploy). The self-updater
+shows Martin the Update button automatically.

@@ -68,6 +68,17 @@ app on his iPhone as the real test environment.
 - v1.15 "A year on one picture" — SHIPPED: year-poster export
   (1080x1350 PNG per year card via share sheet / download,
   renderYearPoster in js/app.js).
+- v1.16 "The whole rhythm" — SHIPPED: eating-window countdown on the
+  idle fasting card (time since last fast + next-fast start clock)
+  and an overlong-fast guard (amber "still fasting? tap timer to
+  fix" once a running fast passes 24h).
+- v1.17 "History, trophies, and no more gray boxes" — SHIPPED:
+  record-a-fast hours sheet with goal chips + skip-day button,
+  day-note sheet (both replacing browser prompt()), fasting-history
+  import in Settings (paste start;end / date;hours / fasts.csv rows;
+  live preview, dedupe by end-day, undo toast), Achievements card at
+  the bottom of Stats (global totals + per-habit milestone chips,
+  next milestone hollow), remaining validation alerts → toasts.
 - Backlog: reminders need a push server and would break the no-server
   principle — flagged to Martin, revisit only if he asks.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
@@ -80,9 +91,11 @@ app on his iPhone as the real test environment.
 
 ## Feature pipeline
 
-All five features proposed on 31 Aug 2026 have shipped (v1.13-v1.15,
-2 Sep 2026; current: CACHE_NAME ams-tracking-v29, asset links ?v=29).
-The pipeline is empty — gather Martin's on-phone feedback and agree on
-new ideas with him before building anything further. Follow the
+All five features Martin approved on 2 Sep 2026 ("all five in
+sequence") have shipped: eating-window countdown + forgotten-stop
+guard as v1.16, and hours/note sheets + history import + trophy
+cabinet as v1.17 (current: CACHE_NAME ams-tracking-v33, asset links
+?v=33). The pipeline is empty — gather Martin's on-phone feedback and
+agree on new ideas with him before building anything further. Follow the
 release checklist above for every future release; the self-updater
 shows Martin the Update button automatically.

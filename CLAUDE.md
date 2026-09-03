@@ -143,7 +143,43 @@ All ten UI improvements Martin approved on 2 Sep 2026 ("All ten in
 sensible batches please") have shipped as three releases: v1.18
 "Find your way", v1.19 "The feel, part two", and v1.20 "Your hands,
 your eyes", followed by Martin's v1.21 version-pill + zone-label
-request and the v1.22 hotfix + segmented day bar (current:
-CACHE_NAME ams-tracking-v38, asset links ?v=38). Details in the
-roadmap above. Awaiting Martin's on-phone feedback; nothing else is
-queued.
+request, the v1.22 hotfix + segmented day bar, and his v1.23-v1.23.3
+polish round (richer card tints in oklab, idle edit zone, smaller
+week dots, no x/7 counter, time-of-day greeting header without the
+date line, washed-out version pill, "until 19:01 / time to fast"
+eating-window wording).
+
+**APPROVED and in progress (3 Sep 2026): five new features, Martin
+said "1-5 yes", explicitly including How-it-works updates. Ship as
+three releases, each through the full release checklist above.**
+
+v1.24 — two small nudges:
+1. Record within reach: on each habit's Stats card, when the current
+   streak is > 0, below the best, and within 3 days (daily/timer) or
+   1 week (weekly) of it, show a quiet line like "2 days to your
+   record". Disappears once passed.
+2. Backup nudge: on launch, if there is real data and the last backup
+   is missing or > 30 days old, show a toast with a "Back up" action
+   that triggers the existing JSON export; remember the nudge time in
+   settings (e.g. lastBackupNudge) so it fires at most monthly.
+
+v1.25 — the analysis pair:
+3. Month in review: on the 1st of each month (dismissable, like the
+   weekly card; settings.lastMonthReview), a card summing the month
+   per habit: days completed, total fasts + average length vs the
+   previous month, longest streak of the month.
+4. Fasting rhythm insights: a Stats card with the usual fast start
+   time, most consistent weekday, and a per-weekday bar of average
+   fasting hours Mon-Sun.
+
+v1.26 — the big one:
+5. Per-weekday fasting goals: optional goal per weekday on timer
+   habits (e.g. 16h Mon-Thu, 14h Fri). Schema change — needs
+   migrate() care (Martin's phone has live data); ring, countdown,
+   goal clock, eating-window "until" time, and goal-met calendar
+   colors must all follow the day's own goal, with per-fast goals
+   (session.g) still taking precedence.
+
+Follow the release checklist for each (How-it-works + version
+history + versions bumped together + Playwright + push). Present
+each release to Martin for on-phone feedback as it ships.

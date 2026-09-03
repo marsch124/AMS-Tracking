@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=42">
+    <link rel="stylesheet" href="css/style.css?v=43">
 </head>
 <body>
 
@@ -178,19 +178,26 @@
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). A live preview at the top of the sheet shows the card exactly as it will look on the Today screen — it follows every keystroke of the name and every icon, color, type, and weekday choice. Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
-                    <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit. At the top, the <strong>Achievements</strong> card keeps what the confetti celebrated: earned streak milestones per habit, your longest fast, best streak, and total days tracked.</p>
+                    <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit. When your current streak comes within 3 days (or 1 week, for weekly habits) of your best, the card adds a line like “2 days to your record” — a small extra reason not to break the chain. At the top, the <strong>Achievements</strong> card keeps what the confetti celebrated: earned streak milestones per habit, your longest fast, best streak, and total days tracked.</p>
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
                     <p><strong>Voice commands (Siri)</strong> — as of iOS 2026 releases, Shortcuts cannot open an installed web app: the “Open App” action doesn't list it, and “Open URLs” lands in Safari, which keeps a completely separate copy of your data — so a voice or Lock Screen launcher isn't possible yet. The practical setup is the app icon in the Dock; the icon badge shows the day's status before you even tap. Worth re-trying after each iOS update: if “Tracking” ever appears in the Shortcuts “Open App” picker, a “Hey Siri, Fasten” shortcut and a Lock Screen button will work immediately. (The <code>?fast=start/stop/toggle</code> web commands exist for platforms where links open in the installed app.)</p>
                     <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. The faint version number at the top right of the Today screen always shows which version you're on — tapping it checks for an update immediately, as does Settings → Check for app update.</p>
                     <p><strong>Old history</strong> — switching from another fasting app? Settings → “Import fasting history” accepts pasted rows (day + hours, or start + end times, or this app's own CSV), previews what it found, and adds them as fasts — days that already have a fast are left untouched, and the import can be undone.</p>
-                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it — and the app asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
+                    <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it. When it has been more than 30 days, the app says so once (at most monthly) with a bar at the bottom whose “Back up” button opens the share sheet right away. It also asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
             </details>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.24 <span class="vh-date">— 3 Sep 2026</span></h4>
+                    <p>Two gentle nudges.</p>
+                    <ul>
+                        <li><strong>Record within reach</strong> — when a habit's current streak comes within 3 days (or 1 week for weekly-target habits) of your all-time best, its Stats card shows a quiet line in the habit's color: “2 days to your record”. It appears only while the record is genuinely close and disappears once you pass it — then the milestone confetti takes over.</li>
+                        <li><strong>Backup nudge</strong> — your data lives only on this phone. If the last backup is more than 30 days old (or was never made), the app now says so once when opened — at most once a month — with a “Back up” button that opens the share sheet directly. Backing up from Settings resets the clock.</li>
+                    </ul>
+
                     <h4>v1.23.3 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>Clearer words on the eating window.</p>
                     <ul>
@@ -618,7 +625,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=42"></script>
-    <script src="js/app.js?v=42"></script>
+    <script src="js/icons.js?v=43"></script>
+    <script src="js/app.js?v=43"></script>
 </body>
 </html>

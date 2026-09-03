@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.23.3';
+const APP_VERSION = '1.24';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -2279,6 +2279,17 @@ function renderStats() {
         });
         card.appendChild(tiles);
 
+        // a quiet nudge when the personal record is within reach
+        const gap = best - cur;
+        if (cur > 0 && gap > 0 && gap <= (weekly ? 1 : 3)) {
+            const nudge = document.createElement('p');
+            nudge.className = 'record-nudge';
+            nudge.style.color = habit.color;
+            const unitWord = weekly ? (gap === 1 ? 'week' : 'weeks') : (gap === 1 ? 'day' : 'days');
+            nudge.innerHTML = `${icon('flame', 'hi-inline')} ${gap} ${unitWord} to your record`;
+            card.appendChild(nudge);
+        }
+
         // last 30 days as a pixel strip
         const done = doneSet(habit);
         const skip = skipSet(habit);
@@ -2656,6 +2667,25 @@ $('#sheet-settings').addEventListener('click', (e) => {
 $('#app-version').textContent = 'AMS Tracking v' + APP_VERSION;
 $('#version-pill').textContent = 'v' + APP_VERSION;
 $('#version-pill').addEventListener('click', () => checkForUpdate(true));
+
+/* v1.24: the data lives only on this phone — remind about stale backups,
+   at most once a month, with the export one tap away */
+function maybeBackupNudge() {
+    const hasData = state.habits.some(h =>
+        Object.keys(doneSet(h)).length || (h.sessions || []).length);
+    if (!hasData) return;
+    const MONTH = 30 * 86400e3;
+    if (Date.now() - (state.settings.lastBackup || 0) < MONTH) return;
+    if (Date.now() - (state.settings.lastBackupNudge || 0) < MONTH) return;
+    state.settings.lastBackupNudge = Date.now();
+    save();
+    const days = state.settings.lastBackup
+        ? Math.floor((Date.now() - state.settings.lastBackup) / 86400e3) : null;
+    showToast(days ? `Last backup: ${days} days ago` :
+        'No backup yet — your data lives only on this phone',
+        () => $('#btn-export').click(), 'Back up', 12000);
+}
+setTimeout(maybeBackupNudge, 2500);
 
 $('#btn-export').addEventListener('click', async () => {
     const json = JSON.stringify(state, null, 2);

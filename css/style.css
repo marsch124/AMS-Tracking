@@ -1557,3 +1557,31 @@ html, body {
     color: var(--text-dim);
 }
 .rb.best .rb-lbl { color: var(--text); }
+
+/* ---------- v1.26: per-weekday fasting goals ---------- */
+
+.gbd-row { display: flex; gap: 5px; margin-top: 8px; }
+.gbd {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+.gbd span { font-size: 0.5882rem; font-weight: 700; color: var(--text-dim); }
+.gbd input {
+    width: 100%;
+    padding: 8px 2px;
+    text-align: center;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8235rem;
+    font-family: inherit;
+    outline: none;
+}
+.gbd input:focus { border-color: var(--accent); }
+.gbd input::-webkit-outer-spin-button,
+.gbd input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.gbd-hint { font-size: 0.7059rem; color: var(--text-dim); margin: 6px 2px 0; }

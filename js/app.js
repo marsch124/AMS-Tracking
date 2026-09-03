@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.25';
+const APP_VERSION = '1.26';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -126,9 +126,27 @@ function doneSet(habit) {
 
 function skipSet(habit) { return habit.skip || {}; }
 
+/* v1.26: the fasting goal can vary by weekday (habit.goalByDay, Mon-first,
+   null = use the default habit.goalHours). It is keyed by the day the fast
+   ENDS — the day it counts for. */
+function goalHoursOn(habit, d) {
+    const g = habit.goalByDay ? habit.goalByDay[weekdayIdx(d)] : null;
+    return g != null && isFinite(g) && g > 0 ? g : habit.goalHours;
+}
+
+/* The day a fast's goal is read from: the actual end day when finished;
+   for a running fast a prediction — an afternoon/evening start ends
+   tomorrow, a morning start ends the same day. */
+function goalDayFor(session) {
+    if (session.e) return new Date(session.e);
+    const s = new Date(session.s);
+    return s.getHours() >= 12 ? addDays(s, 1) : s;
+}
+
 /* A fast may carry its own goal for the night (session.g, hours) */
 function goalMsFor(habit, session) {
-    const h = (session && session.g) || habit.goalHours;
+    const h = (session && session.g) ||
+        (session ? goalHoursOn(habit, goalDayFor(session)) : habit.goalHours);
     return h ? h * 3600e3 : null;
 }
 
@@ -265,7 +283,7 @@ function fastDayStats(habit) {
         if (!s.e) return;
         const k = dateKey(new Date(s.e));
         ms[k] = (ms[k] || 0) + (s.e - s.s);
-        const g = s.g || habit.goalHours;
+        const g = s.g || goalHoursOn(habit, new Date(s.e));
         if (!g || s.e - s.s >= g * 3600e3) met[k] = true;
     });
     return { ms, met };
@@ -619,10 +637,13 @@ function buildCard(habit) {
                     openFastSheet(habit, last, true);
                 });
             }
-            if (last && habit.goalHours && sinceEnd < 24 * 3600e3) {
+            // the next fast ends the day after the last one did (daily
+            // rhythm), so the eating window follows that day's goal
+            const nextGoal = last ? goalHoursOn(habit, addDays(new Date(last.e), 1)) : null;
+            if (last && nextGoal && sinceEnd < 24 * 3600e3) {
                 // the eating window is the other half of the fasting rhythm
                 num.textContent = fmtDuration(sinceEnd);
-                const nextStart = last.e + Math.max(0, 24 - habit.goalHours) * 3600e3;
+                const nextStart = last.e + Math.max(0, 24 - nextGoal) * 3600e3;
                 const d = new Date(nextStart);
                 // reads as one sentence with the counter: "6:22 eating, until 19:01"
                 label.innerHTML = 'eating<br>' + (nextStart > Date.now()
@@ -1188,8 +1209,11 @@ function openStartGoalSheet(habit) {
     startGoalHabitId = habit.id;
     const row = $('#startgoal-chips');
     row.innerHTML = '';
-    const options = [[null, habit.goalHours ? `${habit.goalHours}h` : 'no goal'],
-        ...FAST_GOAL_PRESETS.filter(h => h !== habit.goalHours).map(h => [h, `${h}h`])];
+    // "tonight's" default: the goal of the day this fast will end on
+    const now = new Date();
+    const defG = goalHoursOn(habit, now.getHours() >= 12 ? addDays(now, 1) : now);
+    const options = [[null, defG ? `${defG}h` : 'no goal'],
+        ...FAST_GOAL_PRESETS.filter(h => h !== defG).map(h => [h, `${h}h`])];
     options.forEach(([g, text]) => {
         const c = document.createElement('button');
         c.type = 'button';
@@ -1439,7 +1463,7 @@ function buildHistoryCard(habit) {
                 let circle;
                 if (done[key]) {
                     const h = Math.round((fastDay.ms[key] || 0) / 3600e3);
-                    const cls = !habit.goalHours || fastDay.met[key] ? 'met' : 'under';
+                    const cls = fastDay.met[key] ? 'met' : 'under'; // met is true when no goal applies
                     circle = `<span class="cf-hours ${cls}">${h}</span>`;
                 } else if (activeToday) {
                     const h = Math.round((Date.now() - activeToday.s) / 3600e3);
@@ -1645,7 +1669,7 @@ function openHoursSheet(habit, d, fromToday) {
     $('#hours-input').value = '';
     const row = $('#hours-chips');
     row.innerHTML = '';
-    const presets = [...new Set([habit.goalHours, ...FAST_GOAL_PRESETS])].filter(Boolean);
+    const presets = [...new Set([goalHoursOn(habit, d), ...FAST_GOAL_PRESETS])].filter(Boolean);
     presets.forEach(h => {
         const c = document.createElement('button');
         c.type = 'button';
@@ -2154,11 +2178,12 @@ function renderFastGoalChips(habit) {
     const def = document.createElement('button');
     def.type = 'button';
     def.className = 'chip goal-chip' + (fastEdit.goal === null ? ' sel' : '');
-    def.textContent = habit.goalHours ? `${habit.goalHours}h` : '\u2014';
+    const defG = goalHoursOn(habit, goalDayFor(fastEdit.session));
+    def.textContent = defG ? `${defG}h` : '\u2014';
     def.title = 'Habit default';
     def.addEventListener('click', () => { fastEdit.goal = null; renderFastGoalChips(habit); });
     row.appendChild(def);
-    FAST_GOAL_PRESETS.filter(h => h !== habit.goalHours).forEach(h => {
+    FAST_GOAL_PRESETS.filter(h => h !== defG).forEach(h => {
         const c = document.createElement('button');
         c.type = 'button';
         c.className = 'chip goal-chip' + (fastEdit.goal === h ? ' sel' : '');
@@ -2540,6 +2565,24 @@ function openSheet(editId) {
     $('#f-name').value = habit ? habit.name : '';
     $('#f-icon-search').value = '';
     $('#f-goal').value = habit && habit.goalHours ? habit.goalHours : '';
+    // per-weekday goal overrides (v1.26): seven small optional inputs
+    const gbdRow = $('#f-goalbyday');
+    gbdRow.innerHTML = '';
+    const byDay = (habit && habit.goalByDay) || [];
+    for (let i = 0; i < 7; i++) {
+        const cell = document.createElement('label');
+        cell.className = 'gbd';
+        cell.innerHTML = `<span>${DAY_NAMES[i]}</span>`;
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.inputMode = 'decimal';
+        inp.min = '1';
+        inp.max = '48';
+        inp.step = '0.5';
+        inp.value = byDay[i] != null ? byDay[i] : '';
+        cell.appendChild(inp);
+        gbdRow.appendChild(cell);
+    }
     renderSheetChips();
     $('#sheet-edit').hidden = false;
     if (!habit) setTimeout(() => $('#f-name').focus(), 250);
@@ -2656,6 +2699,11 @@ $('#btn-sheet-save').addEventListener('click', () => {
     if (!name) { $('#f-name').focus(); return; }
     const g = parseFloat(String($('#f-goal').value).replace(',', '.'));
     const goalHours = isFinite(g) && g > 0 && g <= 48 ? g : null;
+    const byDay = [...$('#f-goalbyday').querySelectorAll('input')].map(inp => {
+        const v = parseFloat(String(inp.value).replace(',', '.'));
+        return isFinite(v) && v > 0 && v <= 48 ? v : null;
+    });
+    const goalByDay = byDay.some(v => v != null) ? byDay : null;
 
     if (sheet.editingId) {
         const habit = state.habits.find(h => h.id === sheet.editingId);
@@ -2664,7 +2712,10 @@ $('#btn-sheet-save').addEventListener('click', () => {
             habit.icon = sheet.icon;
             habit.color = sheet.color;
             habit.days = [...sheet.days];
-            if (habit.type === 'timer') habit.goalHours = goalHours;
+            if (habit.type === 'timer') {
+                habit.goalHours = goalHours;
+                habit.goalByDay = goalByDay;
+            }
             if (habit.type === 'weekly') habit.target = sheet.target;
         }
     } else {
@@ -2676,6 +2727,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             type: sheet.type,
             days: [...sheet.days],
             goalHours: sheet.type === 'timer' ? goalHours : null,
+            goalByDay: sheet.type === 'timer' ? goalByDay : null,
             target: sheet.type === 'weekly' ? sheet.target : null,
             createdAt: dateKey(new Date()),
             done: {},

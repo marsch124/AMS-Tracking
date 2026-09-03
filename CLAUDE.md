@@ -149,11 +149,12 @@ week dots, no x/7 counter, time-of-day greeting header without the
 date line, washed-out version pill, "until 19:01 / time to fast"
 eating-window wording).
 
-**APPROVED and in progress (3 Sep 2026): five new features, Martin
-said "1-5 yes", explicitly including How-it-works updates. Ship as
-three releases, each through the full release checklist above.**
+All five features Martin approved on 3 Sep 2026 ("1-5 yes") have
+SHIPPED as v1.24-v1.26 (current: CACHE_NAME ams-tracking-v45, asset
+links ?v=45). The pipeline is empty — gather Martin's on-phone
+feedback before building further. Details of what shipped:
 
-v1.24 — two small nudges:
+v1.24 "Two gentle nudges" — SHIPPED:
 1. Record within reach: on each habit's Stats card, when the current
    streak is > 0, below the best, and within 3 days (daily/timer) or
    1 week (weekly) of it, show a quiet line like "2 days to your
@@ -163,7 +164,7 @@ v1.24 — two small nudges:
    that triggers the existing JSON export; remember the nudge time in
    settings (e.g. lastBackupNudge) so it fires at most monthly.
 
-v1.25 — the analysis pair:
+v1.25 "The month, and the pattern" — SHIPPED:
 3. Month in review: on the 1st of each month (dismissable, like the
    weekly card; settings.lastMonthReview), a card summing the month
    per habit: days completed, total fasts + average length vs the
@@ -172,7 +173,7 @@ v1.25 — the analysis pair:
    time, most consistent weekday, and a per-weekday bar of average
    fasting hours Mon-Sun.
 
-v1.26 — the big one:
+v1.26 "A goal for every weekday" — SHIPPED:
 5. Per-weekday fasting goals: optional goal per weekday on timer
    habits (e.g. 16h Mon-Thu, 14h Fri). Schema change — needs
    migrate() care (Martin's phone has live data); ring, countdown,

@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=41">
+    <link rel="stylesheet" href="css/style.css?v=42">
 </head>
 <body>
 
@@ -155,7 +155,7 @@
                 <div class="fold-body">
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
                     <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over.</p>
-                    <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; after stopping, it counts the <strong>eating window</strong> and shows the clock time your next fast is due to keep the rhythm (24h minus your goal), falling back to the last fast's length once a day has passed. A fast running past 24 hours turns amber and asks “still fasting?” — tap the timer to fix a forgotten stop. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit: a ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
+                    <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; after stopping, it counts the <strong>eating window</strong> and shows how long it lasts — “6:22 eating, until 19:01” means the eating window closes at 19:01, the moment to start the next fast if you want to keep a steady daily rhythm (the window is 24h minus your goal). Once that time passes it says “time to fast”; after a full day without fasting the card falls back to showing the last fast's length. A fast running past 24 hours turns amber and asks “still fasting?” — tap the timer to fix a forgotten stop. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit: a ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? While fasting, simply tap the running timer number on the Today card to correct the start time. All fasts can also be edited from the detail view's list (including the one in progress) — start, end, or delete.</p>
                     <p><strong>The fasting card's tap areas</strong> — faint dashed lines on the fasting card mark its separate touch zones, and a tiny word under each says what it does: <em>start</em> (or <em>stop</em> while fasting) under the round button, <em>stats</em> under the middle, which opens the habit's details, and <em>edit</em> under the timer number on the right. While a fast runs, edit fixes the running fast's start time; between fasts it opens your most recent fast, so a wrong stop time is one tap away from being corrected. The lines and words are only a hint of where each zone begins.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled. Each dot is also a shortcut: tap one and the habit's calendar opens on that day, briefly flashing it — handy for checking or fixing a specific day of the week.</p>
@@ -191,6 +191,12 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.23.3 <span class="vh-date">— 2 Sep 2026</span></h4>
+                    <p>Clearer words on the eating window.</p>
+                    <ul>
+                        <li><strong>“until 19:01” instead of “next fast 19:01”</strong> — the line under the eating counter now completes the sentence: “6:22 eating, until 19:01” means the eating window closes at 19:01, which is when to start fasting again to keep the daily rhythm. Once that moment passes, it says “time to fast” instead of “next fast now”. Same calculation, friendlier words — Martin found “next fast” unclear.</li>
+                    </ul>
+
                     <h4>v1.23.2 <span class="vh-date">— 2 Sep 2026</span></h4>
                     <p>A quieter header.</p>
                     <ul>
@@ -612,7 +618,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=41"></script>
-    <script src="js/app.js?v=41"></script>
+    <script src="js/icons.js?v=42"></script>
+    <script src="js/app.js?v=42"></script>
 </body>
 </html>

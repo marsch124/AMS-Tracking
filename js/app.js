@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.23.2';
+const APP_VERSION = '1.23.3';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -623,9 +623,10 @@ function buildCard(habit) {
                 num.textContent = fmtDuration(sinceEnd);
                 const nextStart = last.e + Math.max(0, 24 - habit.goalHours) * 3600e3;
                 const d = new Date(nextStart);
+                // reads as one sentence with the counter: "6:22 eating, until 19:01"
                 label.innerHTML = 'eating<br>' + (nextStart > Date.now()
-                    ? `<span style="color:${habit.color}">next fast ${pad(d.getHours())}:${pad(d.getMinutes())}</span>`
-                    : `<span style="color:${habit.color}">next fast now</span>`);
+                    ? `<span style="color:${habit.color}">until ${pad(d.getHours())}:${pad(d.getMinutes())}</span>`
+                    : `<span style="color:${habit.color}">time to fast</span>`);
             } else if (last) {
                 num.textContent = fmtDuration(last.e - last.s);
                 label.textContent = 'last fast';

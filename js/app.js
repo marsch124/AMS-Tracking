@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.24';
+const APP_VERSION = '1.25';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -418,6 +418,7 @@ function renderToday() {
         hour >= 12 && hour < 18 ? 'Afternoon' : 'Evening';
 
     renderWeekReview();
+    renderMonthReview();
 
     const list = $('#habit-list');
     list.innerHTML = '';
@@ -969,6 +970,119 @@ function renderWeekReview() {
             right = (delta < 0 ? '\u2013' : delta > 0 ? '+' : '\u00b1') + Math.abs(delta) +
                 icon('flame', 'wr-flame');
             rightCls = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
+        }
+        const row = document.createElement('div');
+        row.className = 'wr-row';
+        row.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
+            `<span class="wr-name">${escapeHtml(h.name)}</span>` +
+            `<span class="wr-mid">${mid}</span>` +
+            `<span class="wr-right ${rightCls}">${right}</span>`;
+        row.addEventListener('click', () => openDetail(h.id));
+        card.appendChild(row);
+    });
+
+    box.appendChild(card);
+    box.hidden = false;
+}
+
+/* ---- v1.25: month in review ---- */
+
+function monthFastStats(habit, y, m) {
+    const start = new Date(y, m, 1).getTime();
+    const end = new Date(y, m + 1, 1).getTime();
+    const durs = (habit.sessions || [])
+        .filter(s => s.e && s.e >= start && s.e < end)
+        .map(s => s.e - s.s);
+    return { n: durs.length, avg: durs.length ? durs.reduce((a, b) => a + b, 0) / durs.length : null };
+}
+
+/* Longest consecutive done-run inside one month (skip days excused) */
+function bestRunInMonth(habit, y, m) {
+    const done = doneSet(habit);
+    const skip = skipSet(habit);
+    const lastOfMonth = new Date(y, m + 1, 0);
+    const today = new Date();
+    const end = lastOfMonth < today ? lastOfMonth : today;
+    let best = 0;
+    let run = 0;
+    for (let d = new Date(y, m, 1); d <= end; d = addDays(d, 1)) {
+        if (!isScheduled(habit, d)) continue;
+        const k = dateKey(d);
+        if (done[k]) { run++; best = Math.max(best, run); }
+        else if (!skip[k]) run = 0;
+    }
+    return best;
+}
+
+/* Once per calendar month: how last month went, per habit. Same pattern
+   as the weekly card — dismiss stores settings.lastMonthReview. */
+function renderMonthReview() {
+    const box = $('#month-review');
+    box.hidden = true;
+    box.innerHTML = '';
+    const now = new Date();
+    const thisKey = now.getFullYear() + '-' + pad(now.getMonth() + 1);
+    if (state.settings.lastMonthReview === thisKey) return;
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const py = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const ppy = pm === 0 ? py - 1 : py;
+    const ppm = pm === 0 ? 11 : pm - 1;
+    const habits = state.habits.filter(h =>
+        !h.archived && (!h.createdAt || keyToDate(h.createdAt) < firstOfMonth));
+    const monthKey = py + '-' + pad(pm + 1);
+    const hasHistory = habits.some(h =>
+        Object.keys(doneSet(h)).some(k => k.startsWith(monthKey)) ||
+        Object.keys(skipSet(h)).some(k => k.startsWith(monthKey)));
+    if (!habits.length || !hasHistory) return;
+
+    const card = document.createElement('div');
+    card.className = 'wr-card';
+    const head = document.createElement('div');
+    head.className = 'wr-head';
+    const monthName = new Date(py, pm, 1).toLocaleDateString(undefined, { month: 'long' });
+    head.innerHTML = `<h3>${monthName} in review</h3>`;
+    const close = document.createElement('button');
+    close.className = 'wr-close';
+    close.innerHTML = icon('x');
+    close.setAttribute('aria-label', 'Dismiss month review');
+    close.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.settings.lastMonthReview = thisKey;
+        save();
+        renderToday();
+    });
+    head.appendChild(close);
+    card.appendChild(head);
+
+    habits.forEach(h => {
+        let mid = '';
+        let right = '';
+        let rightCls = 'flat';
+        if (h.type === 'timer') {
+            const cur = monthFastStats(h, py, pm);
+            const prev = monthFastStats(h, ppy, ppm);
+            mid = cur.n
+                ? `${cur.n} fast${cur.n === 1 ? '' : 's'} · Ø ${fmtDuration(cur.avg)} h`
+                : 'no fasts';
+            if (cur.avg != null && prev.avg != null) {
+                const d = cur.avg - prev.avg;
+                right = (d < 0 ? '–' : '+') + fmtDuration(Math.abs(d));
+                rightCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+            }
+        } else if (h.type === 'weekly') {
+            const cur = monthStats(h, py, pm);
+            const prev = monthStats(h, ppy, ppm);
+            mid = `${cur.dn}× checked off`;
+            const d = cur.dn - prev.dn;
+            right = (d < 0 ? '–' : d > 0 ? '+' : '±') + Math.abs(d) + '×';
+            rightCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+        } else {
+            const m = monthStats(h, py, pm);
+            mid = `${m.dn}/${m.sched} days`;
+            const best = bestRunInMonth(h, py, pm);
+            right = String(best) + icon('flame', 'wr-flame');
+            rightCls = best > 0 ? 'up' : 'flat';
         }
         const row = document.createElement('div');
         row.className = 'wr-row';
@@ -2176,6 +2290,88 @@ function monthStats(habit, y, m) {
     return { dn, sched, pct: sched ? Math.round(100 * dn / sched) : 0 };
 }
 
+/* ---- v1.25: fasting rhythm insights ---- */
+
+/* Learned pattern of a timer habit; null until 5 finished fasts exist */
+function fastRhythm(habit) {
+    const sess = (habit.sessions || []).filter(s => s.e);
+    if (sess.length < 5) return null;
+    // circular mean of the start times — a fast can start around midnight,
+    // where a plain average of clock times would land absurdly at noon
+    let x = 0;
+    let y = 0;
+    sess.forEach(s => {
+        const d = new Date(s.s);
+        const a = (d.getHours() * 60 + d.getMinutes()) / 1440 * 2 * Math.PI;
+        x += Math.cos(a);
+        y += Math.sin(a);
+    });
+    let frac = Math.atan2(y, x) / (2 * Math.PI);
+    if (frac < 0) frac += 1;
+    const startMin = Math.round(frac * 1440) % 1440;
+    // average hours per weekday of the END day (a fast counts for the day it ends)
+    const sums = Array(7).fill(0);
+    const counts = Array(7).fill(0);
+    sess.forEach(s => {
+        const wd = weekdayIdx(new Date(s.e));
+        sums[wd] += s.e - s.s;
+        counts[wd]++;
+    });
+    const avgByDay = sums.map((v, i) => (counts[i] ? v / counts[i] : null));
+    const avgAll = sess.reduce((a, s) => a + (s.e - s.s), 0) / sess.length;
+    return { startMin, avgByDay, avgAll, count: sess.length };
+}
+
+function buildRhythmCard(habit) {
+    const r = fastRhythm(habit);
+    if (!r) return null;
+    const card = document.createElement('div');
+    card.className = 'detail-card stats-card';
+    const h = document.createElement('h3');
+    h.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>` +
+        `${escapeHtml(habit.name)} rhythm`;
+    card.appendChild(h);
+
+    let bestIdx = -1;
+    r.avgByDay.forEach((v, i) => {
+        if (v != null && (bestIdx < 0 || v > r.avgByDay[bestIdx])) bestIdx = i;
+    });
+    const dayName = (i) => new Date(2026, 0, 5 + i) // a Monday
+        .toLocaleDateString(undefined, { weekday: 'short' });
+
+    const tiles = document.createElement('div');
+    tiles.className = 'tile-row';
+    [[`${pad(Math.floor(r.startMin / 60))}:${pad(r.startMin % 60)}`, 'usual start'],
+     [bestIdx >= 0 ? dayName(bestIdx) : '–', 'strongest day'],
+     [fmtDuration(r.avgAll) + 'h', 'avg fast']].forEach(([v, l]) => {
+        const t = document.createElement('div');
+        t.className = 'tile';
+        t.innerHTML = `<div class="tile-num" style="color:${habit.color}">${v}</div>` +
+            `<div class="tile-lbl">${l}</div>`;
+        tiles.appendChild(t);
+    });
+    card.appendChild(tiles);
+
+    // average fasting hours per weekday, Monday first
+    const max = Math.max(...r.avgByDay.filter(v => v != null));
+    const bars = document.createElement('div');
+    bars.className = 'rhythm-bars';
+    r.avgByDay.forEach((v, i) => {
+        const col = document.createElement('div');
+        col.className = 'rb' + (i === bestIdx ? ' best' : '');
+        const hFrac = v != null && max ? Math.max(0.06, v / max) : 0;
+        const hoursTxt = v != null ? (v / 3600e3).toFixed(1).replace('.', ',') : '';
+        col.innerHTML = `<span class="rb-val">${hoursTxt}</span>` +
+            `<span class="rb-bar" style="height:${Math.round(hFrac * 100)}%;` +
+            `background:${v != null ? habit.color : 'var(--border)'};` +
+            `${v == null ? 'min-height:4px;opacity:0.5;' : ''}"></span>` +
+            `<span class="rb-lbl">${DAY_NAMES[i]}</span>`;
+        bars.appendChild(col);
+    });
+    card.appendChild(bars);
+    return card;
+}
+
 /* The trophy cabinet at the bottom of Stats: totals across every habit,
    then the streak milestones each habit has actually reached (and the next
    one as a hollow chip, so there is always something to aim for). */
@@ -2309,6 +2505,10 @@ function renderStats() {
         card.appendChild(strip);
         card.addEventListener('click', () => openDetail(habit.id));
         body.appendChild(card);
+    });
+    habits.filter(h => h.type === 'timer').forEach(h => {
+        const rc = buildRhythmCard(h);
+        if (rc) body.appendChild(rc);
     });
     body.appendChild(buildTrophyCard(habits));
 }

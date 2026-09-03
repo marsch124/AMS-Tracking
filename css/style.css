@@ -1521,3 +1521,39 @@ html, body {
     font-size: 0.8235rem;
     font-weight: 700;
 }
+
+/* ---------- v1.25: fasting rhythm bars ---------- */
+
+.rhythm-bars {
+    display: flex;
+    gap: 7px;
+    align-items: stretch;
+    height: 5.2941rem;
+    margin-top: 14px;
+}
+.rb {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+.rb-val {
+    font-size: 0.5882rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+.rb-bar {
+    width: 100%;
+    max-width: 26px;
+    border-radius: 7px 7px 4px 4px;
+}
+.rb:not(.best) .rb-bar { opacity: 0.55; }
+.rb-lbl {
+    font-size: 0.5882rem;
+    font-weight: 700;
+    color: var(--text-dim);
+}
+.rb.best .rb-lbl { color: var(--text); }

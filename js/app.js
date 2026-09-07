@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.26';
+const APP_VERSION = '1.27';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -521,6 +521,7 @@ function buildCard(habit) {
         e.stopPropagation();
         if (btn.dataset.lp) { delete btn.dataset.lp; return; } // long-press consumed this tap
         if (habit.type === 'timer') toggleTimer(habit);
+        else if (habitParts(habit)) countPartTap(habit); // 1/2/3 taps = which part
         else toggleToday(habit);
     });
 
@@ -562,7 +563,28 @@ function buildCard(habit) {
     main.className = 'habit-main';
     const name = document.createElement('p');
     name.className = 'habit-name';
-    name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+    const parts = habitParts(habit);
+    if (parts) {
+        // each part is its own little word: colored when done, plain when not,
+        // and tappable for the exact fix when a tap count goes wrong
+        const donePartsToday = donePartsOn(habit, todayKey);
+        name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>` +
+            parts.map((p, i) =>
+                `<button class="part-chip${donePartsToday.includes(i) ? ' on' : ''}"` +
+                ` style="${donePartsToday.includes(i) ? `color:${habit.color}` : ''}"` +
+                ` aria-label="${escapeHtml(p)}${donePartsToday.includes(i) ? ' — done' : ''}"` +
+                `>${escapeHtml(p)}</button>`
+            ).join('<span class="part-sep">|</span>');
+        name.querySelectorAll('.part-chip').forEach((chip, i) => {
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (partTap) { clearTimeout(partTap.timer); partTap = null; }
+                togglePart(habit, i);
+            });
+        });
+    } else {
+        name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+    }
     if (habit.name.length > 24) name.classList.add('name-xs');
     else if (habit.name.length > 15) name.classList.add('name-sm');
     // today's note peeks out as a small dot next to the name
@@ -746,6 +768,31 @@ function endDrag(card, cancel) {
    open the record sheet). Everything undoable, nothing double-applied. */
 function swipeDone(habit) {
     const key = dateKey(new Date());
+    const parts = habitParts(habit);
+    if (parts) {
+        // a swipe on a multi-part habit means "did the whole set"
+        const before = donePartsOn(habit, key);
+        if (before.length === parts.length) { showToast('Already done today'); return; }
+        const wasSkipP = !!(habit.skip && habit.skip[key]);
+        if (wasSkipP) delete habit.skip[key];
+        habit.done = habit.done || {};
+        habit.done[key] = 1; // all parts
+        if (!before.length) {
+            justChecked = habit.id;
+            if (dayComplete()) dayJustCompleted = true;
+        }
+        save();
+        renderToday();
+        showToast('All parts marked done', () => {
+            if (before.length) habit.done[key] = before;
+            else delete habit.done[key];
+            if (wasSkipP) { habit.skip = habit.skip || {}; habit.skip[key] = 1; }
+            save();
+            renderToday();
+        });
+        if (!before.length) maybeCelebrateStreak(habit);
+        return;
+    }
     if (doneSet(habit)[key]) { showToast('Already done today'); return; }
     if (habit.type === 'timer') {
         if (activeSession(habit)) toggleTimer(habit); // stop -> today's fast, own undo toast
@@ -1128,6 +1175,85 @@ function dayComplete() {
     const sched = state.habits.filter(h => !h.archived &&
         isScheduled(h, new Date()) && !skipSet(h)[todayKey]);
     return sched.length > 0 && sched.every(h => doneSet(h)[todayKey]);
+}
+
+/* ================= v1.27: multi-part habits =================
+   A habit whose name reads "Medit | Brea | Cold" is tracked in parts.
+   done[key] then holds the array of part indices done that day; a plain
+   1 (legacy, or "all done") counts as every part. The array is truthy,
+   so every streak, stat and calendar rule keeps treating the day as
+   done — which is exactly the intent: any part done = the day counts.
+   An empty array is never stored; the key is deleted instead. */
+function habitParts(habit) {
+    if (habit.type === 'timer' || !habit.name.includes('|')) return null;
+    const parts = habit.name.split('|').map(s => s.trim()).filter(Boolean);
+    return parts.length >= 2 && parts.length <= 4 ? parts : null;
+}
+
+/* Indices done on that day; a legacy 1 means all of them */
+function donePartsOn(habit, key) {
+    const v = (habit.done || {})[key];
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    const parts = habitParts(habit);
+    return parts ? parts.map((_, i) => i) : [0];
+}
+
+function togglePart(habit, idx) {
+    const key = dateKey(new Date());
+    habit.done = habit.done || {};
+    if (habit.skip && habit.skip[key]) delete habit.skip[key];
+    const before = donePartsOn(habit, key);
+    const on = before.includes(idx);
+    const after = on ? before.filter(i => i !== idx) : [...before, idx].sort((a, b) => a - b);
+    if (after.length) habit.done[key] = after;
+    else delete habit.done[key];
+    // the day flipping from nothing to something is a real check-off
+    if (!before.length && after.length) {
+        justChecked = habit.id;
+        if (dayComplete()) dayJustCompleted = true;
+    }
+    save();
+    renderToday();
+    if (!before.length && after.length) maybeCelebrateStreak(habit);
+    const name = (habitParts(habit) || [])[idx] || 'Part';
+    showToast(`${name} ${on ? 'cleared' : 'done'}`, () => {
+        if (before.length) habit.done[key] = before;
+        else delete habit.done[key];
+        save();
+        renderToday();
+    });
+}
+
+/* Counting taps on the circle: 1 tap = first part, 2 = second, 3 = third.
+   Each tap restarts a short window, so the app must wait for it to close
+   before acting; extra taps clamp to the last part rather than doing
+   nothing. The part about to be toggled lights up while counting. */
+const PART_TAP_MS = 320;
+let partTap = null; // { habitId, count, timer }
+
+function partTapPreview(habit, idx) {
+    document.querySelectorAll('.part-chip.pending').forEach(el => el.classList.remove('pending'));
+    const chips = document.querySelectorAll(
+        `.habit-card[data-id="${habit.id}"] .part-chip`);
+    if (chips[idx]) chips[idx].classList.add('pending');
+}
+
+function countPartTap(habit) {
+    const parts = habitParts(habit);
+    if (!parts) return;
+    if (!partTap || partTap.habitId !== habit.id) {
+        if (partTap) clearTimeout(partTap.timer);
+        partTap = { habitId: habit.id, count: 0, timer: null };
+    }
+    partTap.count++;
+    clearTimeout(partTap.timer);
+    const idx = Math.min(partTap.count, parts.length) - 1;
+    partTapPreview(habit, idx);
+    partTap.timer = setTimeout(() => {
+        partTap = null;
+        togglePart(habit, idx);
+    }, PART_TAP_MS);
 }
 
 function toggleToday(habit) {
@@ -2974,16 +3100,21 @@ function fmtCsvDateTime(ms) {
 
 async function exportCsv() {
     // Semicolon-separated with decimal commas: opens cleanly in DACH Excel
-    const dayRows = ['date;habit;type;status;note'];
+    const dayRows = ['date;habit;type;status;parts;note'];
     const fastRows = ['habit;start;end;hours'];
     state.habits.forEach(h => {
         const done = doneSet(h);
         const skip = skipSet(h);
         const notes = h.notes || {};
+        const parts = habitParts(h);
         const keys = [...new Set([...Object.keys(done), ...Object.keys(skip), ...Object.keys(notes)])].sort();
         keys.forEach(k => {
             const status = done[k] ? 'done' : skip[k] ? 'skip' : '';
-            dayRows.push([k, csvField(h.name), h.type, status, csvField(notes[k] || '')].join(';'));
+            // multi-part habits also spell out which parts that day holds
+            const partTxt = parts && done[k]
+                ? donePartsOn(h, k).map(i => parts[i]).join(', ') : '';
+            dayRows.push([k, csvField(h.name), h.type, status,
+                csvField(partTxt), csvField(notes[k] || '')].join(';'));
         });
         (h.sessions || []).filter(s => s.e).forEach(s => {
             const hours = ((s.e - s.s) / 3600e3).toFixed(2).replace('.', ',');

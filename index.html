@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=45">
+    <link rel="stylesheet" href="css/style.css?v=46">
 </head>
 <body>
 
@@ -157,6 +157,8 @@
                 <summary><span class="fold-title"><span data-hi="help"></span> How it works</span></summary>
                 <div class="fold-body">
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
+
+                    <p><strong>Habits with several parts</strong> — name a habit with vertical bars, like <em>Medit | Brea | Cold</em>, and the app tracks each part on its own. The number of taps on the big circle picks the part: <strong>one tap</strong> toggles the first part, <strong>two quick taps</strong> the second, <strong>three</strong> the third. While you tap, the part you're about to toggle lights up, so you can see the count landing; a moment after your last tap it registers, and a bar confirms it (“Brea done”) with Undo. Done parts are written in the habit's color, the others stay gray, and the circle is checked as soon as <em>any</em> part is done — so streaks, week dots and the day bar count the day as complete. You can also tap a part's word directly to toggle exactly that one, and swiping the card to the right marks all parts at once. Two, three or four parts are supported.</p>
                     <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over.</p>
                     <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; after stopping, it counts the <strong>eating window</strong> and shows how long it lasts — “6:22 eating, until 19:01” means the eating window closes at 19:01, the moment to start the next fast if you want to keep a steady daily rhythm (the window is 24h minus your goal). Once that time passes it says “time to fast”; after a full day without fasting the card falls back to showing the last fast's length. A fast running past 24 hours turns amber and asks “still fasting?” — tap the timer to fix a forgotten stop. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit — and, if you like, a different goal for certain weekdays (seven small fields under the goal; the goal belongs to the day a fast <em>ends</em> on, so Friday's number is for the fast you start Thursday evening; empty fields use the main goal). The ring, the countdown, the “until” time, and the green/gray calendar circles all follow the day's own goal, and a per-fast goal chosen at start still overrides everything. A ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? While fasting, simply tap the running timer number on the Today card to correct the start time. All fasts can also be edited from the detail view's list (including the one in progress) — start, end, or delete.</p>
@@ -194,6 +196,15 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.27 <span class="vh-date">— 3 Sep 2026</span></h4>
+                    <p>One habit, three parts.</p>
+                    <ul>
+                        <li><strong>Multi-part habits by tap count</strong> — a habit named with vertical bars, like <em>Medit | Brea | Cold</em>, is now tracked part by part. One tap on the big circle toggles the first part, two quick taps the second, three the third — exactly as requested. Nothing to set up: the parts are read from the name, so the habit you already have works the moment this update lands, and your history for it stays untouched.</li>
+                        <li><strong>You can see the count landing</strong> — while you tap, the part that's about to be toggled lights up, so a double tap visibly moves the highlight from the first word to the second. A moment after your last tap the change registers and a bar confirms it (“Brea done”, “Medit cleared”) with Undo, in case a tap was counted differently than you meant. Extra taps stay on the last part rather than doing something unexpected.</li>
+                        <li><strong>Colored where it counts</strong> — parts you've done are written in the habit's color, the rest stay gray, and the big circle is checked as soon as any one part is done, so streaks, week dots and the day bar treat the day as complete. Tapping a part's word toggles precisely that part, and a swipe to the right still marks the whole set at once.</li>
+                        <li>The CSV export gained a <em>parts</em> column listing which parts each day holds.</li>
+                    </ul>
+
                     <h4>v1.26 <span class="vh-date">— 3 Sep 2026</span></h4>
                     <p>A goal for every weekday.</p>
                     <ul>
@@ -643,7 +654,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=45"></script>
-    <script src="js/app.js?v=45"></script>
+    <script src="js/icons.js?v=46"></script>
+    <script src="js/app.js?v=46"></script>
 </body>
 </html>

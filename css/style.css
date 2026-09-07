@@ -1585,3 +1585,35 @@ html, body {
 .gbd input::-webkit-outer-spin-button,
 .gbd input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .gbd-hint { font-size: 0.7059rem; color: var(--text-dim); margin: 6px 2px 0; }
+
+/* ---------- v1.27: multi-part habits ("Medit | Brea | Cold") ---------- */
+
+.part-chip {
+    border: none;
+    background: none;
+    padding: 0 1px;
+    font: inherit;
+    font-weight: 700;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 6px;
+}
+.part-chip.on { font-weight: 800; }
+/* the part a tap count is about to toggle, while the window is open */
+.part-chip.pending {
+    background: color-mix(in oklab, currentColor 18%, transparent);
+    animation: partPulse 0.32s ease-out;
+}
+@keyframes partPulse {
+    from { transform: scale(1.14); }
+    to { transform: scale(1); }
+}
+.part-sep {
+    color: var(--text-dim);
+    opacity: 0.5;
+    font-weight: 600;
+    padding: 0 4px; /* keeps the "Medit | Brea | Cold" spacing of the name */
+}
+@media (prefers-reduced-motion: reduce) {
+    .part-chip.pending { animation: none; }
+}

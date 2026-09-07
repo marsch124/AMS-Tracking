@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.27';
+const APP_VERSION = '1.28';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -534,6 +534,8 @@ function buildCard(habit) {
                 lpTimer = null;
                 btn.dataset.lp = '1';
                 if (habit.type === 'timer') openStartGoalSheet(habit);
+                // a multi-part habit picks the parts instead of "all done"
+                else if (habitParts(habit)) openPartsSheet(habit, addDays(new Date(), -1), true);
                 else markYesterday(habit);
             }, 500);
         });
@@ -1763,6 +1765,11 @@ $('#btn-skiprange-save').addEventListener('click', () => {
 
 function toggleHistoryDay(habit, d, wasDone) {
     const key = dateKey(d);
+    if (habitParts(habit)) {
+        // per-part editing beats the done -> skip -> empty cycle here
+        openPartsSheet(habit, d);
+        return;
+    }
     if (habit.type !== 'timer') {
         habit.done = habit.done || {};
         habit.skip = habit.skip || {};
@@ -1783,6 +1790,102 @@ function toggleHistoryDay(habit, d, wasDone) {
     save();
     openDetail(habit.id, true);
 }
+
+/* ================= v1.28: parts sheet (which parts on a day) =================
+   A multi-part habit can't be backfilled with a single "done" — holding the
+   circle or tapping a day in the calendar opens this instead, so a past day
+   can hold just Medit and Cold. Backfills never celebrate milestones. */
+
+let partsCtx = null; // { habitId, key, date, fromToday, sel: [] }
+
+function openPartsSheet(habit, d, fromToday) {
+    const parts = habitParts(habit);
+    if (!parts) return;
+    const key = dateKey(d);
+    partsCtx = { habitId: habit.id, key, date: d, fromToday: !!fromToday,
+        sel: donePartsOn(habit, key) };
+    const dateTxt = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const label = key === dateKey(new Date()) ? 'Today'
+        : key === dateKey(addDays(new Date(), -1)) ? 'Yesterday' : null;
+    $('#parts-title').textContent = label ? `${label} · ${dateTxt}` : dateTxt;
+    renderPartsChips(habit, parts);
+    $('#sheet-parts').hidden = false;
+}
+
+function renderPartsChips(habit, parts) {
+    const row = $('#parts-chips');
+    row.innerHTML = '';
+    parts.forEach((p, i) => {
+        const on = partsCtx.sel.includes(i);
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip goal-chip' + (on ? ' sel' : '');
+        c.textContent = p;
+        c.addEventListener('click', () => {
+            partsCtx.sel = on ? partsCtx.sel.filter(x => x !== i)
+                : [...partsCtx.sel, i].sort((a, b) => a - b);
+            renderPartsChips(habit, parts);
+        });
+        row.appendChild(c);
+    });
+}
+
+/* Puts the day back exactly as it was, for the undo toast */
+function partsDaySnapshot(habit, key) {
+    const done = (habit.done || {})[key];
+    const wasSkip = !!(habit.skip && habit.skip[key]);
+    return () => {
+        habit.done = habit.done || {};
+        habit.skip = habit.skip || {};
+        if (done === undefined) delete habit.done[key];
+        else habit.done[key] = done;
+        if (wasSkip) habit.skip[key] = 1;
+        else delete habit.skip[key];
+        save();
+        refreshAfterParts();
+    };
+}
+
+function refreshAfterParts() {
+    if (partsCtx && !partsCtx.fromToday && !$('#screen-detail').hidden) openDetail(detailId, true);
+    else renderToday();
+}
+
+function closePartsSheet(apply, skipDay) {
+    const habit = state.habits.find(h => h.id === (partsCtx && partsCtx.habitId));
+    $('#sheet-parts').hidden = true;
+    if (!habit || (!apply && !skipDay)) return;
+    const key = partsCtx.key;
+    const parts = habitParts(habit) || [];
+    const undo = partsDaySnapshot(habit, key);
+    habit.done = habit.done || {};
+    habit.skip = habit.skip || {};
+    let msg;
+    if (skipDay) {
+        delete habit.done[key];
+        habit.skip[key] = 1;
+        msg = 'Marked as a skip day';
+    } else if (partsCtx.sel.length) {
+        habit.done[key] = [...partsCtx.sel];
+        delete habit.skip[key];
+        msg = partsCtx.sel.map(i => parts[i]).join(', ') + ' saved';
+    } else {
+        // saving with nothing ticked empties the day completely, skip included
+        delete habit.done[key];
+        delete habit.skip[key];
+        msg = 'Day cleared';
+    }
+    save();
+    refreshAfterParts();
+    showToast(msg, undo);
+}
+
+$('#btn-parts-save').addEventListener('click', () => closePartsSheet(true, false));
+$('#btn-parts-skip').addEventListener('click', () => closePartsSheet(false, true));
+$('#btn-parts-cancel').addEventListener('click', () => closePartsSheet(false, false));
+$('#sheet-parts').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-parts')) closePartsSheet(false, false);
+});
 
 /* ================= record-fast sheet (backfill) ================= */
 
@@ -3305,7 +3408,8 @@ $('#toast-undo').addEventListener('click', () => {
 function setupSheetDismiss() {
     [['#sheet-edit', null], ['#sheet-settings', null], ['#sheet-fast', null],
      ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null], ['#sheet-startgoal', null],
-     ['#sheet-skiprange', null], ['#sheet-hours', null], ['#sheet-note', null], ['#sheet-histimport', null]]
+     ['#sheet-skiprange', null], ['#sheet-hours', null], ['#sheet-note', null], ['#sheet-histimport', null],
+     ['#sheet-parts', null]]
         .forEach(([sel, after]) => {
             const backdrop = document.querySelector(sel);
             const sheetEl = backdrop.querySelector('.sheet');

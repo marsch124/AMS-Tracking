@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=46">
+    <link rel="stylesheet" href="css/style.css?v=47">
 </head>
 <body>
 
@@ -159,14 +159,16 @@
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
 
                     <p><strong>Habits with several parts</strong> — name a habit with vertical bars, like <em>Medit | Brea | Cold</em>, and the app tracks each part on its own. The number of taps on the big circle picks the part: <strong>one tap</strong> toggles the first part, <strong>two quick taps</strong> the second, <strong>three</strong> the third. While you tap, the part you're about to toggle lights up, so you can see the count landing; a moment after your last tap it registers, and a bar confirms it (“Brea done”) with Undo. Done parts are written in the habit's color, the others stay gray, and the circle is checked as soon as <em>any</em> part is done — so streaks, week dots and the day bar count the day as complete. You can also tap a part's word directly to toggle exactly that one, and swiping the card to the right marks all parts at once. Two, three or four parts are supported.</p>
+
+                    <p><strong>Parts on an earlier day</strong> — press and hold the big circle of a multi-part habit and a small sheet opens for <em>yesterday</em> with one button per part: tick the ones you did and save, so a day can hold just Medit and Cold. The same sheet opens when you tap any day in that habit's calendar, which is how you correct a day further back — it opens with that day's parts already ticked. Saving with nothing ticked empties the day, and “Mark as skip day instead” excuses it (holidays, illness). Every change shows an Undo bar, and days filled in this way never trigger a milestone celebration.</p>
                     <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over.</p>
                     <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; after stopping, it counts the <strong>eating window</strong> and shows how long it lasts — “6:22 eating, until 19:01” means the eating window closes at 19:01, the moment to start the next fast if you want to keep a steady daily rhythm (the window is 24h minus your goal). Once that time passes it says “time to fast”; after a full day without fasting the card falls back to showing the last fast's length. A fast running past 24 hours turns amber and asks “still fasting?” — tap the timer to fix a forgotten stop. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit — and, if you like, a different goal for certain weekdays (seven small fields under the goal; the goal belongs to the day a fast <em>ends</em> on, so Friday's number is for the fast you start Thursday evening; empty fields use the main goal). The ring, the countdown, the “until” time, and the green/gray calendar circles all follow the day's own goal, and a per-fast goal chosen at start still overrides everything. A ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? While fasting, simply tap the running timer number on the Today card to correct the start time. All fasts can also be edited from the detail view's list (including the one in progress) — start, end, or delete.</p>
                     <p><strong>The fasting card's tap areas</strong> — faint dashed lines on the fasting card mark its separate touch zones, and a tiny word under each says what it does: <em>start</em> (or <em>stop</em> while fasting) under the round button, <em>stats</em> under the middle, which opens the habit's details, and <em>edit</em> under the timer number on the right. While a fast runs, edit fixes the running fast's start time; between fasts it opens your most recent fast, so a wrong stop time is one tap away from being corrected. The lines and words are only a hint of where each zone begins.</p>
                     <p><strong>Week dots</strong> — the M–S dots show this week (Monday first); filled dots are completed days, dimmed dots are days the habit isn't scheduled. Each dot is also a shortcut: tap one and the habit's calendar opens on that day, briefly flashing it — handy for checking or fixing a specific day of the week.</p>
-                    <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day opens a small sheet to pick or type the hours (or mark a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move through months — up to a year ahead, so a planned vacation is visible; future days are locked except vacation-marked skip days, which a tap un-marks. Once you've wandered off the current month, a target button appears in the calendar header — one tap jumps straight back to today. Streaks and stats update immediately.</p>
+                    <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. (For a habit with several parts, tapping a day opens the part sheet for that day instead of cycling.) A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day opens a small sheet to pick or type the hours (or mark a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move through months — up to a year ahead, so a planned vacation is visible; future days are locked except vacation-marked skip days, which a tap un-marks. Once you've wandered off the current month, a target button appears in the calendar header — one tap jumps straight back to today. Streaks and stats update immediately.</p>
                     <p><strong>Vacations &amp; sick weeks</strong> — under the month calendar, “Skip several days” marks a whole date range as skip days at once: pick the first and last day (future dates included, up to 92 days), and tick “Apply to all habits” when the whole life pauses, not just one habit. Days already done stay done, and the Undo bar takes back exactly the days the range added. A planned range shows up on the calendar right away and can be checked in the months ahead.</p>
-                    <p><strong>Forgot yesterday?</strong> — press-and-hold the check circle of a daily or weekly habit to mark <em>yesterday</em> done, without opening the calendar. A short Undo bar confirms it (or tells you yesterday was already done). A normal tap still checks off today. Backfilled days never trigger milestone celebrations.</p>
+                    <p><strong>Forgot yesterday?</strong> — press-and-hold the check circle of a daily or weekly habit to mark <em>yesterday</em> done, without opening the calendar. A short Undo bar confirms it (or tells you yesterday was already done). On a habit with several parts, the hold opens the part sheet for yesterday instead, so you can tick only what you actually did. A normal tap still checks off today. Backfilled days never trigger milestone celebrations.</p>
                     <p><strong>Week in review</strong> — each Monday, a “Last week” card appears under the habit list on the Today screen: per habit, how many scheduled days (or weekly-target check-offs) you managed, how your streak changed over the week (green +, red −), and for fasting the number of fasts with the average length and how it compares to the week before. Tap a row to jump to that habit; the <span data-hi="x" class="hi-inline"></span> dismisses the card until the next week starts, and Settings → “Show week in review” brings it back any time. When a new month begins, a bigger sibling appears the same way — <strong>“August in review”</strong> — with each habit's days completed and longest run of the month, weekly check-off totals, and for fasting the number of fasts and average length compared to the month before. Both cards are pure summary — nothing about your data changes.</p>
                     <p><strong>Fasting stages</strong> — the fasting detail view shows the commonly-cited phases of a fast on a colored track: Digestion (0–4h), Settling in (4–12h), Fat burning (12–16h), and Deep fast (16h+). While a fast is running, a marker sits at your elapsed time, the current stage is highlighted, and a line names it (“Now: Fat burning”); it moves along live. This is a popular approximation from fasting literature, not medical advice — every body is different.</p>
                     <p><strong>The fasting calendar</strong> — for a fasting habit, each calendar day shows the date with the fasted hours in a circle beneath: green when that day's goal was met, gray when the fast fell short of it, red with a live count for today's fast in progress, and a dashed circle with a dash (–) for skip days. A one-line legend under the calendar explains the circles right where they appear. The Fasts card counts how many days met the goal.</p>
@@ -196,6 +198,15 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.28 <span class="vh-date">— 3 Sep 2026</span></h4>
+                    <p>Parts on an earlier day.</p>
+                    <ul>
+                        <li><strong>Yesterday, part by part</strong> — press and hold the big circle of a multi-part habit and a sheet opens for yesterday with one button per part. Tick just the ones you did and save. Until now the hold marked <em>all</em> parts done, which was the one thing v1.27 couldn't express.</li>
+                        <li><strong>Any earlier day too</strong> — tapping a day in a multi-part habit's calendar opens the same sheet for that day, with its current parts already ticked, instead of the done → skip → empty cycle. Saving with nothing ticked empties the day, and “Mark as skip day instead” excuses it, so nothing that was possible before has been lost.</li>
+                        <li>Every change made this way shows an Undo bar that puts the day back exactly as it was, and backfilled days still never trigger a celebration. Habits without parts are completely untouched — hold still marks yesterday done in one go.</li>
+                        <li><strong>Documentation</strong> — the “Habits with several parts” section now covers earlier days, and the “Forgot yesterday?” and “Fixing the past” paragraphs say what happens on a multi-part habit. That gap was the reason for this release.</li>
+                    </ul>
+
                     <h4>v1.27 <span class="vh-date">— 3 Sep 2026</span></h4>
                     <p>One habit, three parts.</p>
                     <ul>
@@ -607,6 +618,21 @@
         </div>
     </div>
 
+    <!-- ============ PARTS SHEET (which parts on a given day) ============ -->
+    <div id="sheet-parts" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-handle"></div>
+            <h2 id="parts-title">Which parts?</h2>
+            <label class="field-label">Tap the parts you did</label>
+            <div id="parts-chips" class="chip-row"></div>
+            <button id="btn-parts-skip" class="archive-btn">Mark as skip day instead</button>
+            <div class="sheet-actions">
+                <button id="btn-parts-cancel" class="ghost-btn">Cancel</button>
+                <button id="btn-parts-save" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ DAY-NOTE SHEET ============ -->
     <div id="sheet-note" class="sheet-backdrop" hidden>
         <div class="sheet">
@@ -654,7 +680,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=46"></script>
-    <script src="js/app.js?v=46"></script>
+    <script src="js/icons.js?v=47"></script>
+    <script src="js/app.js?v=47"></script>
 </body>
 </html>

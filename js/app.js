@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.28';
+const APP_VERSION = '1.29';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -64,8 +64,15 @@ function save() {
 }
 
 /* Icon badge: scheduled habits still open today (installed PWAs only) */
+function badgeAllowed() {
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
 function updateBadge() {
     if (!('setAppBadge' in navigator)) return;
+    // iOS only grants an installed app a badge once notifications are permitted.
+    // Without this the call below rejects, the catch swallows it, and the badge
+    // simply never appears — which is exactly what happened until v1.29.
+    if (!badgeAllowed()) return;
     const todayKey = dateKey(new Date());
     const count = state.habits.filter(h => {
         if (h.archived || !isScheduled(h, new Date())) return false;
@@ -3140,6 +3147,7 @@ $('#btn-settings').addEventListener('click', () => {
     updateStorageNote();
     $('#archived-count').textContent = state.habits.filter(h => h.archived).length;
     $('#sheet-settings').hidden = false;
+    refreshBadgeBtn();
 });
 $('#btn-settings-close').addEventListener('click', () => { $('#sheet-settings').hidden = true; });
 $('#sheet-settings').addEventListener('click', (e) => {
@@ -3452,6 +3460,42 @@ function setupSheetDismiss() {
         });
 }
 setupSheetDismiss();
+
+// The badge needs notification permission, and iOS will only show that prompt
+// during a real tap — so it is asked for here rather than attempted on load.
+function refreshBadgeBtn() {
+    const b = $('#btn-badge');
+    if (!b) return;
+    const label = b.lastChild;
+    if (!('setAppBadge' in navigator) || typeof Notification === 'undefined') {
+        label.textContent = ' App icon badge not supported here';
+        b.disabled = true;
+        return;
+    }
+    b.disabled = false;
+    label.textContent = badgeAllowed()
+        ? ' The count is showing on the app icon'
+        : ' Show the count on the app icon';
+}
+$('#btn-badge').addEventListener('click', async () => {
+    if (!('setAppBadge' in navigator) || typeof Notification === 'undefined') {
+        showToast('This device cannot show a badge on the app icon');
+        return;
+    }
+    try {
+        let perm = Notification.permission;
+        if (perm === 'default') perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+            updateBadge();
+            showToast('The count will now show on the app icon');
+        } else {
+            showToast('Not allowed — turn notifications on for Tracking in iPhone Settings');
+        }
+    } catch (err) {
+        showToast('This device cannot show a badge on the app icon');
+    }
+    refreshBadgeBtn();
+});
 
 $('#btn-update').addEventListener('click', () => {
     $('#sheet-settings').hidden = true;

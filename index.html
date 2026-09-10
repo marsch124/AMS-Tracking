@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=47">
+    <link rel="stylesheet" href="css/style.css?v=48">
 </head>
 <body>
 
@@ -145,6 +145,7 @@
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
             <button id="btn-histimport" class="list-btn"><span data-hi="timer"></span> Import fasting history</button>
+            <button id="btn-badge" class="list-btn"><span data-hi="sunrise"></span> Show the count on the app icon</button>
             <button id="btn-update" class="list-btn"><span data-hi="sunrise"></span> Check for app update</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
@@ -182,7 +183,7 @@
                     <p><strong>Text size</strong> — the app follows the iPhone's Display &amp; Text Size setting: make text larger (or smaller) there and every screen scales with it, icons and buttons included.</p>
                     <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
-                    <p><strong>Icon badge</strong> — on an installed app, the home-screen icon shows how many scheduled habits are still open today. It updates whenever the app is opened or used (a web app can't change it in the background).</p>
+                    <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. An iPhone only allows this once you have said yes to notifications, so it is <strong>off until you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>, then allow the prompt. (Before v1.29 the app simply tried and failed silently, so the badge never actually appeared.) It updates whenever the app is opened or used — a web app can't change it in the background.</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). A live preview at the top of the sheet shows the card exactly as it will look on the Today screen — it follows every keystroke of the name and every icon, color, type, and weekday choice. Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it (the type is fixed once created).</p>
                     <p><strong>Stats</strong> — the chart button on the Today screen opens an overview of all habits: current and best streak, this month vs last month, and the last 30 days as a pixel strip per habit. When your current streak comes within 3 days (or 1 week, for weekly habits) of your best, the card adds a line like “2 days to your record” — a small extra reason not to break the chain. A fasting habit with at least five recorded fasts also gets a <strong>rhythm card</strong>: your usual start time, your strongest weekday, your average fast, and a Mon–Sun bar chart of average fasting hours per weekday — the calendar knows your pattern, this card tells it. At the top, the <strong>Achievements</strong> card keeps what the confetti celebrated: earned streak milestones per habit, your longest fast, best streak, and total days tracked.</p>
@@ -198,6 +199,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.29 <span class="vh-date">— 10 Sep 2026</span></h4>
+                    <p>The icon badge never actually worked.</p>
+                    <ul>
+                        <li><strong>The badge has never appeared, and now it can</strong> — the home-screen icon was supposed to show how many habits are still open today. An iPhone only allows an installed app to put a number on its icon once you have agreed to notifications, and this app never asked. It asked the system for the badge, the system refused, and the refusal was quietly discarded — so the feature described in this guide has simply never happened on your phone.</li>
+                        <li><strong>How to switch it on</strong> — Settings now has <strong>Show the count on the app icon</strong>. Tap it, allow the prompt, and the number appears. The button then tells you it is on. Nothing else changed, and the count itself works exactly as it always did: scheduled habits still open today, with a running fast counted as underway rather than open.</li>
+                        <li><strong>Found while fixing the same fault elsewhere</strong> — AMS CountDown had it too, along with a more serious one where a backup could save no file yet still report success. That has been repaired across CountDown, PackTrack, ColdShower, TechLingo, FermentLog, Breathing and the Main Hub. This app's own backup was already correct — it has used the share sheet all along.</li>
+                    </ul>
+
                     <h4>v1.28 <span class="vh-date">— 3 Sep 2026</span></h4>
                     <p>Parts on an earlier day.</p>
                     <ul>
@@ -680,7 +689,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=47"></script>
-    <script src="js/app.js?v=47"></script>
+    <script src="js/icons.js?v=48"></script>
+    <script src="js/app.js?v=48"></script>
 </body>
 </html>

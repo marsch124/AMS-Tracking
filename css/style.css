@@ -1319,6 +1319,88 @@ html, body {
 .sugg-kind { color: var(--text-dim); font-weight: 700; }
 .note-body { margin: 0; font-size: 0.8235rem; line-height: 1.55; color: var(--text); }
 
+/* ---------- last week, drawn ---------- */
+
+.lw-hero {
+    background: var(--surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 16px 16px 6px;
+    margin-bottom: 22px;
+}
+.lw-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+.lw-fig {
+    font-size: 1.7647rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+}
+.lw-fig.all { color: #2fa96d; }
+.lw-lab {
+    font-size: 0.7647rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+.lw-row { padding: 12px 0 4px; cursor: pointer; }
+.lw-row + .lw-row { border-top: 1px solid var(--border); }
+.lw-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+}
+.lw-top .habit-icon .hi { width: 1.0588rem; height: 1.0588rem; }
+.lw-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    font-size: 0.8529rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.lw-mid {
+    font-weight: 800;
+    font-size: 0.8235rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+.lw-mid.met { color: #2fa96d; }
+.lw-days { display: flex; gap: 5px; }
+
+/* One square per day, the same four states the rest of the app draws:
+   solid done, hollow not, dashed excused, dim not asked for. */
+.lw-day {
+    flex: 1 1 0;
+    min-width: 0;
+    aspect-ratio: 1;
+    max-width: 2.6471rem;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6471rem;
+    font-weight: 800;
+    background: var(--border);
+    color: var(--text-dim);
+}
+.lw-day.is-done { background: var(--c); color: #fff; }
+.lw-day.is-skip {
+    background: none;
+    border: 2px dashed var(--c);
+    color: var(--text-dim);
+}
+.lw-day.is-off { opacity: 0.45; }
+
 /* ---------- aspirations ---------- */
 
 /* No colour of its own, deliberately: colour means "which habit" everywhere

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.39.1';
+const APP_VERSION = '1.40';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -3813,6 +3813,46 @@ function renderNotes() {
         body.appendChild(s);
         return s;
     };
+
+    /* The week, drawn, before a word of it is read. The picture this screen
+       can send has always had it and the screen itself did not, so the thing
+       he opens was a page of text and the thing he forwards was the graphic.
+       Same alphabet as everywhere else in the app: solid is done, hollow is
+       not, dashed is an excused day, dim is a day the habit was not asked for. */
+    const report = weekReport(ws);
+    if (report.rows.length) {
+        const hero = document.createElement('div');
+        hero.className = 'lw-hero';
+
+        const head = document.createElement('div');
+        head.className = 'lw-head';
+        const fig = report.judged
+            ? `${report.met}/${report.judged}`
+            : String(report.ticks);
+        const lab = report.judged
+            ? (report.judged === 1 ? 'habit on target' : 'habits on target')
+            : (report.ticks === 1 ? 'day ticked' : 'days ticked');
+        head.innerHTML = `<span class="lw-fig${report.judged && report.met === report.judged ? ' all' : ''}">${fig}</span>` +
+            `<span class="lw-lab">${lab}</span>`;
+        hero.appendChild(head);
+
+        const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        report.rows.forEach(r => {
+            const row = document.createElement('div');
+            row.className = 'lw-row';
+            const marks = r.days.map((st, i) =>
+                `<span class="lw-day is-${st}" style="--c:${r.habit.color}">${DAYS[i]}</span>`).join('');
+            row.innerHTML =
+                `<div class="lw-top">` +
+                `<span class="habit-icon" style="color:${r.habit.color}">${icon(r.habit.icon)}</span>` +
+                `<span class="lw-name">${escapeHtml(r.habit.name)}</span>` +
+                `<span class="lw-mid${r.met === true ? ' met' : ''}">${r.mid}</span></div>` +
+                `<div class="lw-days">${marks}</div>`;
+            row.addEventListener('click', () => openDetail(r.habit.id));
+            hero.appendChild(row);
+        });
+        body.appendChild(hero);
+    }
 
     /* The summary is the screen. It is prose rather than a stack of cards
        because a list of findings is not a summary — and because it is the

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.33';
+const APP_VERSION = '1.34';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1134,7 +1134,7 @@ function renderWeekReview() {
     // competing with it.
     const notes = document.createElement('button');
     notes.className = 'wr-cta wr-notes';
-    notes.innerHTML = icon('bulb') + ' Read this week\u2019s notes';
+    notes.innerHTML = icon('bulb') + ' Read the notes';
     notes.addEventListener('click', (e) => {
         e.stopPropagation();
         showScreen('notes');
@@ -2932,6 +2932,119 @@ function weekStanding() {
     return out;
 }
 
+/* What the week just gone actually meant. The card and the poster already give
+   its figures; this says whether they were good, which is a different question
+   and the one nobody had answered. Only superlatives, firsts and breaks
+   qualify — "5 of 7, same as usual" is not worth a sentence.
+
+   Deliberately about ONE week, where weekNotes() is about eight. That is the
+   whole reason both exist: last week can be unusual without being a pattern,
+   and a pattern is invisible in any single week. */
+function lastWeekNotes() {
+    const ws = addDays(weekStart(new Date()), -7);
+    const out = [];
+    const born = h => (h.createdAt ? keyToDate(h.createdAt) : null);
+
+    state.habits.filter(h => !h.archived && h.type !== 'timer').forEach(h => {
+        const b = born(h);
+        // how many of the preceding weeks are real history for this habit
+        const prior = [];
+        for (let i = 1; i <= NOTE_WEEKS; i++) {
+            const w = addDays(ws, -7 * i);
+            if (b && addDays(w, 6) < b) continue;
+            prior.push(w);
+        }
+        if (prior.length < 3) return;
+
+        if (h.type === 'weekly') {
+            const target = h.target || 1;
+            const count = weekDoneCount(h, ws);
+            if (count >= target) {
+                // how long since the last week that also made it
+                let since = 0;
+                for (const w of prior) {
+                    if (weekDoneCount(h, w) >= target) break;
+                    since++;
+                }
+                if (since >= prior.length) {
+                    out.push({ habit: h, score: 4,
+                        text: `${h.name} made ${target} for the first time in ${prior.length} weeks — ${count} of ${target}.` });
+                } else if (since >= 2) {
+                    out.push({ habit: h, score: 3.5,
+                        text: `${h.name} hit ${target} again after ${since} weeks of not quite getting there.` });
+                } else {
+                    let run = 1;
+                    for (const w of prior) {
+                        if (weekDoneCount(h, w) >= target) run++; else break;
+                    }
+                    if (run >= 3) {
+                        out.push({ habit: h, score: 2.8,
+                            text: `${run} weeks in a row at ${target} or better for ${h.name}. That is the run to protect.` });
+                    }
+                }
+            } else {
+                let run = 0;
+                for (const w of prior) {
+                    if (weekDoneCount(h, w) >= target) run++; else break;
+                }
+                if (run >= 2) {
+                    out.push({ habit: h, score: 3.6,
+                        text: `${h.name} ended on ${count} of ${target}, after ${run} weeks that made it. ` +
+                            `One week is not a trend — the week after a broken run is the one that decides.` });
+                }
+            }
+        } else {
+            const week = w => {
+                const done = doneSet(h);
+                const skip = skipSet(h);
+                let dn = 0;
+                let sched = 0;
+                for (let i = 0; i < 7; i++) {
+                    const d = addDays(w, i);
+                    const k = dateKey(d);
+                    if (skip[k] || !isScheduled(h, d)) continue;
+                    sched++;
+                    if (done[k]) dn++;
+                }
+                return { dn, sched };
+            };
+            const now = week(ws);
+            if (!now.sched) return;
+            const rates = prior.map(w => week(w)).filter(x => x.sched).map(x => x.dn / x.sched);
+            if (rates.length < 3) return;
+            const rate = now.dn / now.sched;
+            const best = Math.max(...rates);
+            const avg = rates.reduce((a, c) => a + c, 0) / rates.length;
+            if (rate > best) {
+                out.push({ habit: h, score: 4,
+                    text: `${now.dn} of ${now.sched} on ${h.name} — better than any of the last ${rates.length} weeks.` });
+            } else if (rate <= avg - 0.25) {
+                out.push({ habit: h, score: 3.4,
+                    text: `${h.name} ran ${now.dn} of ${now.sched}, against ${Math.round(avg * 100)}% usually. ` +
+                        `Worth a thought about what was different, before it settles in.` });
+            } else if (rate === 1 && now.sched >= 5) {
+                let run = 1;
+                for (const w of prior) {
+                    const x = week(w);
+                    if (x.sched && x.dn === x.sched) run++; else break;
+                }
+                if (run >= 2) {
+                    out.push({ habit: h, score: 2.6,
+                        text: `${run} clean weeks in a row on ${h.name}.` });
+                }
+            }
+        }
+    });
+
+    out.sort((a, b) => b.score - a.score);
+    const seen = new Set();
+    return out.filter(n => {
+        if (seen.has(n.habit.id)) return false;
+        seen.add(n.habit.id);
+        return true;
+    }).slice(0, 2);
+}
+
 /* Every observation that holds, scored so the screen can show the few that
    say most. Each carries the figure it rests on: a note you cannot check is
    a note you cannot disagree with. */
@@ -3209,6 +3322,22 @@ function renderNotes() {
         body.appendChild(s);
         return s;
     };
+
+    // what the week just gone meant, before what this one is doing
+    const past = lastWeekNotes();
+    if (past.length) {
+        const s0 = section('Last week');
+        past.forEach(n => {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.innerHTML =
+                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
+                `<span class="note-title">${escapeHtml(n.habit.name)}</span></div>` +
+                `<p class="note-body">${escapeHtml(n.text)}</p>`;
+            card.addEventListener('click', () => openDetail(n.habit.id));
+            s0.appendChild(card);
+        });
+    }
 
     // where this week stands — the part that changes day to day
     const standing = weekStanding();

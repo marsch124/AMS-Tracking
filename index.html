@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=52">
+    <link rel="stylesheet" href="css/style.css?v=53">
 </head>
 <body>
 
@@ -55,7 +55,7 @@
         </header>
         <h1 class="page-title">Stats</h1>
         <p class="page-subtitle">All habits at a glance</p>
-        <button id="btn-notes" class="list-btn notes-entry"><span data-hi="bulb"></span> This week's notes</button>
+        <button id="btn-notes" class="list-btn notes-entry"><span data-hi="bulb"></span> How it’s going</button>
         <div id="stats-body"></div>
     </main>
 
@@ -64,7 +64,7 @@
         <header class="topbar">
             <button id="btn-notes-back" class="pill-btn" aria-label="Back"><span data-hi="chevL"></span> Today</button>
         </header>
-        <h1 class="page-title">This week</h1>
+        <h1 class="page-title">How it’s going</h1>
         <p id="notes-subtitle" class="page-subtitle"></p>
         <div id="notes-body"></div>
     </main>
@@ -185,7 +185,8 @@
                     <p><strong>Forgot yesterday?</strong> — press-and-hold the check circle of a daily or weekly habit to mark <em>yesterday</em> done, without opening the calendar. A short Undo bar confirms it (or tells you yesterday was already done). On a habit with several parts, the hold opens the part sheet for yesterday instead, so you can tick only what you actually did. A normal tap still checks off today. Backfilled days never trigger milestone celebrations.</p>
                     <p><strong>Week in review</strong> — each Monday, a “Last week” card appears under the habit list on the Today screen: per habit, how many scheduled days (or weekly-target check-offs) you managed, how your streak changed over the week (green +, red −), and for fasting the number of fasts with the average length and how it compares to the week before. Tap a row to jump to that habit; the <span data-hi="x" class="hi-inline"></span> dismisses the card until the next week starts, and Settings → “Show week in review” brings it back any time. When a new month begins, a bigger sibling appears the same way — <strong>“August in review”</strong> — with each habit's days completed and longest run of the month, weekly check-off totals, and for fasting the number of fasts and average length compared to the month before. Both cards are pure summary — nothing about your data changes.</p>
                     <p><strong>The weekly report</strong> — the “Last week” card carries a <strong>Send this report</strong> button, and the card comes up by itself the first time you open the app in a new week. It turns the week into a picture: each habit with its seven days as coloured squares, what you managed (“6/6&times;”, “5/7 days”, or the week's fasts and their average), how each streak moved, and a headline saying how many habits hit their target. On iPhone it opens the share sheet, so it can go straight to Messages, Mail or WhatsApp; elsewhere it saves as a PNG. Settings &rarr; <strong>Send last week's report</strong> does the same thing whenever you want it, including after the card has been dismissed.</p>
-                    <p><strong>This week's notes</strong> — Stats &rarr; <strong>This week's notes</strong>, and a link on the “Last week” card, open a short written read of your own data. Three parts: <em>Where you are</em> (how each weekly target stands right now, and how many days are left to make it), <em>What to try next week</em> (at most three observations from the last eight weeks), and <em>Something new?</em> (three habit ideas you can take or ignore).</p>
+                    <p><strong>How it&rsquo;s going</strong> — Stats &rarr; <strong>How it&rsquo;s going</strong>, and <strong>Read the notes</strong> on the “Last week” card, open a short written read of your own data. Four parts: <em>Last week</em> (what the week just gone actually meant — a best week, a first in months, a run broken), <em>Where you are</em> (how each weekly target stands right now, and how many days are left to make it), <em>What to try next week</em> (at most three observations from the last eight weeks), and <em>Something new?</em> (three habit ideas you can take or ignore).</p>
+                    <p><strong>Last week and next week are different questions</strong> — the “Last week” card and the report picture give you the week's figures; <em>Last week</em> on this screen says whether they were any good, which is the thing the numbers on their own never tell you. It compares one week against your recent normal, so it only speaks when something stood out: your best week in two months, the first time you made the target since August, a run of clean weeks ending. An ordinary week gets no sentence. <em>What to try next week</em> is the opposite — it ignores any single week and reads eight of them for a pattern, because a bad week is not a habit and a habit is invisible in a single week.</p>
                     <p><strong>How the notes are worked out, and what they will not do</strong> — there is no intelligence behind them and nothing is sent anywhere: the app does arithmetic on what is already on your phone and picks the sentences that fit. So every note names the figure it came from — “4 of your last 8 misses fell on a Thursday” — and you can disagree with it. The thresholds are set high on purpose: most notes need several weeks before they will say anything at all, because a confident sentence about a coincidence is worse than silence. When there is nothing honest to say, the screen says that instead of filling the space. Two things it deliberately never does: call a weekly target's rest days a slip (six out of seven means one blank day by design), and tell the same story twice about one habit.</p>
                     <p><strong>Habit suggestions</strong> — three at a time, rotating each week, and anything close to something you already track is left out. <strong>Add this habit</strong> opens the ordinary new-habit sheet with the name, icon and target filled in: it is a starting point you can change, and nothing is created until you press Save.</p>
                     <p><strong>Why it cannot send itself</strong> — an installed web app gets no time to run when it is closed: iPhones give it no background execution at all, so nothing can happen on a Sunday evening unless you open the app. And your data is only ever on this phone, so a mail server somewhere would have nothing to report on. The picture has to be made here, by you, with one tap — which is why the card puts itself in front of you at the start of each week rather than waiting to be found.</p>
@@ -218,6 +219,15 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.34 <span class="vh-date">— 15 Sep 2026</span></h4>
+                    <p>Last week, and what it meant.</p>
+                    <ul>
+                        <li><strong>A button on the “Last week” card called itself “this week's notes”</strong> — you went looking for last week's and reasonably expected both. It now says <strong>Read the notes</strong>, and the screen is called <strong>How it&rsquo;s going</strong>: it covers last week, this week and next, so a title naming one of the three was always going to send somebody the wrong way.</li>
+                        <li><strong>And you were right that last week's was missing</strong> — the card and the picture give the week's figures, and nothing said whether they were any good. The screen now opens with <em>Last week</em>: “6 of 6 for the first time in eight weeks”, “ended on 4 of 6 after four weeks that made it”, “better than any of the last eight weeks”.</li>
+                        <li><strong>It only speaks when something stood out</strong> — a best week, a first in months, a run beginning or ending. A week that matched your normal gets no sentence, and a habit with less than three weeks of history gets none either. Two at most.</li>
+                        <li><strong>Why the two readings are separate</strong> — <em>Last week</em> judges one week against your recent normal. <em>What to try next week</em> ignores single weeks entirely and reads eight of them for a pattern. A bad week is not a habit, and a habit cannot be seen in one week; keeping them apart is what stops either from lying.</li>
+                    </ul>
+
                     <h4>v1.33 <span class="vh-date">— 15 Sep 2026</span></h4>
                     <p>The app says something.</p>
                     <ul>
@@ -745,7 +755,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=52"></script>
-    <script src="js/app.js?v=52"></script>
+    <script src="js/icons.js?v=53"></script>
+    <script src="js/app.js?v=53"></script>
 </body>
 </html>

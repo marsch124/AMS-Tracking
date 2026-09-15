@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.34';
+const APP_VERSION = '1.35';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1134,7 +1134,7 @@ function renderWeekReview() {
     // competing with it.
     const notes = document.createElement('button');
     notes.className = 'wr-cta wr-notes';
-    notes.innerHTML = icon('bulb') + ' Read the notes';
+    notes.innerHTML = icon('bulb') + ' Read last week\u2019s analysis';
     notes.addEventListener('click', (e) => {
         e.stopPropagation();
         showScreen('notes');
@@ -2912,26 +2912,6 @@ function meanStartMin(sessions) {
     return Math.round(frac * 1440) % 1440;
 }
 
-/* Where this week stands right now — the only part that changes day to day,
-   and the reason the screen is worth opening on a Thursday. */
-function weekStanding() {
-    const ws = weekStart(new Date());
-    const daysLeft = 7 - ((weekdayIdx(new Date())) + 1);
-    const out = [];
-    state.habits.filter(h => !h.archived && h.type === 'weekly').forEach(h => {
-        const target = h.target || 1;
-        const count = weekDoneCount(h, ws);
-        const need = target - count;
-        let line;
-        if (need <= 0) line = `Done for the week. Anything more is a bonus.`;
-        else if (need > daysLeft + 1) line = `${need} to go with ${daysLeft + 1} day${daysLeft ? 's' : ''} left — this one is out of reach, so treat the rest of the week as next week's practice.`;
-        else if (need === daysLeft + 1) line = `${need} to go and exactly ${need} day${need === 1 ? '' : 's'} left. Every remaining day has to count.`;
-        else line = `${need} to go with ${daysLeft + 1} days left.`;
-        out.push({ habit: h, head: `${count}/${target} this week`, line });
-    });
-    return out;
-}
-
 /* What the week just gone actually meant. The card and the poster already give
    its figures; this says whether they were good, which is a different question
    and the one nobody had answered. Only superlatives, firsts and breaks
@@ -3310,9 +3290,13 @@ function habitSuggestions(count) {
 function renderNotes() {
     const body = $('#notes-body');
     body.innerHTML = '';
-    const ws = weekStart(new Date());
-    $('#notes-subtitle').textContent =
-        'Week of ' + ws.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+    /* Dated from the week that ended, not the one running. The screen is
+       opened from a card headed "Last week" and is about that week; naming
+       the current one sent Martin looking for the analysis he had asked for
+       and finding a different week's figures. */
+    const ws = addDays(weekStart(new Date()), -7);
+    const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    $('#notes-subtitle').textContent = fmtD(ws) + ' \u2013 ' + fmtD(addDays(ws, 6));
 
     const section = (title, hint) => {
         const s = document.createElement('section');
@@ -3326,7 +3310,7 @@ function renderNotes() {
     // what the week just gone meant, before what this one is doing
     const past = lastWeekNotes();
     if (past.length) {
-        const s0 = section('Last week');
+        const s0 = section('How it went');
         past.forEach(n => {
             const card = document.createElement('div');
             card.className = 'note-card';
@@ -3336,23 +3320,6 @@ function renderNotes() {
                 `<p class="note-body">${escapeHtml(n.text)}</p>`;
             card.addEventListener('click', () => openDetail(n.habit.id));
             s0.appendChild(card);
-        });
-    }
-
-    // where this week stands — the part that changes day to day
-    const standing = weekStanding();
-    if (standing.length) {
-        const s = section('Where you are');
-        standing.forEach(st => {
-            const row = document.createElement('div');
-            row.className = 'note-card';
-            row.innerHTML =
-                `<div class="note-top"><span class="habit-icon" style="color:${st.habit.color}">${icon(st.habit.icon)}</span>` +
-                `<span class="note-title">${escapeHtml(st.habit.name)}</span>` +
-                `<span class="note-fig" style="color:${st.habit.color}">${st.head}</span></div>` +
-                `<p class="note-body">${escapeHtml(st.line)}</p>`;
-            row.addEventListener('click', () => openDetail(st.habit.id));
-            s.appendChild(row);
         });
     }
 

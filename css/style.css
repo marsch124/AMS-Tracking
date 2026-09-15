@@ -12,6 +12,10 @@
     --accent: #3b70f0;
     --toast-undo: #7ea4f7; /* on the inverted (dark) toast */
     --stale: #7a5b06;
+    /* One data hue, two steps. #2fa96d is the app's completion green and
+       measures 2.92:1 on white, under the 3:1 a data mark needs, so daylight
+       takes a darker step of the same hue. */
+    --chart-ink: #24925c;
 }
 
 :root[data-theme="dark"] {
@@ -24,6 +28,7 @@
     --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
     --toast-undo: #2c5fd8;
     --stale: #e0a80f;
+    --chart-ink: #2fa96d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +42,7 @@
         --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
         --toast-undo: #2c5fd8; /* on the inverted (light) toast */
         --stale: #e0a80f;
+        --chart-ink: #2fa96d;
     }
 }
 
@@ -1319,6 +1325,67 @@ html, body {
 .sugg-kind { color: var(--text-dim); font-weight: 700; }
 .note-body { margin: 0; font-size: 0.8235rem; line-height: 1.55; color: var(--text); }
 
+/* ---------- last week, charted ---------- */
+
+.lw-chart {
+    background: var(--surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 16px 16px 14px;
+    margin-bottom: 14px;
+}
+.lw-chart-h {
+    margin: 0 0 14px;
+    font-size: 0.7647rem;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+.lw-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 7px;
+    height: 116px;
+}
+.lw-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    height: 100%;
+}
+/* A track behind every bar, so a short day reads as short rather than absent
+   and the seven columns share one scale you can see. */
+.lw-track {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    background: var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.lw-bar {
+    width: 100%;
+    background: var(--chart-ink);
+    border-radius: 8px 8px 0 0;
+    min-height: 0;
+}
+.lw-dayname {
+    margin-top: 7px;
+    text-align: center;
+    font-size: 0.6471rem;
+    font-weight: 800;
+    color: var(--text-dim);
+}
+.lw-cap {
+    margin: 12px 0 0;
+    font-size: 0.7941rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
 /* ---------- last week, drawn ---------- */
 
 .lw-hero {
@@ -1375,6 +1442,10 @@ html, body {
     white-space: nowrap;
 }
 .lw-mid.met { color: #2fa96d; }
+.lw-delta { font-weight: 800; font-size: 0.7647rem; white-space: nowrap; }
+.lw-delta.up { color: #2fa96d; }
+.lw-delta.down { color: #d9463e; }
+.lw-delta.flat { color: var(--text-dim); }
 .lw-days { display: flex; gap: 5px; }
 
 /* One square per day, the same four states the rest of the app draws:
@@ -1494,6 +1565,11 @@ html, body {
 }
 .summary-box + .wr-cta { margin-top: 12px; }
 .wr-cta + .wr-cta { margin-top: 8px; }
+
+/* The knock on the door, not the report itself. The rows this card used to
+   carry now live on the screen it opens. */
+.wr-slim { padding: 12px 16px 14px; }
+.wr-slim .wr-cta { margin-top: 10px; }
 
 /* The add button is deliberately quiet: a suggestion that shouts is an advert,
    and nothing here is added until he adds it. */

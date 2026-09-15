@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.40';
+const APP_VERSION = '1.41';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1237,6 +1237,7 @@ function renderWeekReview() {
     card.className = 'wr-card';
     const head = document.createElement('div');
     head.className = 'wr-head';
+    card.classList.add('wr-slim');
     head.innerHTML = `<h3>Last week</h3>` +
         `<span class="wr-range">${fmtD(lastWs)} – ${fmtD(endLast)}</span>`;
     const close = document.createElement('button');
@@ -1252,36 +1253,26 @@ function renderWeekReview() {
     head.appendChild(close);
     card.appendChild(head);
 
-    // the figures come from weekReport() so the card and the poster it sends
-    // can never tell two different stories about the same week
-    report.rows.filter(r => habits.includes(r.habit)).forEach(r => {
-        const h = r.habit;
-        const right = r.deltaValue != null ? r.delta + icon('flame', 'wr-flame') : r.delta;
-        const row = document.createElement('div');
-        row.className = 'wr-row';
-        row.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
-            `<span class="wr-name">${escapeHtml(h.name)}</span>` +
-            `<span class="wr-mid">${r.mid}</span>` +
-            `<span class="wr-right ${r.deltaCls}">${right}</span>`;
-        row.addEventListener('click', () => openDetail(h.id));
-        card.appendChild(row);
-    });
-
-    /* One way out of this card: into the analysis. Sending the week used to
-       start here and reading about it used to start here, which split the two
-       halves of the same job across a summary card and a screen. Both sends
-       now sit under the week they send, on the analysis screen. */
-    const notes = document.createElement('button');
-    notes.className = 'wr-cta wr-notes';
-    notes.innerHTML = icon('bulb') + ' Last week';
-    notes.addEventListener('click', (e) => {
+    /* The rows have moved into Last week's analysis, where the week is now
+       charted, drawn and written about. Martin drew a circle round this card
+       and said it does not belong on the home screen: Today is about today,
+       and a six-row table of the week before was the largest thing on it.
+       What stays is the knock on the door — one line saying an analysis is
+       waiting and which week it covers. Nothing the rows carried was lost;
+       the figures and the streak deltas are on that screen. */
+    const go = document.createElement('button');
+    go.className = 'wr-cta wr-notes';
+    go.innerHTML = icon('bulb') + ' Last week';
+    go.addEventListener('click', (e) => {
         e.stopPropagation();
         showScreen('notes');
     });
-    card.appendChild(notes);
+    card.appendChild(go);
 
     box.appendChild(card);
     box.hidden = false;
+    void habits;
+    void report;
 }
 
 /* ---- v1.25: month in review ---- */
@@ -3821,6 +3812,41 @@ function renderNotes() {
        not, dashed is an excused day, dim is a day the habit was not asked for. */
     const report = weekReport(ws);
     if (report.rows.length) {
+        /* The shape of the week: how many habits were completed on each day.
+           One series, so no legend — the title names it. Deliberately NOT
+           stacked by habit colour: those colours are his own choices from the
+           palette and two habits may sit a hue apart (his week has two reds
+           and two purples), so identity by colour in a 40px bar would be a
+           guess. Identity lives in the rows below, where the name is written
+           next to the mark. */
+        const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        const perDay = [0, 0, 0, 0, 0, 0, 0];
+        report.rows.forEach(r => r.days.forEach((st, i) => { if (st === 'done') perDay[i]++; }));
+        const ceiling = Math.max(report.rows.length, 1);
+        const chart = document.createElement('div');
+        chart.className = 'lw-chart';
+        chart.innerHTML =
+            `<h3 class="lw-chart-h">Habits completed each day</h3>` +
+            `<div class="lw-bars">` +
+            perDay.map((n, i) =>
+                `<div class="lw-col">` +
+                `<div class="lw-track"><div class="lw-bar" style="height:${Math.round(n / ceiling * 100)}%"></div></div>` +
+                `<span class="lw-dayname">${DAYS[i]}</span></div>`).join('') +
+            `</div>`;
+        const best = perDay.indexOf(Math.max(...perDay));
+        const total = perDay.reduce((a, c) => a + c, 0);
+        const cap = document.createElement('p');
+        cap.className = 'lw-cap';
+        /* One sentence instead of a number on every bar, and it doubles as the
+           relief the contrast check asks for: the figure is legible as text
+           whatever the bar looks like. */
+        cap.textContent = total === 0
+            ? `Nothing was ticked last week.`
+            : `${total} in all, out of ${ceiling} habits a day. ` +
+              `${DAY_FULL[best]} carried the most, with ${perDay[best]} of ${ceiling}.`;
+        chart.appendChild(cap);
+        body.appendChild(chart);
+
         const hero = document.createElement('div');
         hero.className = 'lw-hero';
 
@@ -3836,7 +3862,6 @@ function renderNotes() {
             `<span class="lw-lab">${lab}</span>`;
         hero.appendChild(head);
 
-        const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
         report.rows.forEach(r => {
             const row = document.createElement('div');
             row.className = 'lw-row';
@@ -3846,7 +3871,11 @@ function renderNotes() {
                 `<div class="lw-top">` +
                 `<span class="habit-icon" style="color:${r.habit.color}">${icon(r.habit.icon)}</span>` +
                 `<span class="lw-name">${escapeHtml(r.habit.name)}</span>` +
-                `<span class="lw-mid${r.met === true ? ' met' : ''}">${r.mid}</span></div>` +
+                `<span class="lw-mid${r.met === true ? ' met' : ''}">${r.mid}</span>` +
+                (r.delta
+                    ? `<span class="lw-delta ${r.deltaCls}">${r.delta}` +
+                      (r.deltaValue != null ? icon('flame', 'wr-flame') : '') + `</span>`
+                    : '') + `</div>` +
                 `<div class="lw-days">${marks}</div>`;
             row.addEventListener('click', () => openDetail(r.habit.id));
             hero.appendChild(row);

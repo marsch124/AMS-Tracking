@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.38';
+const APP_VERSION = '1.38.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1144,7 +1144,7 @@ function renderWeekReview() {
        now sit under the week they send, on the analysis screen. */
     const notes = document.createElement('button');
     notes.className = 'wr-cta wr-notes';
-    notes.innerHTML = icon('bulb') + ' Read last week\u2019s analysis';
+    notes.innerHTML = icon('bulb') + ' Last week';
     notes.addEventListener('click', (e) => {
         e.stopPropagation();
         showScreen('notes');

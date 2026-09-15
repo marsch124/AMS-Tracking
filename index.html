@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=63">
+    <link rel="stylesheet" href="css/style.css?v=64">
 </head>
 <body>
 
@@ -29,8 +29,7 @@
 
         <div id="habit-list" class="habit-list"></div>
 
-        <div id="month-review" hidden></div>
-        <div id="week-review" hidden></div>
+        <div id="review-links"></div>
 
         <nav class="bottom-bar">
             <button id="btn-stats" class="pill-btn icon-only" aria-label="Statistics"><span data-hi="chart"></span></button>
@@ -193,7 +192,6 @@
             <button id="btn-layout" class="list-btn"><span data-hi="grid"></span> <span id="layout-label">Layout: list</span></button>
             <button id="btn-theme" class="list-btn"><span data-hi="moon"></span> <span id="theme-label">Theme: auto</span></button>
             <button id="btn-archived" class="list-btn"><span data-hi="import"></span> Archived habits (<span id="archived-count">0</span>)</button>
-            <button id="btn-weekreview" class="list-btn"><span data-hi="scroll"></span> Show week in review</button>
 
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="help"></span> How it works</span></summary>
@@ -211,7 +209,7 @@
                     <p><strong>Fixing the past</strong> — in a habit's detail view, the month calendar is editable. For daily and weekly habits, tapping a day cycles it: done → <strong>skip day</strong> → empty. (For a habit with several parts, tapping a day opens the part sheet for that day instead of cycling.) A skip day (shown hollow with a dashed outline) is excused — it neither breaks nor extends a streak, and it leaves the completion count — perfect for holidays or sick days. For fasting, tapping an empty day opens a small sheet to pick or type the hours (or mark a skip day); tapping a day with a recorded fast opens that fast in the editor, where you can adjust its start and stop, delete it, or cancel — nothing changes until you save. Use the arrows to move through months — up to a year ahead, so a planned vacation is visible; future days are locked except vacation-marked skip days, which a tap un-marks. Once you've wandered off the current month, a target button appears in the calendar header — one tap jumps straight back to today. Streaks and stats update immediately.</p>
                     <p><strong>Vacations &amp; sick weeks</strong> — under the month calendar, “Skip several days” marks a whole date range as skip days at once: pick the first and last day (future dates included, up to 92 days), and tick “Apply to all habits” when the whole life pauses, not just one habit. Days already done stay done, and the Undo bar takes back exactly the days the range added. A planned range shows up on the calendar right away and can be checked in the months ahead.</p>
                     <p><strong>Forgot yesterday?</strong> — press-and-hold the check circle of a daily or weekly habit to mark <em>yesterday</em> done, without opening the calendar. A short Undo bar confirms it (or tells you yesterday was already done). On a habit with several parts, the hold opens the part sheet for yesterday instead, so you can tick only what you actually did. A normal tap still checks off today. Backfilled days never trigger milestone celebrations.</p>
-                    <p><strong>Week in review</strong> — each Monday, a “Last week” card appears under the habit list on the Today screen: per habit, how many scheduled days (or weekly-target check-offs) you managed, how your streak changed over the week (green +, red −), and for fasting the number of fasts with the average length and how it compares to the week before. Tap a row to jump to that habit; the <span data-hi="x" class="hi-inline"></span> dismisses the card until the next week starts, and Settings → “Show week in review” brings it back any time. When a new month begins, a sibling appears the same way — <strong>“August in review”</strong>, one line with a <strong>Last month</strong> button opening its own screen, which starts with a chart of the ticks in each week of that month and then gives each habit its row — with each habit's days completed and longest run of the month, weekly check-off totals, and for fasting the number of fasts and average length compared to the month before. Both cards are pure summary — nothing about your data changes.</p>
+                    <p><strong>Last week and Last month</strong> — two permanent buttons sit under your habits on the Today screen, and neither can be dismissed or lost. <strong>Last week</strong> opens the analysis of the week that ended: a chart of how many habits you completed each day, the week drawn habit by habit, a written summary you can send as text or as a picture, what to try next week, and your aspirations. <strong>Last month</strong> opens the same idea for the month: a chart of the ticks in each week of it, then each habit's figure and its change on the month before. Both are pure summary — nothing about your data changes, and nothing in them is hidden until a particular day of the week.</p>
                     <p><strong>The weekly report</strong> — the “Last week” card comes up by itself the first time you open the app in a new week. It is one line — the week's dates and a <strong>Last week</strong> button — because the week that has ended belongs on its own screen rather than on Today. Everything it used to list, the figures and the streak changes, is in the analysis it opens, along with both ways of sending the week. It turns the week into a picture: each habit with its seven days as coloured squares, what you managed (“6/6&times;”, “5/7 days”, or the week's fasts and their average), how each streak moved, and a headline saying how many habits hit their target. On iPhone it opens the share sheet, so it can go straight to Messages, Mail or WhatsApp; elsewhere it saves as a PNG. Settings &rarr; <strong>Send last week's report</strong> does the same thing whenever you want it, including after the card has been dismissed.</p>
                     <p><strong>Last week&rsquo;s analysis</strong> — <strong>Read last week&rsquo;s analysis</strong> on the “Last week” card, or Stats &rarr; the same words, opens the week that ended, dated to that week. It <strong>starts with a chart</strong>: how many habits you completed on each day of the week, Monday first, with a line underneath naming the day that carried the most. Then the week drawn — the headline count of habits on target, and one row per habit with its figure, its streak change, and its seven days as coloured squares: solid for done, plain for missed, dashed for an excused day, dim for a day the habit was not asked for. Tap a row to open that habit. Below the drawing comes the written summary. It is <em>written</em>, in paragraphs: what happened, whether that was any good measured against your recent normal, what the last eight weeks show underneath it and what to do about that next week, and one habit idea. Under the summary sit both ways of sending the week: <strong>Send this summary as text</strong> hands the words to the share sheet, so it can go by mail or message, and <strong>Send the week as a picture</strong> hands over the drawn report. The labels name the form because two buttons both saying “send this” would say nothing about which is which. Under the text, the cards are still there: <em>How it went</em> and <em>What to try next week</em>, one per observation in its habit's colour and tappable through to that habit, then <em>Something new?</em> with three habit ideas and a button each. The words and the cards say the same things on purpose — the text is what you read and send, the cards are what you scan. The week you are currently in is not on this screen: its count is on the Today card, where you are looking anyway.</p>
                     <p><strong>Last week and next week are different questions</strong> — the “Last week” card and the report picture give you the week's figures; <em>Last week</em> on this screen says whether they were any good, which is the thing the numbers on their own never tell you. It compares one week against your recent normal, so it only speaks when something stood out: your best week in two months, the first time you made the target since August, a run of clean weeks ending. An ordinary week gets no sentence. <em>What to try next week</em> is the opposite — it ignores any single week and reads eight of them for a pattern, because a bad week is not a habit and a habit is invisible in a single week.</p>
@@ -250,6 +248,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.43 <span class="vh-date">— 15 Sep 2026</span></h4>
+                    <p>Two buttons that cannot be lost.</p>
+                    <ul>
+                        <li><strong>The review cards are gone; two permanent buttons replace them</strong> — <strong>Last week</strong> and <strong>Last month</strong>, always under your habits on Today. You swiped one away and could not get it back, which is a fault in the design and not in the swipe: something that vanishes for six days on one gesture should never have been dismissible.</li>
+                        <li><strong>“Last week” is written once, on the button</strong> — the heading above it said the same words, which was one word too many in two centimetres.</li>
+                        <li><strong>Settings → “Show week in review” is gone with them</strong> — it existed to bring back a card you could lose. There is nothing to bring back now, because there is nothing to lose. It was also buried where nobody would look, which is why it was no help to you.</li>
+                    </ul>
+
                     <h4>v1.42 <span class="vh-date">— 15 Sep 2026</span></h4>
                     <p>The month goes the same way.</p>
                     <ul>
@@ -894,7 +900,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=63"></script>
-    <script src="js/app.js?v=63"></script>
+    <script src="js/icons.js?v=64"></script>
+    <script src="js/app.js?v=64"></script>
 </body>
 </html>

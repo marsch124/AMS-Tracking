@@ -1325,6 +1325,37 @@ html, body {
 .sugg-kind { color: var(--text-dim); font-weight: 700; }
 .note-body { margin: 0; font-size: 0.8235rem; line-height: 1.55; color: var(--text); }
 
+/* Permanent, and deliberately quiet: two rows under the habits, always there.
+   They replaced cards that could be swiped away and then only restored from a
+   Settings row nobody would find. */
+#review-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0 4px;
+}
+.review-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    font-size: 0.8824rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+}
+.review-link span { flex: 1; min-width: 0; }
+.review-link .hi { width: 1.0588rem; height: 1.0588rem; color: var(--accent); }
+.review-link .review-chev { color: var(--text-dim); width: 0.8824rem; height: 0.8824rem; }
+.review-link:active { background: var(--border); }
+
 /* ---------- last week, charted ---------- */
 
 .lw-chart {

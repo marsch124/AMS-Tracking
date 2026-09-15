@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.42';
+const APP_VERSION = '1.43';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -451,8 +451,7 @@ function renderToday() {
         hour >= 5 && hour < 12 ? 'Morning' :
         hour >= 12 && hour < 18 ? 'Afternoon' : 'Evening';
 
-    renderWeekReview();
-    renderMonthReview();
+    renderReviewLinks();
 
     const list = $('#habit-list');
     list.innerHTML = '';
@@ -1211,68 +1210,24 @@ function weekReport(ws) {
 /* Once per ISO week: how last week went, per habit. Dismiss stores the
    week key so the card stays away until the next Monday. Derived data
    only — the sole stored value is settings.lastReviewWeek. */
-function renderWeekReview() {
-    const box = $('#week-review');
-    box.hidden = true;
+/* Two permanent ways in, and nothing that can be lost.
+
+   These were dismissible cards until Martin swiped one away and could not get
+   it back: the way back was a Settings row called "Show week in review",
+   buried where nobody would look for it. A thing that disappears for six days
+   because of one gesture should not have been dismissible in the first place.
+   They are plain buttons now — always on Today, never in the way, and there is
+   no state to remember because there is nothing to hide. */
+function renderReviewLinks() {
+    const box = $('#review-links');
     box.innerHTML = '';
-    const thisWs = weekStart(new Date());
-    const thisKey = dateKey(thisWs);
-    if (state.settings.lastReviewWeek === thisKey) return;
-    const habits = state.habits.filter(h =>
-        !h.archived && (!h.createdAt || keyToDate(h.createdAt) < thisWs));
-    // nothing to review on a fresh install or an empty last week
-    const hasHistory = habits.some(h =>
-        Object.keys(doneSet(h)).some(k => k < thisKey) ||
-        Object.keys(skipSet(h)).some(k => k < thisKey));
-    if (!habits.length || !hasHistory) return;
-
-    const lastWs = addDays(thisWs, -7);
-    const endLast = addDays(thisWs, -1);   // Sunday of last week
-    const endPrev = addDays(thisWs, -8);   // Sunday of the week before
-    const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-
-    const report = weekReport(lastWs);
-
-    const card = document.createElement('div');
-    card.className = 'wr-card';
-    const head = document.createElement('div');
-    head.className = 'wr-head';
-    card.classList.add('wr-slim');
-    head.innerHTML = `<h3>Last week</h3>` +
-        `<span class="wr-range">${fmtD(lastWs)} – ${fmtD(endLast)}</span>`;
-    const close = document.createElement('button');
-    close.className = 'wr-close';
-    close.innerHTML = icon('x');
-    close.setAttribute('aria-label', 'Dismiss week review');
-    close.addEventListener('click', (e) => {
-        e.stopPropagation();
-        state.settings.lastReviewWeek = thisKey;
-        save();
-        renderToday();
+    [['Last week', 'notes'], ['Last month', 'month']].forEach(([label, screen]) => {
+        const b = document.createElement('button');
+        b.className = 'review-link';
+        b.innerHTML = icon('bulb') + '<span>' + label + '</span>' + icon('chevR', 'review-chev');
+        b.addEventListener('click', () => showScreen(screen));
+        box.appendChild(b);
     });
-    head.appendChild(close);
-    card.appendChild(head);
-
-    /* The rows have moved into Last week's analysis, where the week is now
-       charted, drawn and written about. Martin drew a circle round this card
-       and said it does not belong on the home screen: Today is about today,
-       and a six-row table of the week before was the largest thing on it.
-       What stays is the knock on the door — one line saying an analysis is
-       waiting and which week it covers. Nothing the rows carried was lost;
-       the figures and the streak deltas are on that screen. */
-    const go = document.createElement('button');
-    go.className = 'wr-cta wr-notes';
-    go.innerHTML = icon('bulb') + ' Last week';
-    go.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showScreen('notes');
-    });
-    card.appendChild(go);
-
-    box.appendChild(card);
-    box.hidden = false;
-    void habits;
-    void report;
 }
 
 /* ---- v1.25: month in review ---- */
@@ -1304,64 +1259,6 @@ function bestRunInMonth(habit, y, m) {
     return best;
 }
 
-/* Once per calendar month: how last month went, per habit. Same pattern
-   as the weekly card — dismiss stores settings.lastMonthReview. */
-function renderMonthReview() {
-    const box = $('#month-review');
-    box.hidden = true;
-    box.innerHTML = '';
-    const now = new Date();
-    const thisKey = now.getFullYear() + '-' + pad(now.getMonth() + 1);
-    if (state.settings.lastMonthReview === thisKey) return;
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const py = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-    const ppy = pm === 0 ? py - 1 : py;
-    const ppm = pm === 0 ? 11 : pm - 1;
-    const habits = state.habits.filter(h =>
-        !h.archived && (!h.createdAt || keyToDate(h.createdAt) < firstOfMonth));
-    const monthKey = py + '-' + pad(pm + 1);
-    void ppy; void ppm;
-    const hasHistory = habits.some(h =>
-        Object.keys(doneSet(h)).some(k => k.startsWith(monthKey)) ||
-        Object.keys(skipSet(h)).some(k => k.startsWith(monthKey)));
-    if (!habits.length || !hasHistory) return;
-
-    const card = document.createElement('div');
-    card.className = 'wr-card';
-    const head = document.createElement('div');
-    head.className = 'wr-head';
-    const monthName = new Date(py, pm, 1).toLocaleDateString(undefined, { month: 'long' });
-    card.classList.add('wr-slim');
-    head.innerHTML = `<h3>${monthName} in review</h3>`;
-    const close = document.createElement('button');
-    close.className = 'wr-close';
-    close.innerHTML = icon('x');
-    close.setAttribute('aria-label', 'Dismiss month review');
-    close.addEventListener('click', (e) => {
-        e.stopPropagation();
-        state.settings.lastMonthReview = thisKey;
-        save();
-        renderToday();
-    });
-    head.appendChild(close);
-    card.appendChild(head);
-
-    /* The rows have moved to their own screen, for the same reason the week's
-       did: Today is about today. What is left is one line saying the month is
-       ready. Everything the rows carried is on that screen. */
-    const go = document.createElement('button');
-    go.className = 'wr-cta wr-notes';
-    go.innerHTML = icon('bulb') + ' Last month';
-    go.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showScreen('month');
-    });
-    card.appendChild(go);
-
-    box.appendChild(card);
-    box.hidden = false;
-}
 
 let justChecked = null; // habit id whose checkmark should draw itself
 let dayJustCompleted = false; // set when a live action finishes the day
@@ -4784,17 +4681,6 @@ $('#btn-archived').addEventListener('click', () => {
     renderArchived();
     $('#sheet-archived').hidden = false;
 });
-/* bring a dismissed week review back on demand */
-$('#btn-weekreview').addEventListener('click', () => {
-    delete state.settings.lastReviewWeek;
-    save();
-    $('#sheet-settings').hidden = true;
-    renderToday();
-    const box = $('#week-review');
-    if (box.hidden) showToast('Nothing to review yet \u2014 come back after your first tracked week');
-    else box.scrollIntoView({ behavior: 'smooth', block: 'end' });
-});
-
 $('#btn-archived-close').addEventListener('click', () => { $('#sheet-archived').hidden = true; });
 $('#sheet-archived').addEventListener('click', (e) => {
     if (e.target === $('#sheet-archived')) $('#sheet-archived').hidden = true;

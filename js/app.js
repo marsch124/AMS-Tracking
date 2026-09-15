@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.39';
+const APP_VERSION = '1.39.1';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -3681,14 +3681,48 @@ function renderAspirations() {
 
 /* ---- writing one ---- */
 
-const aspSheet = { editingId: null };
+const aspSheet = { editingId: null, habitIds: [] };
+
+/* Habits are attached from BOTH sides. v1.39 only offered the habit's own
+   Serves row, which meant writing an aspiration and then having no way to
+   populate it from the thing you had just written — you had to know to go and
+   edit each habit. The aspiration is where you are thinking about what serves
+   it, so it asks the question there too. */
+function renderAspHabitChips() {
+    const row = $('#f-asp-habits');
+    row.innerHTML = '';
+    const live = state.habits.filter(h => !h.archived);
+    $('#f-asp-habits-empty').hidden = live.length > 0;
+    live.forEach(h => {
+        const taken = h.aspirationId && h.aspirationId !== aspSheet.editingId &&
+            aspirationById(h.aspirationId) && !aspirationById(h.aspirationId).archivedAt;
+        const on = aspSheet.habitIds.includes(h.id);
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip habit-chip' + (on ? ' sel' : '');
+        c.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
+            escapeHtml(h.name) +
+            // a habit already under another aspiration can still be moved, but
+            // it says so first: silently stealing it is how two lists disagree
+            (taken && !on ? `<span class="chip-note">${escapeHtml(aspirationById(h.aspirationId).title)}</span>` : '');
+        c.addEventListener('click', () => {
+            const i = aspSheet.habitIds.indexOf(h.id);
+            if (i >= 0) aspSheet.habitIds.splice(i, 1);
+            else aspSheet.habitIds.push(h.id);
+            renderAspHabitChips();
+        });
+        row.appendChild(c);
+    });
+}
 
 function openAspSheet(editId) {
     aspSheet.editingId = editId || null;
     const a = editId ? aspirationById(editId) : null;
+    aspSheet.habitIds = a ? habitsUnder(a.id).map(h => h.id) : [];
     $('#asp-sheet-title').textContent = a ? 'Edit aspiration' : 'New aspiration';
     $('#f-asp').value = a ? a.title : '';
     $('#btn-asp-archive').hidden = !a;
+    renderAspHabitChips();
     // the starters are for a blank page only; offering them over something he
     // has written invites a stray tap that replaces it
     $('#f-asp-starters-wrap').hidden = !!a;
@@ -3722,12 +3756,22 @@ $('#sheet-asp').addEventListener('click', (e) => {
 $('#btn-asp-save').addEventListener('click', () => {
     const title = $('#f-asp').value.trim();
     if (!title) { $('#f-asp').focus(); return; }
-    if (aspSheet.editingId) {
-        const a = aspirationById(aspSheet.editingId);
+    let id = aspSheet.editingId;
+    if (id) {
+        const a = aspirationById(id);
         if (a) a.title = title;
     } else {
-        state.aspirations.push({ id: newId(), title, createdAt: dateKey(new Date()) });
+        id = newId();
+        state.aspirations.push({ id, title, createdAt: dateKey(new Date()) });
     }
+    /* Apply the membership the sheet was showing. Only habits this aspiration
+       held or has just been given are touched — one belonging to another
+       aspiration and left alone here keeps it. */
+    state.habits.forEach(h => {
+        const want = aspSheet.habitIds.includes(h.id);
+        if (want) h.aspirationId = id;
+        else if (h.aspirationId === id) h.aspirationId = null;
+    });
     save();
     closeAspSheet();
     renderAspirations();

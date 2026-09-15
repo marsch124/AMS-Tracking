@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=59">
+    <link rel="stylesheet" href="css/style.css?v=60">
 </head>
 <body>
 
@@ -220,7 +220,7 @@
                     <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. An iPhone only allows this once you have said yes to notifications, so it is <strong>off until you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>, then allow the prompt. (Before v1.29 the app simply tried and failed silently, so the badge never actually appeared.) It updates whenever the app is opened or used — a web app can't change it in the background.</p>
-                    <p><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. An aspiration is one sentence about who you are becoming: “Strong and durable into my seventies”. No date and no number — the habits carry those. It has no colour of its own either, because colour already means <em>which habit</em> everywhere in this app. Editing a habit gains a <strong>Serves</strong> row once you have written one, and <em>Nothing in particular</em> is a permanent, perfectly good answer: a habit attached to nothing works exactly as it always has.</p>
+                    <p><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. An aspiration is one sentence about who you are becoming: “Strong and durable into my seventies”. No date and no number — the habits carry those. It has no colour of its own either, because colour already means <em>which habit</em> everywhere in this app. Habits are attached from either side: the aspiration's own sheet asks <strong>Which habits serve it?</strong> and lists them all, and editing a habit gains a <strong>Serves</strong> row once an aspiration exists. <em>Nothing in particular</em> is a permanent, perfectly good answer: a habit attached to nothing works exactly as it always has. A habit already under another aspiration shows which, so moving it is deliberate rather than silent.</p>
                     <p><strong>Why it is not just a text field</strong> — every app has a goals box and it is always dead text, because nothing ever reads it back. So each aspiration is answered every week: how many of its habits ran, on its own screen and in last week's analysis and summary. One that has been silent for three weeks is asked about — “Nothing has run under this for 6 weeks. Is it still true?” — rather than left sitting there looking meaningful. The app will also mention once, and then not again for a month, that an aspiration has no habits under it or that some habits serve nothing. Once, because a true sentence repeated every week stops being read.</p>
                     <p><strong>Starting one</strong> — the sheet offers four sentences to start from rather than an empty box, and whichever you pick is yours to rewrite. Archiving an aspiration never touches the habits under it: they simply become unattached, and the Undo bar puts it back.</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
@@ -239,6 +239,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.39.1 <span class="vh-date">— 15 Sep 2026</span></h4>
+                    <p>Two things v1.39 should not have shipped with.</p>
+                    <ul>
+                        <li><strong>Habits can be attached from the aspiration</strong> — the sheet now asks <strong>Which habits serve it?</strong> and lists every habit as a tap-to-attach chip. Before, the only route was to edit each habit in turn and use its <em>Serves</em> row, which meant writing an aspiration and then having no way to fill it from the screen you had just written it on. Both routes work; the habit's own row is unchanged.</li>
+                        <li><strong>A habit held by another aspiration says so</strong> — its chip carries that aspiration's name, so moving it is a decision rather than something that happens quietly behind you.</li>
+                        <li><strong>The aspiration text field was tiny</strong> — it had no styling of its own and fell back to the browser's default, next to prose at full size. It is now the same field as the habit name box. The rule covers both boxes rather than naming one, so the next field added cannot be forgotten the same way.</li>
+                    </ul>
+
                     <h4>v1.39 <span class="vh-date">— 15 Sep 2026</span></h4>
                     <p>What the habits are for.</p>
                     <ul>
@@ -703,6 +711,12 @@
                 <label class="field-label">Or start from one of these</label>
                 <div id="f-asp-starters" class="chip-row"></div>
             </div>
+
+            <div id="f-asp-habits-wrap">
+                <label class="field-label">Which habits serve it?</label>
+                <div id="f-asp-habits" class="chip-row"></div>
+                <p id="f-asp-habits-empty" class="cal-hint" hidden>No habits yet — add one first and it can be attached here.</p>
+            </div>
             <button id="btn-asp-archive" class="archive-btn" hidden><span data-hi="import"></span> Archive this aspiration</button>
             <div class="sheet-actions">
                 <button id="btn-asp-cancel" class="ghost-btn">Cancel</button>
@@ -845,7 +859,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=59"></script>
-    <script src="js/app.js?v=59"></script>
+    <script src="js/icons.js?v=60"></script>
+    <script src="js/app.js?v=60"></script>
 </body>
 </html>

@@ -449,7 +449,10 @@ html, body {
     margin: 16px 0 8px;
 }
 
-#f-name {
+/* Every text field in a sheet, not one id at a time: #f-asp was added in
+   v1.39 and got browser defaults, which is a 13px field next to 17px prose.
+   A rule per input is a rule somebody forgets. */
+#f-name, #f-asp {
     width: 100%;
     font-size: 1rem;
     padding: 14px;
@@ -459,7 +462,7 @@ html, body {
     color: var(--text);
     outline: none;
 }
-#f-name:focus { border-color: var(--accent); }
+#f-name:focus, #f-asp:focus { border-color: var(--accent); }
 
 .chip-row {
     display: flex;
@@ -1353,6 +1356,26 @@ html, body {
     line-height: 1.45;
 }
 .asp-loose .note-title { color: var(--text-dim); }
+.habit-chip {
+    width: auto;
+    height: auto;
+    min-height: 44px;
+    max-width: 100%;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 0.7941rem;
+    font-weight: 600;
+    white-space: normal;
+}
+.habit-chip .hi { width: 0.9412rem; height: 0.9412rem; }
+.chip-note {
+    font-weight: 600;
+    color: var(--text-dim);
+    font-size: 0.7059rem;
+}
+.chip-note::before { content: "\00b7\00a0"; }
+
 /* .chip is a fixed 2.5882rem square built for an icon. These carry a sentence,
    so they take their size from their text while keeping the square's height as
    a floor — that is the 44px tap target the August audit enforces. */

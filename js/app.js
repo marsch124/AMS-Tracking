@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.36';
+const APP_VERSION = '1.37';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -3470,6 +3470,49 @@ function renderNotes() {
               'on Monday.'
             : 'Nothing to summarise yet. Add a habit and give it a week.';
         s1.appendChild(p);
+    }
+
+    /* The cards stayed. The summary was asked for as an ADDITION to them and
+       was built as a replacement, which took away the part of this screen
+       Martin liked most. Prose is what he reads and sends; the cards are what
+       he scans, each one tappable through to the habit it is about. The
+       overlap between the two is the point, not a fault. */
+    const past = lastWeekNotes();
+    if (past.length) {
+        const s0 = section('How it went');
+        past.forEach(n => {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.innerHTML =
+                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
+                `<span class="note-title">${escapeHtml(n.habit.name)}</span></div>` +
+                `<p class="note-body">${escapeHtml(n.text)}</p>`;
+            card.addEventListener('click', () => openDetail(n.habit.id));
+            s0.appendChild(card);
+        });
+    }
+
+    const notes = weekNotes();
+    const s2 = section('What to try next week',
+        'Read from your own data. Every note names the figure it came from, so you can disagree with it.');
+    if (notes.length) {
+        notes.forEach(n => {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.innerHTML =
+                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
+                `<span class="note-title">${escapeHtml(n.title)}</span></div>` +
+                `<p class="note-body">${escapeHtml(n.body)}</p>`;
+            card.addEventListener('click', () => openDetail(n.habit.id));
+            s2.appendChild(card);
+        });
+    } else {
+        const p = document.createElement('p');
+        p.className = 'notes-empty';
+        p.textContent = 'Nothing worth saying yet. A weekday pattern needs a few weeks ' +
+            'before it is a pattern rather than a coincidence, and a confident sentence ' +
+            'about a coincidence would be worse than this one.';
+        s2.appendChild(p);
     }
 
     /* Suggestions stay as cards: each needs its own button, which is the one

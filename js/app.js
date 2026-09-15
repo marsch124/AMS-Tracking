@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.31';
+const APP_VERSION = '1.32';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -990,6 +990,86 @@ function weekFastStats(habit, ws) {
     return { n: durs.length, avg: durs.length ? durs.reduce((a, b) => a + b, 0) / durs.length : null };
 }
 
+/* One reading of last week, used by BOTH the review card and the poster it
+   sends. Two renderers computing the same figures separately is how a card
+   and its own export end up disagreeing, so neither of them counts anything
+   itself — they only draw what this returns.
+
+   `met` is the week's verdict where the habit has one: every scheduled,
+   unskipped day for a daily habit, the target for a weekly one. A fasting
+   habit has no weekly bar to clear, so it reports its fasts and is left out
+   of the headline count rather than being given an invented one. */
+function weekReport(ws) {
+    const we = addDays(ws, 6);
+    const habits = state.habits.filter(h =>
+        !h.archived && (!h.createdAt || keyToDate(h.createdAt) <= we));
+    const prevWs = addDays(ws, -7);
+    const endThis = addDays(ws, 6);
+    const endPrev = addDays(ws, -1);
+
+    const rows = habits.map(h => {
+        const done = doneSet(h);
+        const skip = skipSet(h);
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const d = addDays(ws, i);
+            const k = dateKey(d);
+            days.push(done[k] ? 'done'
+                : skip[k] ? 'skip'
+                : !isScheduled(h, d) ? 'off'
+                : 'empty');
+        }
+        const row = { habit: h, days, mid: '', delta: '', deltaCls: 'flat', met: null };
+        if (h.type === 'timer') {
+            const cur = weekFastStats(h, ws);
+            const prev = weekFastStats(h, prevWs);
+            row.mid = cur.n
+                ? `${cur.n} fast${cur.n === 1 ? '' : 's'} · Ø ${fmtDuration(cur.avg)} h`
+                : 'no fasts';
+            row.fasts = cur.n;
+            if (cur.avg != null && prev.avg != null) {
+                const d = cur.avg - prev.avg;
+                row.delta = (d < 0 ? '–' : '+') + fmtDuration(Math.abs(d));
+                row.deltaCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+            }
+        } else if (h.type === 'weekly') {
+            const count = weekDoneCount(h, ws);
+            const target = h.target || 1;
+            row.mid = `${count}/${target}×`;
+            row.met = count >= target;
+            row.deltaValue = weeklyStreak(h, endThis) - weeklyStreak(h, endPrev);
+            row.unit = 'week';
+        } else {
+            let sched = 0;
+            let dn = 0;
+            for (let i = 0; i < 7; i++) {
+                const d = addDays(ws, i);
+                const k = dateKey(d);
+                if (done[k]) dn++;
+                if (isScheduled(h, d) && !skip[k]) sched++;
+            }
+            row.mid = `${dn}/${sched} days`;
+            row.met = sched > 0 && dn >= sched;
+            row.deltaValue = currentStreak(h, endThis) - currentStreak(h, endPrev);
+            row.unit = 'day';
+        }
+        if (row.deltaValue != null) {
+            const v = row.deltaValue;
+            row.delta = (v < 0 ? '–' : v > 0 ? '+' : '±') + Math.abs(v);
+            row.deltaCls = v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+        }
+        return row;
+    });
+
+    const judged = rows.filter(r => r.met !== null);
+    return {
+        ws, we, rows,
+        met: judged.filter(r => r.met).length,
+        judged: judged.length,
+        ticks: rows.reduce((n, r) => n + r.days.filter(d => d === 'done').length, 0)
+    };
+}
+
 /* Once per ISO week: how last week went, per habit. Dismiss stores the
    week key so the card stays away until the next Monday. Derived data
    only — the sole stored value is settings.lastReviewWeek. */
@@ -1013,12 +1093,14 @@ function renderWeekReview() {
     const endPrev = addDays(thisWs, -8);   // Sunday of the week before
     const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
+    const report = weekReport(lastWs);
+
     const card = document.createElement('div');
     card.className = 'wr-card';
     const head = document.createElement('div');
     head.className = 'wr-head';
     head.innerHTML = `<h3>Last week</h3>` +
-        `<span class="wr-range">${fmtD(lastWs)} \u2013 ${fmtD(endLast)}</span>`;
+        `<span class="wr-range">${fmtD(lastWs)} – ${fmtD(endLast)}</span>`;
     const close = document.createElement('button');
     close.className = 'wr-close';
     close.innerHTML = icon('x');
@@ -1032,53 +1114,31 @@ function renderWeekReview() {
     head.appendChild(close);
     card.appendChild(head);
 
-    habits.forEach(h => {
-        const done = doneSet(h);
-        let mid = '';
-        let right = '';
-        let rightCls = 'flat';
-        if (h.type === 'timer') {
-            const cur = weekFastStats(h, lastWs);
-            const prev = weekFastStats(h, addDays(lastWs, -7));
-            mid = cur.n
-                ? `${cur.n} fast${cur.n === 1 ? '' : 's'} \u00b7 \u00d8 ${fmtDuration(cur.avg)} h`
-                : 'no fasts';
-            if (cur.avg != null && prev.avg != null) {
-                const d = cur.avg - prev.avg;
-                right = (d < 0 ? '\u2013' : '+') + fmtDuration(Math.abs(d));
-                rightCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
-            }
-        } else {
-            if (h.type === 'weekly') {
-                mid = `${weekDoneCount(h, lastWs)}/${h.target || 1}\u00d7`;
-            } else {
-                let sched = 0;
-                let dn = 0;
-                const skip = skipSet(h);
-                for (let i = 0; i < 7; i++) {
-                    const d = addDays(lastWs, i);
-                    const k = dateKey(d);
-                    if (done[k]) dn++;
-                    if (isScheduled(h, d) && !skip[k]) sched++;
-                }
-                mid = `${dn}/${sched} days`;
-            }
-            const delta = h.type === 'weekly'
-                ? weeklyStreak(h, endLast) - weeklyStreak(h, endPrev)
-                : currentStreak(h, endLast) - currentStreak(h, endPrev);
-            right = (delta < 0 ? '\u2013' : delta > 0 ? '+' : '\u00b1') + Math.abs(delta) +
-                icon('flame', 'wr-flame');
-            rightCls = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
-        }
+    // the figures come from weekReport() so the card and the poster it sends
+    // can never tell two different stories about the same week
+    report.rows.filter(r => habits.includes(r.habit)).forEach(r => {
+        const h = r.habit;
+        const right = r.deltaValue != null ? r.delta + icon('flame', 'wr-flame') : r.delta;
         const row = document.createElement('div');
         row.className = 'wr-row';
         row.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
             `<span class="wr-name">${escapeHtml(h.name)}</span>` +
-            `<span class="wr-mid">${mid}</span>` +
-            `<span class="wr-right ${rightCls}">${right}</span>`;
+            `<span class="wr-mid">${r.mid}</span>` +
+            `<span class="wr-right ${r.deltaCls}">${right}</span>`;
         row.addEventListener('click', () => openDetail(h.id));
         card.appendChild(row);
     });
+
+    // The card appears by itself on the first open of a new week, so this is
+    // where the report offers itself — no second card competing with it.
+    const send = document.createElement('button');
+    send.className = 'wr-send';
+    send.innerHTML = icon('export') + ' Send this report';
+    send.addEventListener('click', (e) => {
+        e.stopPropagation();
+        exportWeekPoster(lastWs);
+    });
+    card.appendChild(send);
 
     box.appendChild(card);
     box.hidden = false;
@@ -1339,7 +1399,7 @@ function toggleTimer(habit) {
         const others = habit.sessions.filter(x => x.e && x !== active);
         const duration = active.e - active.s;
         if (others.length >= 3 && duration > Math.max(...others.map(x => x.e - x.s))) {
-            celebrate('Personal best fast!', habit.color, fmtDuration(duration) + ' h \u00b7 ' + habit.name);
+            celebrate('Personal best fast!', habit.color, fmtDuration(duration) + ' h · ' + habit.name);
         }
     } else {
         startFast(habit, null);
@@ -1442,7 +1502,7 @@ function openDetail(id, keepMonth) {
     $('#detail-subtitle').textContent = habit.type === 'timer'
         ? 'Start / stop timer habit'
         : habit.type === 'weekly'
-            ? `Weekly target \u00b7 ${habit.target || 1}\u00d7 per week`
+            ? `Weekly target · ${habit.target || 1}× per week`
             : 'Daily habit';
 
     const body = $('#detail-body');
@@ -1597,7 +1657,7 @@ function buildHistoryCard(habit) {
                 if (isTimer) {
                     el.classList.add('skipped-fast');
                     el.innerHTML = `<span class="cf-date">${day}</span>` +
-                        `<span class="cf-hours skipday" style="border-color:${habit.color};color:${habit.color}">\u2013</span>`;
+                        `<span class="cf-hours skipday" style="border-color:${habit.color};color:${habit.color}">–</span>`;
                 } else {
                     el.classList.add('skipped');
                     el.style.color = habit.color;
@@ -1627,7 +1687,7 @@ function buildHistoryCard(habit) {
                     circle = `<span class="cf-hours running">${h}</span>`;
                 } else if (skip[key]) {
                     el.classList.add('skipped-fast');
-                    circle = `<span class="cf-hours skipday" style="border-color:${habit.color};color:${habit.color}">\u2013</span>`;
+                    circle = `<span class="cf-hours skipday" style="border-color:${habit.color};color:${habit.color}">–</span>`;
                 } else {
                     circle = '<span class="cf-hours none"></span>';
                 }
@@ -2034,7 +2094,7 @@ function buildYearCard(habit, done, year) {
         const status = done[k] ? 'done' : skipSet(habit)[k] ? 'skip day' : 'not done';
         const note = (habit.notes || {})[k];
         showToast(d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) +
-            ` \u2014 ${status}` + (note ? ` \u00b7 ${note}` : ''));
+            ` \u2014 ${status}` + (note ? ` · ${note}` : ''));
     });
     card.appendChild(grid);
 
@@ -2197,8 +2257,204 @@ async function renderYearPoster(habit, year) {
 
     ctx.font = `600 26px ${FONT}`;
     ctx.fillStyle = DIM;
-    ctx.fillText(`AMS Tracking \u00b7 ${year}, pixel by pixel`, W / 2, 1236);
+    ctx.fillText(`AMS Tracking · ${year}, pixel by pixel`, W / 2, 1236);
     return canvas;
+}
+
+/* ---- the week, as a picture you can send ----
+   Same canvas approach as the year poster: nothing is uploaded, the image is
+   drawn on the phone and handed to the share sheet, so a weekly report can go
+   to somebody without the app ever having a server or a copy of the data
+   anywhere else. The figures all come from weekReport(). */
+
+/* Rasterises a hand-drawn icon into the canvas. Resolves either way, because
+   a poster that hangs on one bad icon is worse than one drawn without it. */
+function drawIcon(ctx, name, color, x, y, size) {
+    return new Promise(resolve => {
+        const svg = icon(name)
+            .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+            .replace('stroke="currentColor"', `stroke="${color}"`);
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, x, y, size, size); resolve(); };
+        img.onerror = resolve;
+        setTimeout(resolve, 1500);
+        img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    });
+}
+
+async function renderWeekPoster(ws) {
+    const W = 1080, H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const BG = '#f2f4f8', CARD = '#ffffff', TEXT = '#16181d', DIM = '#7a7f8a';
+    const EMPTY = '#e8ebf1', UP = '#2fa96d', DOWN = '#d9463e';
+    const FONT = "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif";
+    const rr = (x, y, w, h, r) => {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else ctx.rect(x, y, w, h);
+    };
+    const fit = (text, max, start, min) => {
+        let size = start;
+        do { ctx.font = `800 ${size}px ${FONT}`; size -= 2; }
+        while (ctx.measureText(text).width > max && size > min);
+        return size + 2;
+    };
+
+    const report = weekReport(ws);
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = CARD;
+    rr(50, 50, W - 100, H - 100, 44);
+    ctx.fill();
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `800 62px ${FONT}`;
+    ctx.fillStyle = TEXT;
+    ctx.fillText('My week', 106, 158);
+    const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    ctx.font = `700 34px ${FONT}`;
+    ctx.fillStyle = DIM;
+    ctx.fillText(`${fmtD(report.ws)} \u2013 ${fmtD(report.we)}`, 106, 208);
+
+    /* The headline is a count of the habits that actually have a weekly bar to
+       clear. Fasting has none, so when nothing is judgeable the picture says
+       how much was ticked instead of inventing a verdict. */
+    ctx.textAlign = 'right';
+    if (report.judged) {
+        ctx.font = `800 70px ${FONT}`;
+        ctx.fillStyle = report.met === report.judged ? UP : TEXT;
+        ctx.fillText(`${report.met}/${report.judged}`, W - 106, 168);
+        ctx.font = `600 27px ${FONT}`;
+        ctx.fillStyle = DIM;
+        ctx.fillText(report.judged === 1 ? 'habit on target' : 'habits on target', W - 106, 208);
+    } else {
+        ctx.font = `800 70px ${FONT}`;
+        ctx.fillStyle = TEXT;
+        ctx.fillText(String(report.ticks), W - 106, 168);
+        ctx.font = `600 27px ${FONT}`;
+        ctx.fillStyle = DIM;
+        ctx.fillText(report.ticks === 1 ? 'day ticked' : 'days ticked', W - 106, 208);
+    }
+
+    ctx.strokeStyle = EMPTY;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(106, 252);
+    ctx.lineTo(W - 106, 252);
+    ctx.stroke();
+
+    /* One block per habit, pitched to fill the space whatever the count. Below
+       about seven habits the rows would stretch absurdly, so the pitch is
+       capped and the block sits under the rule rather than floating. */
+    const rows = report.rows;
+    const top = 300, bottom = 1190;
+    /* Rows are pitched to fill the space and then centred in it: a poster with
+       three habits should not leave a third of itself blank, and one with
+       eight should not run into the footer. */
+    const pitch = Math.min(250, (bottom - top) / Math.max(rows.length, 1));
+    const blockTop = top + ((bottom - top) - pitch * rows.length) / 2;
+    const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const h = r.habit;
+        const y = blockTop + pitch * i + 44;
+        await drawIcon(ctx, h.icon, h.color, 106, y - 44, 52);
+
+        /* The right-hand columns are measured first and the name is given what
+           is left over. "Intermittent Fasting" beside "3 fasts / 16:00 h" is the
+           case that overlapped when the name was fitted to a fixed width. */
+        ctx.textAlign = 'right';
+        let rightEdge = W - 106;
+        if (r.delta) {
+            const plural = r.unit && Math.abs(r.deltaValue) !== 1 ? 's' : '';
+            const deltaText = r.delta + (r.unit ? ' ' + r.unit + plural : '');
+            ctx.font = `800 32px ${FONT}`;
+            ctx.fillStyle = r.deltaCls === 'up' ? UP : r.deltaCls === 'down' ? DOWN : DIM;
+            ctx.fillText(deltaText, rightEdge, y);
+            rightEdge -= ctx.measureText(deltaText).width + 30;
+        }
+        ctx.font = `800 40px ${FONT}`;
+        ctx.fillStyle = r.met === true ? UP : TEXT;
+        ctx.fillText(r.mid, rightEdge, y);
+        rightEdge -= ctx.measureText(r.mid).width + 26;
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = TEXT;
+        const size = fit(h.name, Math.max(rightEdge - 178, 160), 42, 22);
+        ctx.font = `800 ${size}px ${FONT}`;
+        ctx.fillText(h.name, 178, y);
+
+        /* The week itself: seven marks, Monday first, in the habit's colour. The
+           marks grow when there are few habits, so the picture fills the poster
+           instead of leaving a third of it white. */
+        const cell = pitch >= 200 ? 78 : pitch >= 150 ? 62 : 54;
+        const gap = pitch >= 200 ? 16 : 14;
+        const sx = 178;
+        r.days.forEach((st, d) => {
+            const x = sx + d * (cell + gap);
+            const yy = y + 26;
+            if (st === 'done') {
+                ctx.fillStyle = h.color;
+                rr(x, yy, cell, cell, 16);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+            } else if (st === 'skip') {
+                ctx.strokeStyle = h.color;
+                ctx.lineWidth = 3.5;
+                ctx.setLineDash([7, 5]);
+                rr(x + 2, yy + 2, cell - 4, cell - 4, 14);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = DIM;
+            } else {
+                ctx.fillStyle = EMPTY;
+                ctx.globalAlpha = st === 'off' ? 0.5 : 1;
+                rr(x, yy, cell, cell, 16);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = DIM;
+            }
+            ctx.textAlign = 'center';
+            ctx.font = `800 ${Math.round(cell * 0.42)}px ${FONT}`;
+            ctx.fillText(DAYS[d], x + cell / 2, yy + cell / 2 + cell * 0.145);
+        });
+    }
+
+    ctx.textAlign = 'center';
+    ctx.font = `600 26px ${FONT}`;
+    ctx.fillStyle = DIM;
+    ctx.fillText('AMS Tracking \u00b7 my week in review', W / 2, 1258);
+    return canvas;
+}
+
+async function exportWeekPoster(ws) {
+    try {
+        const canvas = await renderWeekPoster(ws);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        if (!blob) throw new Error('could not render the image');
+        const name = `ams-tracking-week-${dateKey(ws)}.png`;
+        const file = new File([blob], name, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            showToast('Report shared');
+        } else {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+            showToast('Report saved');
+        }
+    } catch (e) {
+        if (e && e.name === 'AbortError') return; // the share sheet was dismissed
+        console.error('Week poster failed', e);
+        showToast('Could not create the report');
+    }
 }
 
 async function exportYearPoster(habit, year) {
@@ -2272,7 +2528,7 @@ function buildStagesCard(habit) {
     const now = document.createElement('p');
     now.className = 'stage-now';
     if (active) {
-        now.innerHTML = `Now: <strong style="color:${stage.color}">${stage.name}</strong> \u00b7 ${fmtDuration(Date.now() - active.s)} h`;
+        now.innerHTML = `Now: <strong style="color:${stage.color}">${stage.name}</strong> · ${fmtDuration(Date.now() - active.s)} h`;
     } else {
         now.className = 'cal-hint';
         now.textContent = 'While a fast runs, a marker shows which stage you are in.';
@@ -2284,7 +2540,7 @@ function buildStagesCard(habit) {
     FAST_STAGES.forEach(s => {
         const row = document.createElement('div');
         row.className = 'stage-row' + (stage === s ? ' cur' : '');
-        const range = s.to >= TRACK_MAX ? `${s.from}h+` : `${s.from}\u2013${s.to}h`;
+        const range = s.to >= TRACK_MAX ? `${s.from}h+` : `${s.from}–${s.to}h`;
         row.innerHTML = `<span class="stage-dot" style="background:${s.color}"></span>` +
             `<span class="stage-text"><span class="stage-name">${s.name}</span>` +
             `<span class="stage-range">${range}</span>` +
@@ -2400,7 +2656,7 @@ function buildFastChart(habit, finished) {
     const box = document.createElement('div');
     box.innerHTML = `<svg class="fast-chart" viewBox="0 0 ${W} ${H}" role="img" ` +
         `aria-label="Length of the last ${data.length} fasts">${marks}</svg>` +
-        `<p class="cal-hint">Last ${data.length} fasts \u00b7 tap a bar to edit that fast.</p>`;
+        `<p class="cal-hint">Last ${data.length} fasts · tap a bar to edit that fast.</p>`;
     box.querySelectorAll('rect[data-i]').forEach(r => {
         r.addEventListener('click', () => openFastSheet(habit, data[Number(r.dataset.i)]));
     });
@@ -2740,7 +2996,7 @@ function renderStats() {
         const unit = weekly ? 'wk' : 'd';
         const mNow = monthStats(habit, now.getFullYear(), now.getMonth());
         const mPrev = monthStats(habit, prev.getFullYear(), prev.getMonth());
-        const monthVal = (m) => weekly ? `${m.dn}\u00d7` : (m.sched ? m.pct + '%' : '\u2013');
+        const monthVal = (m) => weekly ? `${m.dn}×` : (m.sched ? m.pct + '%' : '–');
 
         const h = document.createElement('h3');
         h.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
@@ -3185,7 +3441,7 @@ async function updateStorageNote() {
         let size = '';
         if (navigator.storage && navigator.storage.estimate) {
             const est = await navigator.storage.estimate();
-            if (est.usage) size = ' \u00b7 ' + Math.max(1, Math.round(est.usage / 1024)) + ' KB';
+            if (est.usage) size = ' · ' + Math.max(1, Math.round(est.usage / 1024)) + ' KB';
         }
         el.textContent = (persisted ? 'Storage: protected' : 'Storage: not yet protected') + size;
     } catch (e) {
@@ -3230,6 +3486,12 @@ function maybeBackupNudge() {
         () => $('#btn-export').click(), 'Back up', 12000);
 }
 setTimeout(maybeBackupNudge, 2500);
+
+/* Reachable after the weekly card has been dismissed, and for the week that
+   has just ended whenever he wants it rather than only on a Monday. */
+$('#btn-week-report').addEventListener('click', () => {
+    exportWeekPoster(addDays(weekStart(new Date()), -7));
+});
 
 $('#btn-export').addEventListener('click', async () => {
     const json = JSON.stringify(state, null, 2);
@@ -3364,8 +3626,8 @@ function updateHistPreview() {
     if (!habit) msg = 'No fasting habit to import into.';
     else if (!sessions.length && !bad) msg = '';
     else msg = `Found ${fresh.length} new fast${fresh.length === 1 ? '' : 's'}` +
-        (dupes ? ` \u00b7 ${dupes} already recorded` : '') +
-        (bad ? ` \u00b7 ${bad} unreadable line${bad === 1 ? '' : 's'}` : '') + '.';
+        (dupes ? ` · ${dupes} already recorded` : '') +
+        (bad ? ` · ${bad} unreadable line${bad === 1 ? '' : 's'}` : '') + '.';
     $('#hist-preview').textContent = msg;
     $('#btn-hist-save').disabled = !habit || !fresh.length;
     return { habit, fresh };

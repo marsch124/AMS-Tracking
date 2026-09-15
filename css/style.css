@@ -1245,6 +1245,27 @@ html, body {
 .wr-right.flat { color: var(--text-dim); }
 .wr-flame { width: 13px; height: 13px; vertical-align: -2px; margin-left: 1px; }
 
+/* The card's own send button. Quiet on purpose: the card is a summary first,
+   and the offer sits under it rather than competing with the rows. */
+.wr-send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    background: none;
+    color: var(--accent);
+    font-size: 0.8235rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.wr-send .hi { width: 0.9412rem; height: 0.9412rem; }
+.wr-send:active { background: rgba(59, 112, 240, 0.12); }
+
 .stage-track { width: 100%; height: auto; margin-top: 2px; }
 .stage-now { margin: 2px 0 8px; font-size: 0.8529rem; font-weight: 600; }
 .stage-rows { border-top: 1px solid var(--border); }

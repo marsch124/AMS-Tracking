@@ -1316,6 +1316,22 @@ html, body {
 .sugg-kind { color: var(--text-dim); font-weight: 700; }
 .note-body { margin: 0; font-size: 0.8235rem; line-height: 1.55; color: var(--text); }
 
+/* The summary reads as a piece of writing, so it gets prose measure and
+   spacing rather than card treatment: one surface, paragraphs inside it. */
+.summary-box {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px 18px 4px;
+    box-shadow: var(--shadow);
+}
+.summary-p {
+    margin: 0 0 14px;
+    font-size: 0.8824rem;
+    line-height: 1.62;
+    color: var(--text);
+}
+.summary-box + .wr-cta { margin-top: 12px; }
+
 /* The add button is deliberately quiet: a suggestion that shouts is an advert,
    and nothing here is added until he adds it. */
 .sugg-add {

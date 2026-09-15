@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.35';
+const APP_VERSION = '1.36';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1001,8 +1001,12 @@ function weekFastStats(habit, ws) {
    of the headline count rather than being given an invented one. */
 function weekReport(ws) {
     const we = addDays(ws, 6);
+    /* Only habits that existed for the WHOLE week. One created on the Thursday
+       would otherwise be reported as "0 of 7 days" for a week it was present
+       for three of — a losing figure for something that had barely started,
+       in the one place that is supposed to say how the week went. */
     const habits = state.habits.filter(h =>
-        !h.archived && (!h.createdAt || keyToDate(h.createdAt) <= we));
+        !h.archived && (!h.createdAt || keyToDate(h.createdAt) <= ws));
     const prevWs = addDays(ws, -7);
     const endThis = addDays(ws, 6);
     const endPrev = addDays(ws, -1);
@@ -1027,6 +1031,7 @@ function weekReport(ws) {
                 ? `${cur.n} fast${cur.n === 1 ? '' : 's'} · Ø ${fmtDuration(cur.avg)} h`
                 : 'no fasts';
             row.fasts = cur.n;
+            row.avg = cur.avg;
             if (cur.avg != null && prev.avg != null) {
                 const d = cur.avg - prev.avg;
                 row.delta = (d < 0 ? '–' : '+') + fmtDuration(Math.abs(d));
@@ -1036,6 +1041,8 @@ function weekReport(ws) {
             const count = weekDoneCount(h, ws);
             const target = h.target || 1;
             row.mid = `${count}/${target}×`;
+            row.count = count;
+            row.target = target;
             row.met = count >= target;
             row.deltaValue = weeklyStreak(h, endThis) - weeklyStreak(h, endPrev);
             row.unit = 'week';
@@ -1049,6 +1056,8 @@ function weekReport(ws) {
                 if (isScheduled(h, d) && !skip[k]) sched++;
             }
             row.mid = `${dn}/${sched} days`;
+            row.dn = dn;
+            row.sched = sched;
             row.met = sched > 0 && dn >= sched;
             row.deltaValue = currentStreak(h, endThis) - currentStreak(h, endPrev);
             row.unit = 'day';
@@ -3285,15 +3294,136 @@ function habitSuggestions(count) {
     return out;
 }
 
+/* ---- the week, written out ----
+
+   Martin asked for a summary in text, twice, and got a screen of cards both
+   times. Cards are a list of findings; a summary is somebody telling you how
+   it went. The observations are the same ones lastWeekNotes() and weekNotes()
+   produce — this composes them into paragraphs rather than tiling them, and
+   the result is what he reads and what he sends. */
+
+/* "a", "a and b", "a, b and c" */
+function proseList(items) {
+    if (!items.length) return '';
+    if (items.length === 1) return items[0];
+    return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+}
+
+/* One clause per habit, in words rather than in the card's shorthand. */
+function habitClause(r) {
+    const n = r.habit.name;
+    if (r.habit.type === 'timer') {
+        return r.fasts
+            ? `${n} recorded ${r.fasts} fast${r.fasts === 1 ? '' : 's'} averaging ${fmtDuration(r.avg)}`
+            : `${n} recorded nothing`;
+    }
+    if (r.habit.type === 'weekly') {
+        return r.met
+            ? `${n} reached ${r.count} of ${r.target}`
+            : `${n} came up short at ${r.count} of ${r.target}`;
+    }
+    if (!r.sched) return `${n} had nothing scheduled`;
+    return r.dn >= r.sched
+        ? `${n} ran every one of its ${r.sched} days`
+        : `${n} ran ${r.dn} of ${r.sched} days`;
+}
+
+/* The summary as paragraphs. Returns [] when there is genuinely nothing to
+   say, which is a real state on a new phone and not an error. */
+function weekSummaryParagraphs() {
+    const ws = addDays(weekStart(new Date()), -7);
+    const report = weekReport(ws);
+    if (!report.rows.length) return [];
+    const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+    const paras = [];
+
+    // 1. what happened, in one breath
+    let opening = `Between ${fmtD(report.ws)} and ${fmtD(report.we)} you ticked ` +
+        `${report.ticks} day${report.ticks === 1 ? '' : 's'} across ` +
+        `${report.rows.length} habit${report.rows.length === 1 ? '' : 's'}. ` +
+        proseList(report.rows.map(habitClause)) + '.';
+    if (report.judged) {
+        opening += report.met === report.judged
+            ? ` Everything with a target made it.`
+            : report.met === 0
+                ? ` Nothing with a target made it, which is worth a moment rather than a shrug.`
+                : ` That is ${report.met} of ${report.judged} targets met.`;
+    }
+    paras.push(opening);
+
+    // 2. whether that was any good — one week against the recent normal
+    const past = lastWeekNotes();
+    if (past.length) paras.push(past.map(n => n.text).join(' '));
+
+    /* 3. the pattern underneath, and what to do about it. Two at most: this is
+       a paragraph somebody reads on a phone, not a report. */
+    const notes = weekNotes().slice(0, 2);
+    if (notes.length) {
+        /* A card carried the habit's name in its heading; a paragraph has no
+           heading, so a body that never names its habit leaves the reader
+           asking which one "5 of your 9 missed days" belonged to. The title
+           is already a sentence, so it leads when the body does not say. */
+        paras.push('Looking further back than one week: ' +
+            notes.map(n => n.body.includes(n.habit.name) ? n.body : `${n.title}. ${n.body}`)
+                .join(' '));
+    } else if (past.length === 0) {
+        paras.push('There is not enough history yet to say anything about patterns. ' +
+            'A weekday that costs you, or a run you tend to break, needs several weeks ' +
+            'before it is a pattern rather than a coincidence.');
+    }
+
+    // 4. one idea, offered rather than urged
+    const pick = habitSuggestions(1)[0];
+    if (pick) {
+        // quoted rather than lower-cased: "water, 2 litres" mid-sentence reads
+        // as a list that has lost its way
+        paras.push(`If you wanted something new, \u201c${pick.name}\u201d ` +
+            `(${pick.type === 'weekly' ? pick.target + ' times a week' : 'daily'}) is one to consider. ` +
+            pick.why);
+    }
+    return paras;
+}
+
+function weekSummaryText() {
+    const paras = weekSummaryParagraphs();
+    if (!paras.length) return '';
+    const ws = addDays(weekStart(new Date()), -7);
+    const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return `My week, ${fmtD(ws)} – ${fmtD(addDays(ws, 6))}\n\n` + paras.join('\n\n');
+}
+
+/* Sending the summary is the mail-and-SMS route he asked for at the start:
+   the picture goes to WhatsApp and Messages, plain text goes anywhere at all.
+   Falls back to the clipboard where the share sheet is not offered. */
+async function shareWeekSummary() {
+    const text = weekSummaryText();
+    if (!text) { showToast('Nothing to summarise yet'); return; }
+    try {
+        if (navigator.share) {
+            await navigator.share({ text });
+            return;
+        }
+        await navigator.clipboard.writeText(text);
+        showToast('Summary copied');
+    } catch (e) {
+        if (e && e.name === 'AbortError') return;   // the sheet was dismissed
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('Summary copied');
+        } catch (e2) {
+            console.error('Summary share failed', e2);
+            showToast('Could not share the summary');
+        }
+    }
+}
+
 /* ---- the notes screen ---- */
 
 function renderNotes() {
     const body = $('#notes-body');
     body.innerHTML = '';
     /* Dated from the week that ended, not the one running. The screen is
-       opened from a card headed "Last week" and is about that week; naming
-       the current one sent Martin looking for the analysis he had asked for
-       and finding a different week's figures. */
+       opened from a card headed "Last week" and is about that week. */
     const ws = addDays(weekStart(new Date()), -7);
     const fmtD = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     $('#notes-subtitle').textContent = fmtD(ws) + ' \u2013 ' + fmtD(addDays(ws, 6));
@@ -3307,47 +3437,44 @@ function renderNotes() {
         return s;
     };
 
-    // what the week just gone meant, before what this one is doing
-    const past = lastWeekNotes();
-    if (past.length) {
-        const s0 = section('How it went');
-        past.forEach(n => {
-            const card = document.createElement('div');
-            card.className = 'note-card';
-            card.innerHTML =
-                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
-                `<span class="note-title">${escapeHtml(n.habit.name)}</span></div>` +
-                `<p class="note-body">${escapeHtml(n.text)}</p>`;
-            card.addEventListener('click', () => openDetail(n.habit.id));
-            s0.appendChild(card);
+    /* The summary is the screen. It is prose rather than a stack of cards
+       because a list of findings is not a summary — and because it is the
+       thing he sends, and nobody sends a set of cards. */
+    const paras = weekSummaryParagraphs();
+    const s1 = section('The week in words');
+    if (paras.length) {
+        const box = document.createElement('div');
+        box.className = 'summary-box';
+        paras.forEach(t => {
+            const para = document.createElement('p');
+            para.className = 'summary-p';
+            para.textContent = t;
+            box.appendChild(para);
         });
-    }
+        s1.appendChild(box);
 
-    // what the last eight weeks actually show
-    const notes = weekNotes();
-    const s2 = section('What to try next week',
-        'Read from your own data. Every note names the figure it came from, so you can disagree with it.');
-    if (notes.length) {
-        notes.forEach(n => {
-            const card = document.createElement('div');
-            card.className = 'note-card';
-            card.innerHTML =
-                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
-                `<span class="note-title">${escapeHtml(n.title)}</span></div>` +
-                `<p class="note-body">${escapeHtml(n.body)}</p>`;
-            card.addEventListener('click', () => openDetail(n.habit.id));
-            s2.appendChild(card);
-        });
+        const send = document.createElement('button');
+        send.className = 'wr-cta';
+        send.innerHTML = icon('export') + ' Send this summary';
+        send.addEventListener('click', shareWeekSummary);
+        s1.appendChild(send);
     } else {
         const p = document.createElement('p');
         p.className = 'notes-empty';
-        p.textContent = 'Nothing worth saying yet. A weekday pattern needs a few weeks ' +
-            'before it is a pattern rather than a coincidence, and a confident sentence ' +
-            'about a coincidence would be worse than this one.';
-        s2.appendChild(p);
+        /* Two different nothings, and saying which one it is matters: a phone
+           with no habits needs a different sentence from one whose habits are
+           simply younger than the week being reported on. */
+        p.textContent = state.habits.some(h => !h.archived)
+            ? 'Nothing to summarise yet. Everything you track began during or after ' +
+              'last week, so there is no complete week to report on — there will be ' +
+              'on Monday.'
+            : 'Nothing to summarise yet. Add a habit and give it a week.';
+        s1.appendChild(p);
     }
 
-    // something new
+    /* Suggestions stay as cards: each needs its own button, which is the one
+       thing a paragraph cannot carry. The summary mentions one of them in
+       passing; these are the rest, with a way to act on them. */
     const picks = habitSuggestions(3);
     if (picks.length) {
         const s3 = section('Something new?',
@@ -3355,7 +3482,7 @@ function renderNotes() {
         picks.forEach(sg => {
             const card = document.createElement('div');
             card.className = 'note-card sugg-card';
-            const kind = sg.type === 'weekly' ? `${sg.target}× a week` : 'daily';
+            const kind = sg.type === 'weekly' ? `${sg.target}\u00d7 a week` : 'daily';
             card.innerHTML =
                 `<div class="note-top"><span class="habit-icon" style="color:var(--accent)">${icon(sg.icon)}</span>` +
                 `<span class="note-title">${escapeHtml(sg.name)}</span>` +

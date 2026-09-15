@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.32';
+const APP_VERSION = '1.33';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1130,9 +1130,19 @@ function renderWeekReview() {
     });
 
     // The card appears by itself on the first open of a new week, so this is
-    // where the report offers itself — no second card competing with it.
+    // where both the notes and the report offer themselves — no second card
+    // competing with it.
+    const notes = document.createElement('button');
+    notes.className = 'wr-cta wr-notes';
+    notes.innerHTML = icon('bulb') + ' Read this week\u2019s notes';
+    notes.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showScreen('notes');
+    });
+    card.appendChild(notes);
+
     const send = document.createElement('button');
-    send.className = 'wr-send';
+    send.className = 'wr-cta wr-send';
     send.innerHTML = icon('export') + ' Send this report';
     send.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -2773,6 +2783,7 @@ $('#btn-fast-delete').addEventListener('click', () => {
 });
 
 $('#btn-back').addEventListener('click', () => showScreen('today'));
+$('#btn-notes-back').addEventListener('click', () => showScreen('today'));
 
 $('#btn-delete').addEventListener('click', () => {
     const habit = state.habits.find(h => h.id === detailId);
@@ -2793,8 +2804,10 @@ function showScreen(which) {
     $('#screen-today').hidden = which !== 'today';
     $('#screen-detail').hidden = which !== 'detail';
     $('#screen-stats').hidden = which !== 'stats';
+    $('#screen-notes').hidden = which !== 'notes';
     if (which === 'today') renderToday();
     if (which === 'stats') renderStats();
+    if (which === 'notes') renderNotes();
     // slide the incoming screen: deeper views arrive from the right,
     // going home slides back in from the left (iOS push/pop feel)
     const el = $('#screen-' + which);
@@ -2804,6 +2817,473 @@ function showScreen(which) {
         el.classList.add(which === 'today' ? 'screen-back' : 'screen-fwd');
     }
     window.scrollTo(0, 0);
+}
+
+/* ================= v1.33: this week's notes =================
+
+   Everything here is arithmetic on the data already on the phone. There is no
+   model and no server behind it: the app notices a pattern and picks the
+   sentence that fits, which is why every note names the number it came from.
+   A note that cannot show its working would be a guess dressed as advice.
+
+   Thresholds are deliberately conservative. Two data points are a coincidence,
+   and a confident sentence about a coincidence is worse than saying nothing —
+   so most notes need a handful of weeks before they will speak at all. */
+
+const NOTE_WEEKS = 8;        // how far back a pattern is read
+const NOTES_SHOWN = 3;       // a wall of advice gets read once
+const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/* The last n week-starts ending at ws, oldest first. */
+function recentWeeks(ws, n) {
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) out.push(addDays(ws, -7 * i));
+    return out;
+}
+
+/* Days that counted, per weekday, over the window: how many were asked for and
+   how many were missed. Skip days and days before the habit existed are left
+   out entirely — an excused day is not a miss, and neither is a day that
+   predates the habit. */
+function weekdayMisses(habit, ws, n) {
+    const done = doneSet(habit);
+    const skip = skipSet(habit);
+    const today = new Date();
+    const born = habit.createdAt ? keyToDate(habit.createdAt) : null;
+    const miss = Array(7).fill(0);
+    const sched = Array(7).fill(0);
+    recentWeeks(ws, n).forEach(w => {
+        for (let i = 0; i < 7; i++) {
+            const d = addDays(w, i);
+            if (d > today) continue;
+            if (born && d < born) continue;
+            const k = dateKey(d);
+            if (skip[k]) continue;
+            if (!isScheduled(habit, d)) continue;
+            sched[i]++;
+            if (!done[k]) miss[i]++;
+        }
+    });
+    return {
+        miss, sched,
+        totalMiss: miss.reduce((a, b) => a + b, 0),
+        totalSched: sched.reduce((a, b) => a + b, 0)
+    };
+}
+
+/* How often a miss becomes two. Only days that were actually asked for count,
+   and the pair has to be consecutive asked-for days — so a habit scheduled
+   Mon/Wed/Fri is judged on Mon->Wed, not on Mon->Tue. */
+function secondMissRate(habit, ws, n) {
+    const done = doneSet(habit);
+    const skip = skipSet(habit);
+    const today = new Date();
+    const born = habit.createdAt ? keyToDate(habit.createdAt) : null;
+    const seq = [];
+    const first = addDays(ws, -7 * (n - 1));
+    for (let d = new Date(first); d <= today; d = addDays(d, 1)) {
+        if (born && d < born) continue;
+        const k = dateKey(d);
+        if (skip[k] || !isScheduled(habit, d)) continue;
+        seq.push(!!done[k]);
+    }
+    let misses = 0;
+    let doubles = 0;
+    for (let i = 0; i < seq.length - 1; i++) {
+        if (!seq[i]) { misses++; if (!seq[i + 1]) doubles++; }
+    }
+    return { misses, doubles, rate: misses ? doubles / misses : null };
+}
+
+/* Circular mean of fast start times over a set of sessions (see fastRhythm:
+   a plain average of clock times lands at noon for anything near midnight). */
+function meanStartMin(sessions) {
+    if (!sessions.length) return null;
+    let x = 0;
+    let y = 0;
+    sessions.forEach(s => {
+        const d = new Date(s.s);
+        const a = (d.getHours() * 60 + d.getMinutes()) / 1440 * 2 * Math.PI;
+        x += Math.cos(a);
+        y += Math.sin(a);
+    });
+    let frac = Math.atan2(y, x) / (2 * Math.PI);
+    if (frac < 0) frac += 1;
+    return Math.round(frac * 1440) % 1440;
+}
+
+/* Where this week stands right now — the only part that changes day to day,
+   and the reason the screen is worth opening on a Thursday. */
+function weekStanding() {
+    const ws = weekStart(new Date());
+    const daysLeft = 7 - ((weekdayIdx(new Date())) + 1);
+    const out = [];
+    state.habits.filter(h => !h.archived && h.type === 'weekly').forEach(h => {
+        const target = h.target || 1;
+        const count = weekDoneCount(h, ws);
+        const need = target - count;
+        let line;
+        if (need <= 0) line = `Done for the week. Anything more is a bonus.`;
+        else if (need > daysLeft + 1) line = `${need} to go with ${daysLeft + 1} day${daysLeft ? 's' : ''} left — this one is out of reach, so treat the rest of the week as next week's practice.`;
+        else if (need === daysLeft + 1) line = `${need} to go and exactly ${need} day${need === 1 ? '' : 's'} left. Every remaining day has to count.`;
+        else line = `${need} to go with ${daysLeft + 1} days left.`;
+        out.push({ habit: h, head: `${count}/${target} this week`, line });
+    });
+    return out;
+}
+
+/* Every observation that holds, scored so the screen can show the few that
+   say most. Each carries the figure it rests on: a note you cannot check is
+   a note you cannot disagree with. */
+function weekNotes() {
+    const ws = addDays(weekStart(new Date()), -7);   // the week just ended
+    const notes = [];
+    const live = state.habits.filter(h => !h.archived);
+
+    live.filter(h => h.type !== 'timer').forEach(h => {
+        const w = weekdayMisses(h, ws, NOTE_WEEKS);
+        const name = h.name;
+
+        /* The weekday that costs the most — daily habits only. On a weekly
+           target of 6 out of 7 a blank day every week is the design rather
+           than a slip, and calling it one would be telling him off for
+           taking the rest day his own target allows for. */
+        if (h.type === 'daily' && w.totalMiss >= 5 && w.totalSched >= 12) {
+            let worst = 0;
+            for (let i = 1; i < 7; i++) if (w.miss[i] > w.miss[worst]) worst = i;
+            const share = w.miss[worst] / w.totalMiss;
+            if (w.miss[worst] >= 3 && share >= 0.3 && w.sched[worst] >= 3) {
+                notes.push({
+                    habit: h,
+                    score: 3 + share,
+                    topic: 'weekday',
+                    title: `${DAY_FULL[worst]} is where ${name} slips`,
+                    body: `${w.miss[worst]} of your last ${w.totalMiss} misses fell on a ${DAY_FULL[worst]}. ` +
+                        `Decide this week what ${DAY_FULL[worst]}'s version looks like — the shortest one that still counts — ` +
+                        `rather than deciding on the day.`
+                });
+            }
+        }
+
+        // weeks that came up one short
+        if (h.type === 'weekly') {
+            const target = h.target || 1;
+            let nearly = 0;
+            let short = 0;
+            recentWeeks(ws, NOTE_WEEKS).forEach(x => {
+                const c = weekDoneCount(h, x);
+                if (c === target - 1) nearly++;
+                if (c < target) short++;
+            });
+            if (nearly >= 2) {
+                notes.push({
+                    habit: h,
+                    score: 3.5,
+                    topic: 'weekly-target',
+                    title: `${nearly} weeks ended one short`,
+                    body: `${name} finished on ${target - 1} of ${target} in ${nearly} of the last ${NOTE_WEEKS} weeks. ` +
+                        `One more day in each and they would all have counted. ` +
+                        `Being at ${Math.max(target - 2, 1)} by Thursday is what buys room for a bad day at the weekend.`
+                });
+            }
+            /* Which day is blank when the week fails — measured against the
+               weeks that succeeded. A habit with a standing rest day has one
+               weekday blank in every week, good and bad alike; without the
+               comparison that day wins this note every time and the advice is
+               "protect the day you deliberately take off". */
+            const met = NOTE_WEEKS - short;
+            if (short >= 3 && met >= 2) {
+                const blankShort = Array(7).fill(0);
+                const blankMet = Array(7).fill(0);
+                const done = doneSet(h);
+                recentWeeks(ws, NOTE_WEEKS).forEach(x => {
+                    const failed = weekDoneCount(h, x) < target;
+                    for (let i = 0; i < 7; i++) {
+                        if (done[dateKey(addDays(x, i))]) continue;
+                        if (failed) blankShort[i]++; else blankMet[i]++;
+                    }
+                });
+                let worst = -1;
+                let bestLift = 0;
+                for (let i = 0; i < 7; i++) {
+                    const lift = blankShort[i] / short - blankMet[i] / met;
+                    if (lift > bestLift) { bestLift = lift; worst = i; }
+                }
+                if (worst >= 0 && bestLift >= 0.5 && blankShort[worst] >= 3) {
+                    notes.push({
+                        habit: h,
+                        score: 3.8,
+                        topic: 'weekly-target',
+                        title: `The weeks that fail have a ${DAY_FULL[worst]} in common`,
+                        body: `${name} came up short ${short} times, and ${DAY_FULL[worst]} was blank in ` +
+                            `${blankShort[worst] === short ? 'every one' : blankShort[worst] + ' of them'} \u2014 ` +
+                            `against ${blankMet[worst]} of the ${met} weeks you made the target. ` +
+                            `That is the day that decides it, whatever the rest of the week looks like.`
+                    });
+                }
+            }
+        }
+
+        /* Whether one miss turns into two — again daily habits only. A weekly
+           target's blank days are the rest days it allows for, so a run of
+           them is not a lapse and counting it as one would read as a telling
+           off for following his own plan. */
+        const sm = h.type === 'daily' ? secondMissRate(h, ws, NOTE_WEEKS) : { misses: 0, rate: null };
+        if (sm.misses >= 6 && sm.rate != null) {
+            if (sm.rate >= 0.5) {
+                notes.push({
+                    habit: h,
+                    score: 4,
+                    topic: 'recovery',
+                    title: `With ${name}, one miss usually becomes two`,
+                    body: `${sm.doubles} of your ${sm.misses} missed days were followed by another. ` +
+                        `That makes the day after a miss the most valuable day you have — ` +
+                        `do a token version of it rather than nothing, and the run survives.`
+                });
+            } else if (sm.rate <= 0.25) {
+                notes.push({
+                    habit: h,
+                    score: 2,
+                    topic: 'recovery',
+                    title: `You come back well on ${name}`,
+                    body: `Only ${sm.doubles} of ${sm.misses} misses turned into two days off. ` +
+                        `That recovery is doing more for the total than any perfect week would — keep missing singly.`
+                });
+            }
+        }
+    });
+
+    live.filter(h => h.type === 'timer').forEach(h => {
+        const sess = (h.sessions || []).filter(s => s.e).sort((a, b) => a.e - b.e);
+        const windowStart = addDays(ws, -7 * (NOTE_WEEKS - 1)).getTime();
+        const recent = sess.filter(s => s.e >= windowStart);
+        if (recent.length >= 6) {
+            // average against the goal
+            if (h.goalHours) {
+                const avg = recent.reduce((a, s) => a + (s.e - s.s), 0) / recent.length;
+                const goal = h.goalHours * 3600e3;
+                const gap = goal - avg;
+                if (gap >= 20 * 60e3) {
+                    notes.push({
+                        habit: h,
+                        score: 3,
+                        topic: 'fast-length',
+                        title: `Your fasts average ${fmtDuration(avg)} against a ${h.goalHours}h goal`,
+                        body: `Over ${recent.length} fasts you are ${fmtDuration(gap)} short on average. ` +
+                            `That is usually the stop time rather than the start — a fixed hour to eat is easier to hold than a fixed length.`
+                    });
+                } else if (gap <= -20 * 60e3) {
+                    notes.push({
+                        habit: h,
+                        score: 2,
+                        topic: 'fast-length',
+                        title: `You are running past your ${h.goalHours}h goal`,
+                        body: `${recent.length} fasts averaged ${fmtDuration(avg)}. ` +
+                            `Either the goal is set lower than what you actually do, or the extra is unplanned — worth deciding which.`
+                    });
+                }
+            }
+            // start time drifting later
+            const half = Math.floor(recent.length / 2);
+            const early = meanStartMin(recent.slice(0, half));
+            const late = meanStartMin(recent.slice(half));
+            if (early != null && late != null) {
+                let diff = late - early;
+                if (diff > 720) diff -= 1440;
+                if (diff < -720) diff += 1440;
+                if (Math.abs(diff) >= 25) {
+                    notes.push({
+                        habit: h,
+                        score: 2.6,
+                        topic: 'fast-drift',
+                        title: `You have been starting ${Math.abs(Math.round(diff))} minutes ${diff > 0 ? 'later' : 'earlier'}`,
+                        body: `The first half of these ${recent.length} fasts began around ${pad(Math.floor(early / 60))}:${pad(early % 60)}, ` +
+                            `the second half around ${pad(Math.floor(late / 60))}:${pad(late % 60)}. ` +
+                            (diff > 0
+                                ? `A later start pushes the whole rhythm, and the hour you eat is the easier end to fix.`
+                                : `Whatever changed is working in your favour — it is worth knowing what it was.`)
+                    });
+                }
+            }
+        }
+    });
+
+    /* Not three notes about one habit. The screen is worth more with one good
+       observation each than with a habit's whole file. */
+    notes.sort((a, b) => b.score - a.score);
+    // one story per habit per topic: "4 weeks ended one short" and "the weeks
+    // that fail have a Sunday in common" are the same four weeks twice
+    const bestOf = new Map();
+    const deduped = notes.filter(n => {
+        const k = (n.habit ? n.habit.id : '') + '|' + (n.topic || '');
+        if (bestOf.has(k)) return false;
+        bestOf.set(k, true);
+        return true;
+    });
+    notes.length = 0;
+    deduped.forEach(n => notes.push(n));
+    const picked = [];
+    const seen = new Set();
+    notes.forEach(n => {
+        if (picked.length >= NOTES_SHOWN) return;
+        const id = n.habit ? n.habit.id : '';
+        if (seen.has(id)) return;
+        seen.add(id);
+        picked.push(n);
+    });
+    // a second note on an already-covered habit, only if there is room left
+    notes.forEach(n => {
+        if (picked.length >= NOTES_SHOWN) return;
+        if (!picked.includes(n)) picked.push(n);
+    });
+    return picked;
+}
+
+/* ---- something new, if you want it ----
+
+   A short shelf rather than a catalogue. Each entry says why it is worth
+   doing, because a list of habit names is just a list of habit names, and
+   anything close to something already tracked is dropped rather than offered
+   back. Three at a time, rotating by week so the shelf is not the same one
+   every Monday and is never a nag. */
+
+const SUGGESTED_HABITS = [
+    { name: 'Walk 30 minutes', icon: 'shoe', type: 'daily', match: 'walk spazier gehen steps',
+      why: 'The cheapest thing you can add to an endurance base, and the one that survives a bad week — it still happens when a proper session does not.' },
+    { name: 'Strength', icon: 'dumbbell', type: 'weekly', target: 2, match: 'strength gym kraft weights hantel lift',
+      why: 'Twice a week is where most of the benefit sits. It is also what protects the joints that long endurance days load.' },
+    { name: 'Mobility 10 min', icon: 'leaf', type: 'daily', match: 'mobility stretch dehnen yoga beweglich',
+      why: 'Ten minutes is short enough to survive a busy evening, which is the only reason it gets done at all.' },
+    { name: 'Lights out by 22:30', icon: 'bed', type: 'daily', match: 'sleep bed schlaf bett lights',
+      why: 'Sleep is the one input that moves everything else — training, fasting, mood. Tracking the bedtime works better than tracking the sleep.' },
+    { name: 'No phone after 21:00', icon: 'phoneOff', type: 'daily', match: 'phone handy screen bildschirm',
+      why: 'Pairs with a bedtime habit rather than competing with it: the earlier one is what makes the later one possible.' },
+    { name: 'Read 20 minutes', icon: 'book', type: 'daily', match: 'read lesen buch book',
+      why: 'An evening habit that is genuinely easier than the thing it replaces, which is rare.' },
+    { name: 'Water, 2 litres', icon: 'glass', type: 'daily', match: 'water wasser trink hydrat',
+      why: 'Easy to assume you are doing and easy to be wrong about. Worth a fortnight of tracking even if you then stop.' },
+    { name: 'Breathing, 5 minutes', icon: 'waves', type: 'daily', match: 'breath atem breathing wim',
+      why: 'The shortest route to a calmer evening, and it costs nothing but the five minutes.' },
+    { name: 'Three lines in a journal', icon: 'pen', type: 'daily', match: 'journal tagebuch write schreib note',
+      why: 'Three lines, not a page. The low bar is the point — it is what makes the entry on a tired day possible.' },
+    { name: 'Weigh in', icon: 'pulse', type: 'weekly', target: 1, match: 'weigh wiegen weight gewicht scale',
+      why: 'Once a week, same day, same time. More often than that measures water, not progress.' },
+    { name: 'Time outdoors', icon: 'mountain', type: 'daily', match: 'outdoor draussen nature natur sun',
+      why: 'Daylight early in the day does more for sleep than most things done in the evening.' },
+    { name: 'Call someone', icon: 'chat', type: 'weekly', target: 1, match: 'call anruf friend freund family familie',
+      why: 'The one habit on this list that is not about you, and the easiest to let slide once a week goes badly.' }
+];
+
+/* Anything close to a habit already tracked is dropped: offering a cold shower
+   to somebody who has one reads as an app that has not been paying attention. */
+function habitSuggestions(count) {
+    const mine = state.habits.map(h => h.name.toLowerCase());
+    const free = SUGGESTED_HABITS.filter(s => {
+        const words = (s.match + ' ' + s.name.toLowerCase()).split(/\s+/).filter(Boolean);
+        return !mine.some(n => words.some(w => w.length > 3 && n.includes(w)));
+    });
+    if (!free.length) return [];
+    // rotate by week, so the shelf changes without being random on every render
+    const week = Math.floor(weekStart(new Date()).getTime() / (7 * 86400e3));
+    const out = [];
+    for (let i = 0; i < Math.min(count, free.length); i++) {
+        out.push(free[(week + i) % free.length]);
+    }
+    return out;
+}
+
+/* ---- the notes screen ---- */
+
+function renderNotes() {
+    const body = $('#notes-body');
+    body.innerHTML = '';
+    const ws = weekStart(new Date());
+    $('#notes-subtitle').textContent =
+        'Week of ' + ws.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+
+    const section = (title, hint) => {
+        const s = document.createElement('section');
+        s.className = 'notes-section';
+        s.innerHTML = `<h3 class="notes-h">${title}</h3>` +
+            (hint ? `<p class="notes-hint">${hint}</p>` : '');
+        body.appendChild(s);
+        return s;
+    };
+
+    // where this week stands — the part that changes day to day
+    const standing = weekStanding();
+    if (standing.length) {
+        const s = section('Where you are');
+        standing.forEach(st => {
+            const row = document.createElement('div');
+            row.className = 'note-card';
+            row.innerHTML =
+                `<div class="note-top"><span class="habit-icon" style="color:${st.habit.color}">${icon(st.habit.icon)}</span>` +
+                `<span class="note-title">${escapeHtml(st.habit.name)}</span>` +
+                `<span class="note-fig" style="color:${st.habit.color}">${st.head}</span></div>` +
+                `<p class="note-body">${escapeHtml(st.line)}</p>`;
+            row.addEventListener('click', () => openDetail(st.habit.id));
+            s.appendChild(row);
+        });
+    }
+
+    // what the last eight weeks actually show
+    const notes = weekNotes();
+    const s2 = section('What to try next week',
+        'Read from your own data. Every note names the figure it came from, so you can disagree with it.');
+    if (notes.length) {
+        notes.forEach(n => {
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.innerHTML =
+                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
+                `<span class="note-title">${escapeHtml(n.title)}</span></div>` +
+                `<p class="note-body">${escapeHtml(n.body)}</p>`;
+            card.addEventListener('click', () => openDetail(n.habit.id));
+            s2.appendChild(card);
+        });
+    } else {
+        const p = document.createElement('p');
+        p.className = 'notes-empty';
+        p.textContent = 'Nothing worth saying yet. A weekday pattern needs a few weeks ' +
+            'before it is a pattern rather than a coincidence, and a confident sentence ' +
+            'about a coincidence would be worse than this one.';
+        s2.appendChild(p);
+    }
+
+    // something new
+    const picks = habitSuggestions(3);
+    if (picks.length) {
+        const s3 = section('Something new?',
+            'Only ideas. Nothing here is added until you add it.');
+        picks.forEach(sg => {
+            const card = document.createElement('div');
+            card.className = 'note-card sugg-card';
+            const kind = sg.type === 'weekly' ? `${sg.target}× a week` : 'daily';
+            card.innerHTML =
+                `<div class="note-top"><span class="habit-icon" style="color:var(--accent)">${icon(sg.icon)}</span>` +
+                `<span class="note-title">${escapeHtml(sg.name)}</span>` +
+                `<span class="note-fig sugg-kind">${kind}</span></div>` +
+                `<p class="note-body">${escapeHtml(sg.why)}</p>`;
+            const add = document.createElement('button');
+            add.className = 'sugg-add';
+            add.innerHTML = icon('plus') + ' Add this habit';
+            add.addEventListener('click', () => {
+                /* Opens the ordinary new-habit sheet with the suggestion filled
+                   in, rather than creating it outright: the icon, colour and
+                   target are still his to change, and a habit that appears
+                   without a decision is one he never chose. */
+                openSheet(null);
+                sheet.type = sg.type;
+                sheet.icon = sg.icon;
+                if (sg.target) sheet.target = sg.target;
+                $('#f-name').value = sg.name;
+                renderSheetChips();
+            });
+            card.appendChild(add);
+            s3.appendChild(card);
+        });
+    }
 }
 
 /* ================= stats screen ================= */
@@ -3053,6 +3533,7 @@ function renderStats() {
 }
 
 $('#btn-stats').addEventListener('click', () => showScreen('stats'));
+$('#btn-notes').addEventListener('click', () => showScreen('notes'));
 $('#btn-stats-back').addEventListener('click', () => showScreen('today'));
 
 /* ================= add / edit sheet ================= */

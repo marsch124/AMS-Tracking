@@ -1247,7 +1247,10 @@ html, body {
 
 /* The card's own send button. Quiet on purpose: the card is a summary first,
    and the offer sits under it rather than competing with the rows. */
-.wr-send {
+/* Both calls to action on the week card share this. They had shared the class
+   name .wr-send too, which made "the send button" ambiguous in the code and
+   in every selector that reached for it. */
+.wr-cta {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1263,8 +1266,76 @@ html, body {
     font-weight: 700;
     cursor: pointer;
 }
-.wr-send .hi { width: 0.9412rem; height: 0.9412rem; }
-.wr-send:active { background: rgba(59, 112, 240, 0.12); }
+.wr-cta .hi { width: 0.9412rem; height: 0.9412rem; }
+.wr-cta:active { background: rgba(59, 112, 240, 0.12); }
+.wr-notes { margin-top: 12px; }
+
+/* ---------- this week's notes ---------- */
+
+.notes-entry { margin-bottom: 14px; }
+.notes-section { margin-bottom: 26px; }
+.notes-h {
+    font-size: 0.7647rem;
+    font-weight: 800;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0 0 4px;
+}
+.notes-hint {
+    margin: 0 0 10px;
+    font-size: 0.7941rem;
+    color: var(--text-dim);
+    line-height: 1.45;
+}
+.notes-empty {
+    margin: 0;
+    padding: 16px 16px;
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+    font-size: 0.8529rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+.note-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+}
+.note-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.note-top .habit-icon .hi { width: 1.1176rem; height: 1.1176rem; }
+.note-title { font-weight: 800; font-size: 0.8824rem; flex: 1; min-width: 0; }
+.note-fig { font-weight: 800; font-size: 0.8235rem; white-space: nowrap; }
+.sugg-kind { color: var(--text-dim); font-weight: 700; }
+.note-body { margin: 0; font-size: 0.8235rem; line-height: 1.55; color: var(--text); }
+
+/* The add button is deliberately quiet: a suggestion that shouts is an advert,
+   and nothing here is added until he adds it. */
+.sugg-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    background: none;
+    color: var(--accent);
+    font-size: 0.8235rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.sugg-add .hi { width: 0.9412rem; height: 0.9412rem; }
+.sugg-add:active { background: rgba(59, 112, 240, 0.12); }
 
 .stage-track { width: 100%; height: auto; margin-top: 2px; }
 .stage-now { margin: 2px 0 8px; font-size: 0.8529rem; font-weight: 600; }

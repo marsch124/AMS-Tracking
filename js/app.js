@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.29';
+const APP_VERSION = '1.30';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -214,7 +214,12 @@ function weeklyStats(habit) {
     let run = 0;
     for (let i = 0; i < 530 && w <= thisWeek; i++) {
         const met = weekDoneCount(habit, w) >= target;
-        const inProgress = w.getTime() === thisWeek.getTime();
+        /* Compared as day keys, not timestamps: weekStart() keeps the time of
+           day it was given, so the week being walked (midnight, from a date
+           key) never equalled the current week (now, from new Date()) — and
+           the week in progress was counted as a week already missed. Every
+           weekly habit's completion count was short by one until Sunday. */
+        const inProgress = dateKey(w) === dateKey(thisWeek);
         const excused = !met && weekHasSkip(habit, w);
         if ((!inProgress || met) && !excused) weeksTotal++;
         if (met) { weeksMet++; run++; best = Math.max(best, run); }
@@ -2788,6 +2793,10 @@ const sheet = {
     target: 3
 };
 
+function editingHabit() {
+    return sheet.editingId ? state.habits.find(h => h.id === sheet.editingId) : null;
+}
+
 function openSheet(editId) {
     sheet.editingId = editId || null;
     const habit = editId ? state.habits.find(h => h.id === editId) : null;
@@ -2795,7 +2804,11 @@ function openSheet(editId) {
     sheet.color = habit ? habit.color : PALETTE[state.habits.length % PALETTE.length];
     sheet.type = habit ? habit.type : 'daily';
     sheet.days = habit && habit.days ? [...habit.days] : [true, true, true, true, true, true, true];
-    sheet.target = habit && habit.target ? habit.target : 3;
+    // A daily habit switched to a weekly target starts at the number of days it
+    // was already scheduled for, because that is what it had been asking for.
+    sheet.target = habit && habit.target ? habit.target
+        : habit && habit.days ? Math.max(1, habit.days.filter(Boolean).length)
+        : 3;
 
     $('#sheet-title').textContent = habit ? 'Edit habit' : 'New habit';
     $('#f-name').value = habit ? habit.name : '';
@@ -2882,12 +2895,31 @@ function renderSheetChips() {
         colorRow.appendChild(c);
     });
 
-    // type (locked while editing — history formats differ)
+    /* Type, while editing an existing habit: daily and weekly may be swapped,
+       the timer may not be entered or left. Daily and weekly keep their history
+       in the same place — habit.done, one key per day — and differ only in how
+       it is read (scheduled weekdays and a run of days, against a count per
+       week), so moving between them loses nothing. A timer habit's history is
+       start/end sessions instead, which neither of the other two can express,
+       and there is nothing to convert it into. */
+    const editing = editingHabit();
+    const typeLocked = !!editing && editing.type === 'timer';
     document.querySelectorAll('.type-btn').forEach(btn => {
-        btn.classList.toggle('sel', btn.dataset.type === sheet.type);
-        btn.disabled = !!sheet.editingId;
-        btn.onclick = () => { sheet.type = btn.dataset.type; renderSheetChips(); };
+        const type = btn.dataset.type;
+        btn.classList.toggle('sel', type === sheet.type);
+        btn.disabled = typeLocked || (!!editing && type === 'timer');
+        btn.onclick = () => { sheet.type = type; renderSheetChips(); };
     });
+    // Says what the switch will do to the streak, because the ticks stay and
+    // the streak is the one thing that restates itself.
+    const typeNote = $('#f-type-note');
+    const switching = !!editing && !typeLocked && sheet.type !== editing.type;
+    typeNote.hidden = !switching;
+    if (switching) {
+        typeNote.textContent = sheet.type === 'weekly'
+            ? 'Every day you have ticked stays. The streak will count weeks that reached the target, instead of days in a row.'
+            : 'Every day you have ticked stays. The streak will count days in a row again, on the days you choose below.';
+    }
 
     // fasting goal (timer only), scheduled days (daily only), target (weekly only)
     $('#f-goal-wrap').hidden = sheet.type !== 'timer';
@@ -2952,7 +2984,13 @@ $('#btn-sheet-save').addEventListener('click', () => {
                 habit.goalHours = goalHours;
                 habit.goalByDay = goalByDay;
             }
-            if (habit.type === 'weekly') habit.target = sheet.target;
+            /* Only daily and weekly can be switched (see renderSheetChips), so
+               this never has to convert a history — habit.done is read
+               differently, not rewritten. */
+            if (habit.type !== 'timer' && sheet.type !== 'timer') {
+                habit.type = sheet.type;
+                habit.target = sheet.type === 'weekly' ? sheet.target : null;
+            }
         }
     } else {
         state.habits.push({

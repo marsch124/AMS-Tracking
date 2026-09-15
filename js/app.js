@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.30';
+const APP_VERSION = '1.31';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -624,6 +624,7 @@ function buildCard(habit) {
     num.className = 'stat-number';
     const label = document.createElement('div');
     label.className = 'stat-label';
+    let weeklySub = null;
 
     if (habit.type === 'daily') {
         const streak = currentStreak(habit);
@@ -631,10 +632,25 @@ function buildCard(habit) {
         num.style.color = habit.color;
         label.textContent = streak === 1 ? 'day' : 'days';
     } else if (habit.type === 'weekly') {
+        /* This week's count is the headline, not the streak: the question a
+           weekly target is asked every day is "how many more", and at a target
+           of six out of seven the filled dots are countable but not readable at
+           a glance. The streak keeps its flame on the line below, so the card
+           still says everything a daily card says. This is NOT the "3/7" after
+           the week dots that Martin had removed in v1.23 — that number sat on
+           every card, daily ones included, where the dots really did tell the
+           whole story. */
+        const target = habit.target || 1;
+        const count = weekDoneCount(habit, weekStart(new Date()));
         const streak = weeklyStreak(habit);
-        num.innerHTML = `${streak}${icon('flame', 'flame')}`;
+        num.textContent = `${count}/${target}`;
         num.style.color = habit.color;
-        label.textContent = streak === 1 ? 'week' : 'weeks';
+        if (count >= target) num.classList.add('target-met');
+        label.textContent = 'this week';
+        weeklySub = document.createElement('div');
+        weeklySub.className = 'stat-sub';
+        weeklySub.innerHTML = `${streak}${icon('flame', 'flame')} ` +
+            (streak === 1 ? 'week' : 'weeks');
     } else {
         num.style.color = habit.color;
         if (active) {
@@ -696,6 +712,7 @@ function buildCard(habit) {
     }
     stat.appendChild(num);
     stat.appendChild(label);
+    if (weeklySub) stat.appendChild(weeklySub);
 
     if (state.settings.layout === 'grid') {
         card.classList.add('gcard');

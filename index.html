@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=49">
+    <link rel="stylesheet" href="css/style.css?v=50">
 </head>
 <body>
 
@@ -163,7 +163,7 @@
                     <p><strong>Habits with several parts</strong> — name a habit with vertical bars, like <em>Medit | Brea | Cold</em>, and the app tracks each part on its own. The number of taps on the big circle picks the part: <strong>one tap</strong> toggles the first part, <strong>two quick taps</strong> the second, <strong>three</strong> the third. While you tap, the part you're about to toggle lights up, so you can see the count landing; a moment after your last tap it registers, and a bar confirms it (“Brea done”) with Undo. Done parts are written in the habit's color, the others stay gray, and the circle is checked as soon as <em>any</em> part is done — so streaks, week dots and the day bar count the day as complete. You can also tap a part's word directly to toggle exactly that one, and swiping the card to the right marks all parts at once. Two, three or four parts are supported.</p>
 
                     <p><strong>Parts on an earlier day</strong> — press and hold the big circle of a multi-part habit and a small sheet opens for <em>yesterday</em> with one button per part: tick the ones you did and save, so a day can hold just Medit and Cold. The same sheet opens when you tap any day in that habit's calendar, which is how you correct a day further back — it opens with that day's parts already ticked. Saving with nothing ticked empties the day, and “Mark as skip day instead” excuses it (holidays, illness). Every change shows an Undo bar, and days filled in this way never trigger a milestone celebration.</p>
-                    <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The card's ratio shows this week (e.g. 2/3) and the streak counts <em>weeks</em> in which you hit the target; the running week never breaks the streak until it's over. A habit already running as a daily check can be moved onto a weekly target at any time without losing a single tick — see <em>Changing a habit's type later</em>.</p>
+                    <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The Today card leads with <strong>this week's count</strong> — “4/6”, with “this week” under it — and turns green the moment you reach the target. Under that, in smaller type, the flame counts <em>weeks</em> in which you hit it; the running week never breaks that streak until it's over. A habit already running as a daily check can be moved onto a weekly target at any time without losing a single tick — see <em>Changing a habit's type later</em>.</p>
                     <p><strong>Start/stop habits</strong> (intermittent fasting) — the same button does both: tap <span data-hi="play" class="hi-inline"></span> in the evening to start the fast, and tap <span data-hi="stop" class="hi-inline"></span> when you eat again. While fasting, the card shows the live elapsed time; after stopping, it counts the <strong>eating window</strong> and shows how long it lasts — “6:22 eating, until 19:01” means the eating window closes at 19:01, the moment to start the next fast if you want to keep a steady daily rhythm (the window is 24h minus your goal). Once that time passes it says “time to fast”; after a full day without fasting the card falls back to showing the last fast's length. A fast running past 24 hours turns amber and asks “still fasting?” — tap the timer to fix a forgotten stop. A fast counts for the day it <em>ends</em> on. Set a <strong>fasting goal</strong> when editing the habit — and, if you like, a different goal for certain weekdays (seven small fields under the goal; the goal belongs to the day a fast <em>ends</em> on, so Friday's number is for the fast you start Thursday evening; empty fields use the main goal). The ring, the countdown, the “until” time, and the green/gray calendar circles all follow the day's own goal, and a per-fast goal chosen at start still overrides everything. A ring fills around the button as the fast progresses like a traffic light — red for the first third of the goal, yellow for the middle third, green for the home stretch — while the card counts down how long is left and shows the clock time (24-hour) at which you'll hit the goal (e.g. “2:30 left, goal 11:30”). Everything turns green when you reach it.</p>
                     <p><strong>Editing a fast</strong> — forgot to press start or stop on time? While fasting, simply tap the running timer number on the Today card to correct the start time. All fasts can also be edited from the detail view's list (including the one in progress) — start, end, or delete.</p>
                     <p><strong>The fasting card's tap areas</strong> — faint dashed lines on the fasting card mark its separate touch zones, and a tiny word under each says what it does: <em>start</em> (or <em>stop</em> while fasting) under the round button, <em>stats</em> under the middle, which opens the habit's details, and <em>edit</em> under the timer number on the right. While a fast runs, edit fixes the running fast's start time; between fasts it opens your most recent fast, so a wrong stop time is one tap away from being corrected. The lines and words are only a hint of where each zone begins.</p>
@@ -201,6 +201,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.31 <span class="vh-date">— 15 Sep 2026</span></h4>
+                    <p>How many this week.</p>
+                    <ul>
+                        <li><strong>A weekly target now says where you stand</strong> — its Today card leads with the count, “4/6”, and the words “this week” beneath. It turns green when you reach the target. The week streak keeps its flame on a smaller line underneath, so nothing that was on the card has gone.</li>
+                        <li><strong>Why this is not the counter you had removed</strong> — in v1.23 the little “3/7” after the week dots was taken off, because it sat on <em>every</em> card and the filled dots already told the story. This one appears only on a weekly target, where the dots do not: counting six filled dots out of seven is exactly the thing a number saves you. Daily and fasting cards are untouched, and nothing was put back after the dots.</li>
+                        <li>The guide had been describing this ratio since weekly targets were introduced, and the card never actually showed it. Now it does.</li>
+                    </ul>
+
                     <h4>v1.30 <span class="vh-date">— 15 Sep 2026</span></h4>
                     <p>A habit may change its mind.</p>
                     <ul>
@@ -701,7 +709,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=49"></script>
-    <script src="js/app.js?v=49"></script>
+    <script src="js/icons.js?v=50"></script>
+    <script src="js/app.js?v=50"></script>
 </body>
 </html>

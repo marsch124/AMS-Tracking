@@ -258,6 +258,22 @@ html, body {
     margin-top: 2px;
 }
 
+/* The week streak under a weekly target's count: quieter than the label
+   above it, because the count is what the card is being asked. */
+.stat-sub {
+    font-size: 0.6176rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--text-dim);
+    opacity: 0.85;
+    margin-top: 1px;
+    white-space: nowrap;
+}
+
+.stat-sub .hi.flame { width: 0.7rem; height: 0.7rem; vertical-align: -1px; margin-left: 1px; }
+
+.stat-number.target-met { color: #2fa96d !important; }
+
 /* ---------- empty state ---------- */
 
 .empty-state {

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.38.1';
+const APP_VERSION = '1.39';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -28,6 +28,10 @@ function migrate(st) {
         if (EMOJI_TO_ICON[h.icon]) h.icon = EMOJI_TO_ICON[h.icon];
         else if (!ICON_PATHS[h.icon]) h.icon = 'sun';
     });
+    // v1.39: aspirations. An absent list is the normal state for every phone
+    // that existed before this release, so it is created empty rather than
+    // migrated into.
+    st.aspirations = st.aspirations || [];
     st.settings = st.settings || {};
     if (!st.settings.layout) st.settings.layout = 'list';
     if (!st.settings.theme) st.settings.theme = 'auto';
@@ -978,6 +982,131 @@ function buildWeekDots(habit, done) {
     }
     return row;
 }
+
+/* ================= aspirations (v1.39) =================
+
+   An aspiration is one sentence about who you are becoming. It has no date,
+   no metric and no colour: colour already means "which habit" everywhere in
+   this app, and a second colour system on top of it would collapse both.
+
+   The rule that governs the whole feature: an aspiration the app never reports
+   against should not exist. Every habit app has a goals field and it is always
+   dead text, because nothing reads it back. So each one is answered every week
+   — how many of its habits ran — and one that has gone quiet is asked about
+   rather than left to sit there looking meaningful.
+
+   It is also completely ignorable. habit.aspirationId of null is a permanent,
+   respectable state; a habit that serves nothing works exactly as it did
+   before this existed, forever. */
+
+function liveAspirations() {
+    return (state.aspirations || []).filter(a => !a.archivedAt);
+}
+
+function aspirationById(id) {
+    return (state.aspirations || []).find(a => a.id === id) || null;
+}
+
+function habitsUnder(aspId) {
+    return state.habits.filter(h => !h.archived && h.aspirationId === aspId);
+}
+
+/* Habits attached to nothing. Never a reproach on its own — it is only worth
+   mentioning once an aspiration exists to attach them to. */
+function unattachedHabits() {
+    return state.habits.filter(h => !h.archived &&
+        (!h.aspirationId || !aspirationById(h.aspirationId) ||
+         aspirationById(h.aspirationId).archivedAt));
+}
+
+/* Did this habit do anything at all in the week starting ws? */
+function habitActiveIn(habit, ws) {
+    const done = doneSet(habit);
+    for (let i = 0; i < 7; i++) if (done[dateKey(addDays(ws, i))]) return true;
+    return false;
+}
+
+/* Did it do what it was asked for? Mirrors weekReport()'s `met`. */
+function habitMetIn(habit, ws) {
+    if (habit.type === 'timer') return null;          // no weekly bar to clear
+    if (habit.type === 'weekly') return weekDoneCount(habit, ws) >= (habit.target || 1);
+    const done = doneSet(habit);
+    const skip = skipSet(habit);
+    let dn = 0;
+    let sched = 0;
+    for (let i = 0; i < 7; i++) {
+        const d = addDays(ws, i);
+        const k = dateKey(d);
+        if (skip[k] || !isScheduled(habit, d)) continue;
+        sched++;
+        if (done[k]) dn++;
+    }
+    return sched > 0 && dn >= sched;
+}
+
+/* How many completed weeks in a row nothing at all has run under it. Counts
+   back from the week given, and stops at 53 so an aspiration created years
+   ago cannot walk the loop forever. */
+function silentWeeks(aspId, ws) {
+    const hs = habitsUnder(aspId);
+    if (!hs.length) return 0;
+    let n = 0;
+    for (let i = 0; i < 53; i++) {
+        const w = addDays(ws, -7 * i);
+        if (hs.some(h => habitActiveIn(h, w))) break;
+        n++;
+    }
+    return n;
+}
+
+/* One row per aspiration for the week that ended: how many of its habits ran,
+   how many did what they were asked, and how long it has been quiet. */
+function aspirationCoverage(ws) {
+    return liveAspirations().map(a => {
+        const hs = habitsUnder(a.id);
+        const ran = hs.filter(h => habitActiveIn(h, ws));
+        const judged = hs.filter(h => habitMetIn(h, ws) !== null);
+        return {
+            asp: a,
+            habits: hs,
+            total: hs.length,
+            ran: ran.length,
+            met: judged.filter(h => habitMetIn(h, ws)).length,
+            judged: judged.length,
+            quiet: silentWeeks(a.id, ws)
+        };
+    });
+}
+
+/* Said once, then not again for a month. A true observation repeated every
+   week becomes wallpaper, and then the screen carrying the useful notes is
+   the screen he has stopped reading. */
+const NUDGE_COOLDOWN_WEEKS = 4;
+
+function nudgeAllowed(key) {
+    const seen = (state.settings.aspNudges || {})[key];
+    if (!seen) return true;
+    const weeksSince = Math.round((weekStart(new Date()) - keyToDate(seen)) / (7 * 86400e3));
+    return weeksSince >= NUDGE_COOLDOWN_WEEKS;
+}
+
+function markNudged(key) {
+    state.settings.aspNudges = state.settings.aspNudges || {};
+    state.settings.aspNudges[key] = dateKey(weekStart(new Date()));
+    save();
+}
+
+/* Starting points, because the first screen must never be an empty box with
+   "your aspiration" over it. If he will not write one into a chat he will
+   certainly not write one into a text field on a phone; picking a sentence
+   and editing it is a far shorter journey to something true enough to report
+   against. Every one of them is editable afterwards. */
+const ASPIRATION_STARTERS = [
+    'Strong and durable into my seventies',
+    'Healthy enough to keep doing what I love',
+    'Calm, rested and clear-headed',
+    'Someone who finishes what he starts'
+];
 
 /* ================= week in review ================= */
 
@@ -2806,9 +2935,11 @@ function showScreen(which) {
     $('#screen-detail').hidden = which !== 'detail';
     $('#screen-stats').hidden = which !== 'stats';
     $('#screen-notes').hidden = which !== 'notes';
+    $('#screen-asp').hidden = which !== 'asp';
     if (which === 'today') renderToday();
     if (which === 'stats') renderStats();
     if (which === 'notes') renderNotes();
+    if (which === 'asp') renderAspirations();
     // slide the incoming screen: deeper views arrive from the right,
     // going home slides back in from the left (iOS push/pop feel)
     const el = $('#screen-' + which);
@@ -3147,6 +3278,53 @@ function weekNotes() {
         }
     });
 
+    /* Aspirations answer for themselves. These are the uncomfortable ones and
+       they are the whole reason the feature is not dead text — but each is
+       said once and then held for a month, because a true observation
+       repeated weekly stops being read, and takes the useful notes with it. */
+    const asps = liveAspirations();
+    aspirationCoverage(ws).forEach(c => {
+        if (c.quiet >= 3 && nudgeAllowed('quiet:' + c.asp.id)) {
+            notes.push({
+                habit: c.habits[0] || null,
+                aspiration: c.asp,
+                score: 4.2,
+                topic: 'aspiration',
+                quietNote: true,
+                title: `“${c.asp.title}” has gone quiet`,
+                body: `Nothing has run under it for ${c.quiet} weeks. ` +
+                    `That is either a run of bad weeks or a sign it is no longer what you want. ` +
+                    `Both are worth knowing, and only you can say which.`
+            });
+        } else if (!c.total && nudgeAllowed('empty:' + c.asp.id)) {
+            notes.push({
+                habit: null,
+                aspiration: c.asp,
+                score: 3.9,
+                topic: 'aspiration',
+                title: `“${c.asp.title}” has no habits under it`,
+                body: `Nothing is being tracked towards it, so nothing can be said about it ` +
+                    `week to week. Edit a habit and use Serves, or let this one go.`
+            });
+        }
+    });
+    if (asps.length) {
+        const loose = unattachedHabits();
+        if (loose.length && nudgeAllowed('loose')) {
+            notes.push({
+                habit: loose[0],
+                score: 2.4,
+                topic: 'aspiration',
+                title: loose.length === 1
+                    ? `${loose[0].name} serves nothing`
+                    : `${loose.length} habits serve nothing`,
+                body: `${loose.length === 1 ? 'It is' : 'They are'} tracked but not attached ` +
+                    `to any aspiration. That is a perfectly good answer — not everything ` +
+                    `has to ladder up to something. It is only worth saying once.`
+            });
+        }
+    }
+
     live.filter(h => h.type === 'timer').forEach(h => {
         const sess = (h.sessions || []).filter(s => s.e).sort((a, b) => a.e - b.e);
         const windowStart = addDays(ws, -7 * (NOTE_WEEKS - 1)).getTime();
@@ -3209,7 +3387,8 @@ function weekNotes() {
     // that fail have a Sunday in common" are the same four weeks twice
     const bestOf = new Map();
     const deduped = notes.filter(n => {
-        const k = (n.habit ? n.habit.id : '') + '|' + (n.topic || '');
+        const k = (n.aspiration ? 'asp:' + n.aspiration.id : n.habit ? n.habit.id : '') +
+            '|' + (n.topic || '');
         if (bestOf.has(k)) return false;
         bestOf.set(k, true);
         return true;
@@ -3220,7 +3399,7 @@ function weekNotes() {
     const seen = new Set();
     notes.forEach(n => {
         if (picked.length >= NOTES_SHOWN) return;
-        const id = n.habit ? n.habit.id : '';
+        const id = n.aspiration ? 'asp:' + n.aspiration.id : n.habit ? n.habit.id : '';
         if (seen.has(id)) return;
         seen.add(id);
         picked.push(n);
@@ -3343,7 +3522,18 @@ function weekSummaryParagraphs() {
     }
     paras.push(opening);
 
-    // 2. whether that was any good — one week against the recent normal
+    /* 2. what it added up to. The aspiration is the thing the habits are for,
+       so the summary answers it before it gets to whether the week was good. */
+    const cover = aspirationCoverage(ws).filter(c => c.total);
+    if (cover.length) {
+        paras.push(cover.map(c =>
+            `Towards “${c.asp.title}”, ${c.ran} of ${c.total} ` +
+            `habit${c.total === 1 ? '' : 's'} ran` +
+            (c.quiet >= 3 ? ` — nothing has under it for ${c.quiet} weeks now` : '') + '.'
+        ).join(' '));
+    }
+
+    // 3. whether that was any good — one week against the recent normal
     const past = lastWeekNotes();
     if (past.length) paras.push(past.map(n => n.text).join(' '));
 
@@ -3356,8 +3546,9 @@ function weekSummaryParagraphs() {
            asking which one "5 of your 9 missed days" belonged to. The title
            is already a sentence, so it leads when the body does not say. */
         paras.push('Looking further back than one week: ' +
-            notes.map(n => n.body.includes(n.habit.name) ? n.body : `${n.title}. ${n.body}`)
-                .join(' '));
+            notes.map(n => n.habit && n.body.includes(n.habit.name)
+                ? n.body
+                : `${n.title}. ${n.body}`).join(' '));
     } else if (past.length === 0) {
         paras.push('There is not enough history yet to say anything about patterns. ' +
             'A weekday that costs you, or a run you tend to break, needs several weeks ' +
@@ -3408,6 +3599,156 @@ async function shareWeekSummary() {
         }
     }
 }
+
+
+/* ---- the aspirations screen ---- */
+
+function renderAspirations() {
+    const body = $('#asp-body');
+    body.innerHTML = '';
+    const list = liveAspirations();
+    const ws = addDays(weekStart(new Date()), -7);
+
+    if (!list.length) {
+        const p = document.createElement('p');
+        p.className = 'notes-empty';
+        p.textContent = 'Nothing here yet. An aspiration is one sentence about who you ' +
+            'are becoming — the thing your habits are actually for. Once you have one, ' +
+            'every week says how many of its habits ran, and one that goes quiet gets ' +
+            'asked about rather than left sitting there.';
+        body.appendChild(p);
+    }
+
+    const cover = aspirationCoverage(ws);
+    cover.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'note-card asp-card';
+        const fig = c.total
+            ? `${c.ran}/${c.total}`
+            : '—';
+        card.innerHTML =
+            `<div class="note-top">` +
+            `<span class="note-title">${escapeHtml(c.asp.title)}</span>` +
+            `<span class="note-fig asp-fig">${fig}</span></div>` +
+            `<p class="note-body asp-sub">${c.total
+                ? `${c.ran} of ${c.total} habit${c.total === 1 ? '' : 's'} ran last week`
+                : 'No habits under this yet'}</p>`;
+
+        if (c.habits.length) {
+            const row = document.createElement('div');
+            row.className = 'asp-habits';
+            c.habits.forEach(h => {
+                const chip = document.createElement('span');
+                chip.className = 'asp-chip' + (habitActiveIn(h, ws) ? ' ran' : '');
+                chip.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
+                    escapeHtml(h.name);
+                row.appendChild(chip);
+            });
+            card.appendChild(row);
+        }
+        if (c.quiet >= 3) {
+            const q = document.createElement('p');
+            q.className = 'asp-quiet';
+            q.textContent = `Nothing has run under this for ${c.quiet} weeks. Is it still true?`;
+            card.appendChild(q);
+        }
+        card.addEventListener('click', () => openAspSheet(c.asp.id));
+        body.appendChild(card);
+    });
+
+    const loose = unattachedHabits();
+    if (loose.length && list.length) {
+        const card = document.createElement('div');
+        card.className = 'note-card asp-card asp-loose';
+        card.innerHTML =
+            `<div class="note-top"><span class="note-title">Not attached to anything</span>` +
+            `<span class="note-fig asp-fig">${loose.length}</span></div>` +
+            `<p class="note-body asp-sub">Perfectly fine — a habit does not need an ` +
+            `aspiration. Edit a habit and use <em>Serves</em> if you want to attach one.</p>`;
+        const row = document.createElement('div');
+        row.className = 'asp-habits';
+        loose.forEach(h => {
+            const chip = document.createElement('span');
+            chip.className = 'asp-chip';
+            chip.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
+                escapeHtml(h.name);
+            row.appendChild(chip);
+        });
+        card.appendChild(row);
+        body.appendChild(card);
+    }
+}
+
+/* ---- writing one ---- */
+
+const aspSheet = { editingId: null };
+
+function openAspSheet(editId) {
+    aspSheet.editingId = editId || null;
+    const a = editId ? aspirationById(editId) : null;
+    $('#asp-sheet-title').textContent = a ? 'Edit aspiration' : 'New aspiration';
+    $('#f-asp').value = a ? a.title : '';
+    $('#btn-asp-archive').hidden = !a;
+    // the starters are for a blank page only; offering them over something he
+    // has written invites a stray tap that replaces it
+    $('#f-asp-starters-wrap').hidden = !!a;
+    const row = $('#f-asp-starters');
+    row.innerHTML = '';
+    ASPIRATION_STARTERS.forEach(t => {
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'chip starter-chip';
+        c.textContent = t;
+        c.addEventListener('click', () => {
+            $('#f-asp').value = t;
+            $('#f-asp').focus();
+        });
+        row.appendChild(c);
+    });
+    $('#sheet-asp').hidden = false;
+    if (!a) setTimeout(() => $('#f-asp').focus(), 250);
+}
+
+function closeAspSheet() { $('#sheet-asp').hidden = true; }
+
+$('#btn-asp').addEventListener('click', () => showScreen('asp'));
+$('#btn-asp-back').addEventListener('click', () => showScreen('today'));
+$('#btn-asp-add').addEventListener('click', () => openAspSheet(null));
+$('#btn-asp-cancel').addEventListener('click', closeAspSheet);
+$('#sheet-asp').addEventListener('click', (e) => {
+    if (e.target === $('#sheet-asp')) closeAspSheet();
+});
+
+$('#btn-asp-save').addEventListener('click', () => {
+    const title = $('#f-asp').value.trim();
+    if (!title) { $('#f-asp').focus(); return; }
+    if (aspSheet.editingId) {
+        const a = aspirationById(aspSheet.editingId);
+        if (a) a.title = title;
+    } else {
+        state.aspirations.push({ id: newId(), title, createdAt: dateKey(new Date()) });
+    }
+    save();
+    closeAspSheet();
+    renderAspirations();
+});
+
+$('#btn-asp-archive').addEventListener('click', () => {
+    const a = aspirationById(aspSheet.editingId);
+    if (!a) return;
+    /* Archiving never touches the habits under it. They fall back to
+       unattached, which is a state the whole feature is built to tolerate,
+       and the undo puts the aspiration back with them still pointing at it. */
+    a.archivedAt = dateKey(new Date());
+    save();
+    closeAspSheet();
+    renderAspirations();
+    showToast('Aspiration archived', () => {
+        delete a.archivedAt;
+        save();
+        renderAspirations();
+    });
+});
 
 /* ---- the notes screen ---- */
 
@@ -3474,6 +3815,33 @@ function renderNotes() {
         s1.appendChild(p);
     }
 
+    /* Each aspiration answered for the week, which is the promise the feature
+       is built on: one the app never reports against is dead text within a
+       month, and every habit app has a field like that. */
+    const cover = aspirationCoverage(ws);
+    if (cover.length) {
+        const sa = section('Your aspirations');
+        cover.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'note-card asp-card';
+            card.innerHTML =
+                `<div class="note-top"><span class="note-title">${escapeHtml(c.asp.title)}</span>` +
+                `<span class="note-fig asp-fig">${c.total ? c.ran + '/' + c.total : '\u2014'}</span></div>` +
+                `<p class="note-body asp-sub">${c.total
+                    ? `${c.ran} of ${c.total} habit${c.total === 1 ? '' : 's'} ran last week` +
+                      (c.judged ? `, ${c.met} of ${c.judged} did what ${c.judged === 1 ? 'it' : 'they'} asked` : '')
+                    : 'No habits under this yet'}.</p>`;
+            if (c.quiet >= 3) {
+                const q = document.createElement('p');
+                q.className = 'asp-quiet';
+                q.textContent = `Quiet for ${c.quiet} weeks. Is it still true?`;
+                card.appendChild(q);
+            }
+            card.addEventListener('click', () => showScreen('asp'));
+            sa.appendChild(card);
+        });
+    }
+
     /* The cards stayed. The summary was asked for as an ADDITION to them and
        was built as a replacement, which took away the part of this screen
        Martin liked most. Prose is what he reads and sends; the cards are what
@@ -3501,12 +3869,28 @@ function renderNotes() {
         notes.forEach(n => {
             const card = document.createElement('div');
             card.className = 'note-card';
+            /* An aspiration note may have no habit behind it at all — one with
+               nothing under it is exactly the case being reported — so the icon
+               and the tap target are both conditional. */
+            const mark = n.habit
+                ? `<span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>`
+                : `<span class="habit-icon asp-mark">${icon('mountain')}</span>`;
             card.innerHTML =
-                `<div class="note-top"><span class="habit-icon" style="color:${n.habit.color}">${icon(n.habit.icon)}</span>` +
+                `<div class="note-top">${mark}` +
                 `<span class="note-title">${escapeHtml(n.title)}</span></div>` +
                 `<p class="note-body">${escapeHtml(n.body)}</p>`;
-            card.addEventListener('click', () => openDetail(n.habit.id));
+            card.addEventListener('click', () => {
+                if (n.aspiration) showScreen('asp');
+                else if (n.habit) openDetail(n.habit.id);
+            });
             s2.appendChild(card);
+            /* The cooldown starts when he has seen it, not when it was worked
+               out — weekNotes() is called by the prose as well, and marking
+               there would spend the nudge on a screen he never opened. */
+            if (n.topic === 'aspiration') {
+                if (n.aspiration) markNudged((n.quietNote ? 'quiet:' : 'empty:') + n.aspiration.id);
+                else markNudged('loose');
+            }
         });
     } else {
         const p = document.createElement('p');
@@ -3812,7 +4196,8 @@ const sheet = {
     color: PALETTE[0],
     type: 'daily',
     days: [true, true, true, true, true, true, true],
-    target: 3
+    target: 3,
+    aspirationId: null
 };
 
 function editingHabit() {
@@ -3831,6 +4216,7 @@ function openSheet(editId) {
     sheet.target = habit && habit.target ? habit.target
         : habit && habit.days ? Math.max(1, habit.days.filter(Boolean).length)
         : 3;
+    sheet.aspirationId = habit && habit.aspirationId ? habit.aspirationId : null;
 
     $('#sheet-title').textContent = habit ? 'Edit habit' : 'New habit';
     $('#f-name').value = habit ? habit.name : '';
@@ -3957,6 +4343,25 @@ function renderSheetChips() {
         c.addEventListener('click', () => { sheet.target = n; renderSheetChips(); });
         targetRow.appendChild(c);
     }
+    /* Serves: only drawn once an aspiration exists. A row offering to attach a
+       habit to nothing is a question about a feature he has not opted into. */
+    const asps = liveAspirations();
+    $('#f-serves-wrap').hidden = !asps.length;
+    if (asps.length) {
+        const servesRow = $('#f-serves');
+        servesRow.innerHTML = '';
+        const opts = asps.map(a => [a.id, a.title])
+            .concat([[null, 'Nothing in particular']]);
+        opts.forEach(([id, label]) => {
+            const c = document.createElement('button');
+            c.type = 'button';
+            c.className = 'chip serves-chip' + (sheet.aspirationId === id ? ' sel' : '');
+            c.textContent = label;
+            c.addEventListener('click', () => { sheet.aspirationId = id; renderSheetChips(); });
+            servesRow.appendChild(c);
+        });
+    }
+
     const dayRow = $('#f-days');
     dayRow.innerHTML = '';
     DAY_NAMES.forEach((n, i) => {
@@ -4002,6 +4407,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             habit.icon = sheet.icon;
             habit.color = sheet.color;
             habit.days = [...sheet.days];
+            habit.aspirationId = sheet.aspirationId;
             if (habit.type === 'timer') {
                 habit.goalHours = goalHours;
                 habit.goalByDay = goalByDay;
@@ -4022,6 +4428,7 @@ $('#btn-sheet-save').addEventListener('click', () => {
             color: sheet.color,
             type: sheet.type,
             days: [...sheet.days],
+            aspirationId: sheet.aspirationId,
             goalHours: sheet.type === 'timer' ? goalHours : null,
             goalByDay: sheet.type === 'timer' ? goalByDay : null,
             target: sheet.type === 'weekly' ? sheet.target : null,

@@ -1316,6 +1316,63 @@ html, body {
 .sugg-kind { color: var(--text-dim); font-weight: 700; }
 .note-body { margin: 0; font-size: 0.8235rem; line-height: 1.55; color: var(--text); }
 
+/* ---------- aspirations ---------- */
+
+/* No colour of its own, deliberately: colour means "which habit" everywhere
+   else in this app, and a second colour system on top would collapse both. */
+.asp-card { cursor: pointer; }
+.asp-fig { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.asp-sub { color: var(--text-dim); }
+.asp-mark .hi { color: var(--text-dim); }
+.asp-habits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+.asp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 0.7647rem;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+/* Solid for a habit that ran, hollow for one that did not — the same alphabet
+   the week strip uses, so it needs no key. */
+.asp-chip.ran { border-color: transparent; background: var(--border); color: var(--text); }
+.asp-chip .hi { width: 0.8235rem; height: 0.8235rem; }
+.asp-quiet {
+    margin: 10px 0 0;
+    font-size: 0.7941rem;
+    font-weight: 600;
+    color: var(--stale);
+    line-height: 1.45;
+}
+.asp-loose .note-title { color: var(--text-dim); }
+/* .chip is a fixed 2.5882rem square built for an icon. These carry a sentence,
+   so they take their size from their text while keeping the square's height as
+   a floor — that is the 44px tap target the August audit enforces. */
+.starter-chip, .serves-chip {
+    width: auto;
+    height: auto;
+    /* 44px flat, not 2.5882rem: the rem base is 17px only where iOS supplies
+       -apple-system-body, and everywhere else that square comes out at 41. A
+       tap target is a physical size, so it is written as one. */
+    min-height: 44px;
+    max-width: 100%;
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 0.7941rem;
+    font-weight: 600;
+    text-align: left;
+    line-height: 1.35;
+    white-space: normal;
+}
+
 /* The summary reads as a piece of writing, so it gets prose measure and
    spacing rather than card treatment: one surface, paragraphs inside it. */
 .summary-box {

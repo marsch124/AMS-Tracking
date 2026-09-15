@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=58">
+    <link rel="stylesheet" href="css/style.css?v=59">
 </head>
 <body>
 
@@ -56,7 +56,19 @@
         <h1 class="page-title">Stats</h1>
         <p class="page-subtitle">All habits at a glance</p>
         <button id="btn-notes" class="list-btn notes-entry"><span data-hi="bulb"></span> Last week’s analysis</button>
+        <button id="btn-asp" class="list-btn notes-entry"><span data-hi="mountain"></span> Aspirations</button>
         <div id="stats-body"></div>
+    </main>
+
+    <!-- ============ ASPIRATIONS SCREEN ============ -->
+    <main id="screen-asp" class="screen" hidden>
+        <header class="topbar">
+            <button id="btn-asp-back" class="pill-btn" aria-label="Back"><span data-hi="chevL"></span> Today</button>
+        </header>
+        <h1 class="page-title">Aspirations</h1>
+        <p class="page-subtitle">What the habits are for</p>
+        <div id="asp-body"></div>
+        <button id="btn-asp-add" class="list-btn"><span data-hi="plus"></span> Add an aspiration</button>
     </main>
 
     <!-- ============ NOTES SCREEN ============ -->
@@ -136,6 +148,11 @@
                 <p class="gbd-hint">Optional: a different goal for certain days — the day a fast <em>ends</em> on. Empty days use the goal above.</p>
             </div>
 
+            <div id="f-serves-wrap" hidden>
+                <label class="field-label">Serves</label>
+                <div id="f-serves" class="chip-row"></div>
+            </div>
+
             <div id="f-days-wrap">
                 <label class="field-label">On which days?</label>
                 <div id="f-days" class="chip-row"></div>
@@ -203,6 +220,9 @@
                     <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. An iPhone only allows this once you have said yes to notifications, so it is <strong>off until you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>, then allow the prompt. (Before v1.29 the app simply tried and failed silently, so the badge never actually appeared.) It updates whenever the app is opened or used — a web app can't change it in the background.</p>
+                    <p><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. An aspiration is one sentence about who you are becoming: “Strong and durable into my seventies”. No date and no number — the habits carry those. It has no colour of its own either, because colour already means <em>which habit</em> everywhere in this app. Editing a habit gains a <strong>Serves</strong> row once you have written one, and <em>Nothing in particular</em> is a permanent, perfectly good answer: a habit attached to nothing works exactly as it always has.</p>
+                    <p><strong>Why it is not just a text field</strong> — every app has a goals box and it is always dead text, because nothing ever reads it back. So each aspiration is answered every week: how many of its habits ran, on its own screen and in last week's analysis and summary. One that has been silent for three weeks is asked about — “Nothing has run under this for 6 weeks. Is it still true?” — rather than left sitting there looking meaningful. The app will also mention once, and then not again for a month, that an aspiration has no habits under it or that some habits serve nothing. Once, because a true sentence repeated every week stops being read.</p>
+                    <p><strong>Starting one</strong> — the sheet offers four sentences to start from rather than an empty box, and whichever you pick is yours to rewrite. Archiving an aspiration never touches the habits under it: they simply become unattached, and the Undo bar puts it back.</p>
                     <p><strong>Archiving</strong> — done with a habit but want to keep its history? Archive it from its detail view: it disappears from Today but keeps everything, and can be restored any time from Settings → Archived habits. Deleting, by contrast, is forever.</p>
                     <p><strong>Adding &amp; editing</strong> — ＋ creates a habit with a name, icon, color, and type; the icon picker offers 40 hand-drawn icons and a search field that understands English and German words (try “kaffee” or “sleep”). A live preview at the top of the sheet shows the card exactly as it will look on the Today screen — it follows every keystroke of the name and every icon, color, type, and weekday choice. Daily habits can be limited to certain weekdays. The pencil <span data-hi="pencil" class="hi-inline"></span> in the detail view edits it.</p>
                     <p><strong>Changing a habit's type later</strong> — a habit that turned out to be the other kind can be switched: edit it and pick <em>Daily check</em> or <em>Weekly target</em>. Every day you have already ticked stays exactly as it is — both kinds record the same thing, one mark per day, and only read it differently. Going to a weekly target starts at the number of days the habit was scheduled for, so a seven-day habit offers 7&times; and you tap the number you actually want; the streak then counts weeks that reached it instead of days in a row. Going back the other way counts days again. <strong>Start / Stop is the exception</strong> and stays fixed: it keeps start and end times rather than days, which the other two have nowhere to put.</p>
@@ -219,6 +239,24 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.39 <span class="vh-date">— 15 Sep 2026</span></h4>
+                    <p>What the habits are for.</p>
+                    <ul>
+                        <li><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. One sentence about who you are becoming, with habits attached to it. No date, no number, no colour of its own. Editing a habit gains a <strong>Serves</strong> row, and it only appears once you have written an aspiration — until then nothing about the app changes at all.</li>
+                        <li><strong>It is answered every week, which is the whole point</strong> — its own screen, a section in last week's analysis and a line in the written summary all say how many of its habits ran. A goals field nothing reads back is dead text within a month; this one has to earn its place every Monday.</li>
+                        <li><strong>A quiet one gets asked about</strong> — three silent weeks and it says “Nothing has run under this for 6 weeks. Is it still true?” That is either a run of bad weeks or a sign it is no longer what you want, and only you can say which.</li>
+                        <li><strong>Said once, then left alone for a month</strong> — that an aspiration has no habits under it, or that some habits serve nothing. Both are true and neither is urgent, and a true sentence repeated weekly stops being read, taking the useful notes with it.</li>
+                        <li><strong>Never a blank box</strong> — the sheet offers four sentences to start from, and whatever you pick is yours to rewrite. <strong>Nothing in particular</strong> stays available for every habit, forever. Archiving an aspiration leaves every habit exactly where it was, and Undo puts it back.</li>
+                        <li>Nothing was removed to make room for any of this.</li>
+                    </ul>
+
+                    <h4>v1.38.1 <span class="vh-date">— 15 Sep 2026</span></h4>
+                    <p>A shorter button.</p>
+                    <ul>
+                        <li>The button on the “Last week” card reads <strong>Last week</strong>. Your wording. The screen it opens keeps its own title, and the Stats entry is unchanged.</li>
+                        <li>This entry is late: v1.38.1 shipped without one, which it should not have.</li>
+                    </ul>
+
                     <h4>v1.38 <span class="vh-date">— 15 Sep 2026</span></h4>
                     <p>Both sends, in one place.</p>
                     <ul>
@@ -653,6 +691,26 @@
         </div>
     </div>
 
+    <!-- ============ ASPIRATION SHEET ============ -->
+    <div id="sheet-asp" class="sheet-backdrop" hidden>
+        <div class="sheet">
+            <div class="sheet-grab"></div>
+            <h2 id="asp-sheet-title">New aspiration</h2>
+            <p class="cal-hint">One sentence about who you are becoming. No date, no number — the habits carry those.</p>
+            <label class="field-label" for="f-asp">Aspiration</label>
+            <input id="f-asp" type="text" maxlength="80" placeholder="e.g. Strong and durable into my seventies" autocomplete="off">
+            <div id="f-asp-starters-wrap">
+                <label class="field-label">Or start from one of these</label>
+                <div id="f-asp-starters" class="chip-row"></div>
+            </div>
+            <button id="btn-asp-archive" class="archive-btn" hidden><span data-hi="import"></span> Archive this aspiration</button>
+            <div class="sheet-actions">
+                <button id="btn-asp-cancel" class="ghost-btn">Cancel</button>
+                <button id="btn-asp-save" class="primary-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ REORDER SHEET ============ -->
     <div id="sheet-reorder" class="sheet-backdrop" hidden>
         <div class="sheet">
@@ -787,7 +845,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=58"></script>
-    <script src="js/app.js?v=58"></script>
+    <script src="js/icons.js?v=59"></script>
+    <script src="js/app.js?v=59"></script>
 </body>
 </html>

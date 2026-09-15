@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.37';
+const APP_VERSION = '1.38';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1138,9 +1138,10 @@ function renderWeekReview() {
         card.appendChild(row);
     });
 
-    // The card appears by itself on the first open of a new week, so this is
-    // where both the notes and the report offer themselves — no second card
-    // competing with it.
+    /* One way out of this card: into the analysis. Sending the week used to
+       start here and reading about it used to start here, which split the two
+       halves of the same job across a summary card and a screen. Both sends
+       now sit under the week they send, on the analysis screen. */
     const notes = document.createElement('button');
     notes.className = 'wr-cta wr-notes';
     notes.innerHTML = icon('bulb') + ' Read last week\u2019s analysis';
@@ -1149,15 +1150,6 @@ function renderWeekReview() {
         showScreen('notes');
     });
     card.appendChild(notes);
-
-    const send = document.createElement('button');
-    send.className = 'wr-cta wr-send';
-    send.innerHTML = icon('export') + ' Send this report';
-    send.addEventListener('click', (e) => {
-        e.stopPropagation();
-        exportWeekPoster(lastWs);
-    });
-    card.appendChild(send);
 
     box.appendChild(card);
     box.hidden = false;
@@ -3453,11 +3445,21 @@ function renderNotes() {
         });
         s1.appendChild(box);
 
-        const send = document.createElement('button');
-        send.className = 'wr-cta';
-        send.innerHTML = icon('export') + ' Send this summary';
-        send.addEventListener('click', shareWeekSummary);
-        s1.appendChild(send);
+        /* Two ways to send the same week, side by side, so the choice is
+           between forms rather than between places. The labels name the form
+           because "Send this report" and "Send this summary" next to each
+           other say nothing about which is which. */
+        const sendText = document.createElement('button');
+        sendText.className = 'wr-cta';
+        sendText.innerHTML = icon('export') + ' Send this summary as text';
+        sendText.addEventListener('click', shareWeekSummary);
+        s1.appendChild(sendText);
+
+        const sendPic = document.createElement('button');
+        sendPic.className = 'wr-cta wr-send';
+        sendPic.innerHTML = icon('export') + ' Send the week as a picture';
+        sendPic.addEventListener('click', () => exportWeekPoster(ws));
+        s1.appendChild(sendPic);
     } else {
         const p = document.createElement('p');
         p.className = 'notes-empty';

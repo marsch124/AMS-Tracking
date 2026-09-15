@@ -1331,6 +1331,7 @@ html, body {
     color: var(--text);
 }
 .summary-box + .wr-cta { margin-top: 12px; }
+.wr-cta + .wr-cta { margin-top: 8px; }
 
 /* The add button is deliberately quiet: a suggestion that shouts is an advert,
    and nothing here is added until he adds it. */

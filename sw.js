@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ams-tracking-v56';
+const CACHE_NAME = 'ams-tracking-v57';
 
 const urlsToCache = [
     '/AMS-Tracking/',

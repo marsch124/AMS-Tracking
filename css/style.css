@@ -1447,6 +1447,7 @@ html, body {
 .lw-delta.down { color: #d9463e; }
 .lw-delta.flat { color: var(--text-dim); }
 .lw-days { display: flex; gap: 5px; }
+.lw-sub { margin: 0 0 4px; font-size: 0.7647rem; color: var(--text-dim); }
 
 /* One square per day, the same four states the rest of the app draws:
    solid done, hollow not, dashed excused, dim not asked for. */

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.41';
+const APP_VERSION = '1.42';
 const STORE_KEY = 'amsTracking.v1';
 
 const PALETTE = [
@@ -1321,6 +1321,7 @@ function renderMonthReview() {
     const habits = state.habits.filter(h =>
         !h.archived && (!h.createdAt || keyToDate(h.createdAt) < firstOfMonth));
     const monthKey = py + '-' + pad(pm + 1);
+    void ppy; void ppm;
     const hasHistory = habits.some(h =>
         Object.keys(doneSet(h)).some(k => k.startsWith(monthKey)) ||
         Object.keys(skipSet(h)).some(k => k.startsWith(monthKey)));
@@ -1331,6 +1332,7 @@ function renderMonthReview() {
     const head = document.createElement('div');
     head.className = 'wr-head';
     const monthName = new Date(py, pm, 1).toLocaleDateString(undefined, { month: 'long' });
+    card.classList.add('wr-slim');
     head.innerHTML = `<h3>${monthName} in review</h3>`;
     const close = document.createElement('button');
     close.className = 'wr-close';
@@ -1345,44 +1347,17 @@ function renderMonthReview() {
     head.appendChild(close);
     card.appendChild(head);
 
-    habits.forEach(h => {
-        let mid = '';
-        let right = '';
-        let rightCls = 'flat';
-        if (h.type === 'timer') {
-            const cur = monthFastStats(h, py, pm);
-            const prev = monthFastStats(h, ppy, ppm);
-            mid = cur.n
-                ? `${cur.n} fast${cur.n === 1 ? '' : 's'} · Ø ${fmtDuration(cur.avg)} h`
-                : 'no fasts';
-            if (cur.avg != null && prev.avg != null) {
-                const d = cur.avg - prev.avg;
-                right = (d < 0 ? '–' : '+') + fmtDuration(Math.abs(d));
-                rightCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
-            }
-        } else if (h.type === 'weekly') {
-            const cur = monthStats(h, py, pm);
-            const prev = monthStats(h, ppy, ppm);
-            mid = `${cur.dn}× checked off`;
-            const d = cur.dn - prev.dn;
-            right = (d < 0 ? '–' : d > 0 ? '+' : '±') + Math.abs(d) + '×';
-            rightCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
-        } else {
-            const m = monthStats(h, py, pm);
-            mid = `${m.dn}/${m.sched} days`;
-            const best = bestRunInMonth(h, py, pm);
-            right = String(best) + icon('flame', 'wr-flame');
-            rightCls = best > 0 ? 'up' : 'flat';
-        }
-        const row = document.createElement('div');
-        row.className = 'wr-row';
-        row.innerHTML = `<span class="habit-icon" style="color:${h.color}">${icon(h.icon)}</span>` +
-            `<span class="wr-name">${escapeHtml(h.name)}</span>` +
-            `<span class="wr-mid">${mid}</span>` +
-            `<span class="wr-right ${rightCls}">${right}</span>`;
-        row.addEventListener('click', () => openDetail(h.id));
-        card.appendChild(row);
+    /* The rows have moved to their own screen, for the same reason the week's
+       did: Today is about today. What is left is one line saying the month is
+       ready. Everything the rows carried is on that screen. */
+    const go = document.createElement('button');
+    go.className = 'wr-cta wr-notes';
+    go.innerHTML = icon('bulb') + ' Last month';
+    go.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showScreen('month');
     });
+    card.appendChild(go);
 
     box.appendChild(card);
     box.hidden = false;
@@ -2927,10 +2902,12 @@ function showScreen(which) {
     $('#screen-stats').hidden = which !== 'stats';
     $('#screen-notes').hidden = which !== 'notes';
     $('#screen-asp').hidden = which !== 'asp';
+    $('#screen-month').hidden = which !== 'month';
     if (which === 'today') renderToday();
     if (which === 'stats') renderStats();
     if (which === 'notes') renderNotes();
     if (which === 'asp') renderAspirations();
+    if (which === 'month') renderMonthScreen();
     // slide the incoming screen: deeper views arrive from the right,
     // going home slides back in from the left (iOS push/pop feel)
     const el = $('#screen-' + which);
@@ -3591,6 +3568,151 @@ async function shareWeekSummary() {
     }
 }
 
+
+
+/* ---- last month, on its own screen ----
+
+   The same move the week's card made, for the same reason Martin gave: Today
+   is about today. Everything the card on the home screen used to list is here,
+   and it opens with a chart because that is what he asked these screens to do. */
+
+/* The month that has ended: [year, monthIndex]. */
+function lastMonthPeriod() {
+    const now = new Date();
+    return now.getMonth() === 0
+        ? [now.getFullYear() - 1, 11]
+        : [now.getFullYear(), now.getMonth() - 1];
+}
+
+function monthReportRows(py, pm) {
+    const firstOfMonth = new Date(py, pm, 1);
+    const ppy = pm === 0 ? py - 1 : py;
+    const ppm = pm === 0 ? 11 : pm - 1;
+    return state.habits
+        .filter(h => !h.archived && (!h.createdAt || keyToDate(h.createdAt) < firstOfMonth))
+        .map(h => {
+            const row = { habit: h, mid: '', delta: '', deltaCls: 'flat' };
+            if (h.type === 'timer') {
+                const cur = monthFastStats(h, py, pm);
+                const prev = monthFastStats(h, ppy, ppm);
+                row.mid = cur.n
+                    ? `${cur.n} fast${cur.n === 1 ? '' : 's'} · Ø ${fmtDuration(cur.avg)} h`
+                    : 'no fasts';
+                if (cur.avg != null && prev.avg != null) {
+                    const d = cur.avg - prev.avg;
+                    row.delta = (d < 0 ? '–' : '+') + fmtDuration(Math.abs(d));
+                    row.deltaCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+                }
+            } else if (h.type === 'weekly') {
+                const cur = monthStats(h, py, pm);
+                const prev = monthStats(h, ppy, ppm);
+                row.mid = `${cur.dn}× checked off`;
+                const d = cur.dn - prev.dn;
+                row.delta = (d < 0 ? '–' : d > 0 ? '+' : '±') + Math.abs(d) + '×';
+                row.deltaCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+            } else {
+                const m = monthStats(h, py, pm);
+                row.mid = `${m.dn}/${m.sched} days`;
+                row.best = bestRunInMonth(h, py, pm);
+                row.delta = String(row.best);
+                row.flame = true;
+                row.deltaCls = row.best > 0 ? 'up' : 'flat';
+            }
+            return row;
+        });
+}
+
+/* Ticks per calendar week of the month, for the chart. Weeks run Monday-first
+   like everything else here, and only days inside the month are counted — so a
+   month beginning on a Saturday opens with a two-day bar. That is why the day
+   each week began is printed under its bar and named in the caption: a short
+   first or last bar is a short week, not a bad one. */
+function monthWeekCounts(py, pm, habits) {
+    const first = new Date(py, pm, 1);
+    const last = new Date(py, pm + 1, 0);
+    const out = [];
+    let w = weekStart(first);
+    for (let i = 0; i < 6 && w <= last; i++) {
+        let n = 0;
+        habits.forEach(h => {
+            const done = doneSet(h);
+            for (let d = 0; d < 7; d++) {
+                const day = addDays(w, d);
+                if (day.getMonth() !== pm || day.getFullYear() !== py) continue;
+                if (done[dateKey(day)]) n++;
+            }
+        });
+        out.push({ start: new Date(w), n });
+        w = addDays(w, 7);
+    }
+    return out;
+}
+
+function renderMonthScreen() {
+    const body = $('#month-body');
+    body.innerHTML = '';
+    const [py, pm] = lastMonthPeriod();
+    const monthName = new Date(py, pm, 1).toLocaleDateString(undefined, { month: 'long' });
+    $('#month-title').textContent = monthName + ' in review';
+    $('#month-subtitle').textContent = String(py);
+
+    const rows = monthReportRows(py, pm);
+    if (!rows.length) {
+        const p = document.createElement('p');
+        p.className = 'notes-empty';
+        p.textContent = 'Nothing to review yet. Everything you track began during or ' +
+            'after ' + monthName + ', so there is no complete month to report on.';
+        body.appendChild(p);
+        return;
+    }
+
+    const weeks = monthWeekCounts(py, pm, rows.map(r => r.habit));
+    const ceiling = Math.max(1, ...weeks.map(w => w.n));
+    const chart = document.createElement('div');
+    chart.className = 'lw-chart';
+    chart.innerHTML =
+        `<h3 class="lw-chart-h">Ticks in each week of ${escapeHtml(monthName)}</h3>` +
+        `<div class="lw-bars">` +
+        weeks.map(w =>
+            `<div class="lw-col">` +
+            `<div class="lw-track"><div class="lw-bar" style="height:${Math.round(w.n / ceiling * 100)}%"></div></div>` +
+            `<span class="lw-dayname">${w.start.getDate()}</span></div>`).join('') +
+        `</div>`;
+    const total = weeks.reduce((a, c) => a + c.n, 0);
+    const best = weeks.reduce((a, c) => (c.n > a.n ? c : a), weeks[0]);
+    const cap = document.createElement('p');
+    cap.className = 'lw-cap';
+    cap.textContent = total === 0
+        ? `Nothing was ticked in ${monthName}.`
+        : `${total} in all. The week of ${best.start.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })} ` +
+          `was the strongest, with ${best.n}. Numbers under the bars are the day each week began.`;
+    chart.appendChild(cap);
+    body.appendChild(chart);
+
+    const hero = document.createElement('div');
+    hero.className = 'lw-hero';
+    rows.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'lw-row';
+        row.innerHTML =
+            `<div class="lw-top">` +
+            `<span class="habit-icon" style="color:${r.habit.color}">${icon(r.habit.icon)}</span>` +
+            `<span class="lw-name">${escapeHtml(r.habit.name)}</span>` +
+            `<span class="lw-mid">${r.mid}</span>` +
+            (r.delta ? `<span class="lw-delta ${r.deltaCls}">${r.delta}` +
+                (r.flame ? icon('flame', 'wr-flame') : '') + `</span>` : '') +
+            `</div>` +
+            (r.best != null
+                ? `<p class="lw-sub">Longest run of the month: ${r.best} day${r.best === 1 ? '' : 's'}.</p>`
+                : '');
+        row.addEventListener('click', () => openDetail(r.habit.id));
+        hero.appendChild(row);
+    });
+    body.appendChild(hero);
+}
+
+$('#btn-month').addEventListener('click', () => showScreen('month'));
+$('#btn-month-back').addEventListener('click', () => showScreen('today'));
 
 /* ---- the aspirations screen ---- */
 

@@ -198,6 +198,8 @@ test('runDue: a gone subscription (410) is dropped; a 5xx is retried next minute
   };
   let r = await runDue(e, new Date('2026-10-01T18:00:00Z'), fetchFn);
   assert.deepEqual([r.dropped, r.failed, r.sent], [1, 1, 0]);
+  assert.deepEqual([...r.statuses].sort(), [410, 503]);
+  assert.deepEqual(r.errors, []);
   assert.equal(kv._m.has('sub:gone0000001'), false);
   assert.equal(kv._m.get('sub:flaky000001').metadata.lastSent, null);
   fail = false;
@@ -214,7 +216,13 @@ test('HTTP: validation, CORS, delete, health', async () => {
 
   res = await worker.fetch(new Request('https://w.test/health'), e);
   assert.equal(res.status, 200);
-  assert.equal((await res.json()).ok, true);
+  assert.deepEqual(await res.json(), { ok: true, version: '1.0', vapid: true, subject: true });
+  // a private key that does not belong to the public key is reported, not hidden
+  const other = webpush.generateVAPIDKeys();
+  res = await worker.fetch(new Request('https://w.test/health'), { ...e, VAPID_PRIVATE_KEY: other.privateKey });
+  assert.equal((await res.json()).vapid, false);
+  res = await worker.fetch(new Request('https://w.test/health'), { ...e, VAPID_PRIVATE_KEY: e.VAPID_PRIVATE_KEY + '\n' });
+  assert.equal((await res.json()).vapid, false);
 
   res = await worker.fetch(new Request('https://w.test/reminder/abcdefgh12', { method: 'OPTIONS', headers: { Origin: 'http://localhost:7794' } }), e);
   assert.equal(res.status, 204);

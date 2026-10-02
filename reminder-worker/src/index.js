@@ -125,6 +125,25 @@ export async function vapidAuthorization(endpoint, env, nowSeconds) {
     return 'vapid t=' + signingInput + '.' + b64u.encode(sig) + ', k=' + env.VAPID_PUBLIC_KEY;
 }
 
+/* Does the stored private key really belong to VAPID_PUBLIC_KEY? Sign a byte
+   with one, verify with the other. /health reports the answer, nothing else. */
+export async function vapidSelfCheck(env) {
+    try {
+        const pub = b64u.decode(env.VAPID_PUBLIC_KEY || '');
+        // 32 bytes of base64url = exactly 43 characters; a pasted newline or a
+        // truncated key fails here, whatever the runtime's decoder would forgive.
+        if (pub.length !== 65 || !/^[A-Za-z0-9_-]{43}$/.test(env.VAPID_PRIVATE_KEY || '')) return false;
+        const jwk = { kty: 'EC', crv: 'P-256', x: b64u.encode(pub.slice(1, 33)), y: b64u.encode(pub.slice(33, 65)) };
+        const priv = await crypto.subtle.importKey('jwk', { ...jwk, d: env.VAPID_PRIVATE_KEY, ext: true }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+        const pubKey = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+        const data = enc.encode('ams-tracking');
+        const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, priv, data);
+        return crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pubKey, sig, data);
+    } catch (e) {
+        return false;
+    }
+}
+
 /* ---------- send one push ---------- */
 
 export async function sendPush(subscription, payloadText, env, fetchFn) {
@@ -180,7 +199,7 @@ function validTz(tz) {
 
 export async function runDue(env, now, fetchFn) {
     const list = await env.REMINDERS.list({ prefix: 'sub:' });
-    const report = { checked: 0, sent: 0, quiet: 0, dropped: 0, failed: 0 };
+    const report = { checked: 0, sent: 0, quiet: 0, dropped: 0, failed: 0, statuses: [], errors: [] };
     for (const key of list.keys) {
         report.checked++;
         const meta = key.metadata || {};
@@ -205,7 +224,9 @@ export async function runDue(env, now, fetchFn) {
                 }), env, fetchFn);
             } catch (e) {
                 status = 0;
+                if (report.errors.length < 3) report.errors.push(String(e && e.message || e));
             }
+            report.statuses.push(status);
             if (status === 404 || status === 410) {           // the phone unsubscribed
                 await env.REMINDERS.delete(key.name);
                 report.dropped++;
@@ -305,7 +326,9 @@ export default {
         const url = new URL(request.url);
         const h = corsHeaders(request);
         if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: h });
-        if (url.pathname === '/health') return json({ ok: true, version: WORKER_VERSION }, 200, h);
+        if (url.pathname === '/health') {
+            return json({ ok: true, version: WORKER_VERSION, vapid: await vapidSelfCheck(env), subject: !!env.VAPID_SUBJECT }, 200, h);
+        }
 
         const m = url.pathname.match(/^\/reminder\/([^/]+)(\/status)?$/);
         if (!m) return json({ error: 'not found' }, 404, h);

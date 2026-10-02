@@ -230,7 +230,20 @@ turns the reminder off and says so in the row.
 `https://ams-tracking-reminder.marsch124.workers.dev` (account
 `ea22769ff2b65a1c15e3b30bdd66c884`, workers.dev subdomain `marsch124`, KV
 namespace `fc445a5b64e94c7a9611f2389a850583`). `curl <url>/health` →
-`{"ok":true}`. The UI tests inject their own URL via `window.AMS_REMINDER_API`.
+`{"ok":true,"version":"1.0","vapid":true,"subject":true}` — `vapid:false`
+means the private secret does not match the public key (re-put it).
+The UI tests inject their own URL via `window.AMS_REMINDER_API`.
+
+**Watching it live**: `npx wrangler tail --format json` (from
+`reminder-worker/`) prints one `tick {checked,sent,quiet,dropped,failed,
+statuses,errors}` line per minute while something is stored; the stored
+records are `npx wrangler kv key list --REMOTE --namespace-id <id>` —
+🪤 without `--remote` wrangler 4 shows its LOCAL simulation, which is
+always empty (that cost two false readings on 2 Oct 2026). A send is
+retried every minute inside the 60-minute window until the push service
+answers 2xx/4xx; 404/410 deletes the record. Verified live 2 Oct 2026
+with a throw-away subscription (an echo service answered 500 because it
+cannot decode aes128gcm bodies — the sender itself ran clean).
 
 **Keys**: the VAPID pair lives OUTSIDE git in
 `30 App Development/AMS Tracking Keys/vapid-keys.json` (chmod 600). The

@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=65">
+    <link rel="stylesheet" href="css/style.css?v=66">
 </head>
 <body>
 
@@ -185,7 +185,7 @@
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
             <button id="btn-histimport" class="list-btn"><span data-hi="timer"></span> Import fasting history</button>
-            <button id="btn-badge" class="list-btn"><span data-hi="sunrise"></span> Show the count on the app icon</button>
+            <button id="btn-badge" class="list-btn" data-on="0" data-testid="badge-toggle"><span data-hi="sunrise"></span> Show the count on the app icon</button>
             <div id="row-reminder" class="list-row" data-on="0" data-testid="reminder-row">
                 <button id="btn-reminder" class="list-row-btn" data-testid="reminder-toggle"><span data-hi="bell"></span> <span id="reminder-label">Daily reminder: off</span></button>
                 <input id="reminder-time" type="time" value="20:00" aria-label="Reminder time" data-testid="reminder-time">
@@ -233,7 +233,7 @@
                     <p><strong>Text size</strong> — the app follows the iPhone's Display &amp; Text Size setting: make text larger (or smaller) there and every screen scales with it, icons and buttons included.</p>
                     <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
-                    <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. An iPhone only allows this once you have said yes to notifications, so it is <strong>off until you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>, then allow the prompt. (Before v1.29 the app simply tried and failed silently, so the badge never actually appeared.) It updates whenever the app is opened or used — a web app can't change it in the background.</p>
+                    <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. It is <strong>off unless you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>; the same row then reads <strong>Hide the count on the app icon</strong> and takes it away again. An iPhone only allows a badge once you have said yes to notifications — the same permission the daily reminder uses — but allowing notifications no longer switches the badge on by itself (it did until v1.44). It updates whenever the app is opened or used — a web app can't change it in the background.</p>
                     <p><strong>Daily reminder</strong> — Settings → <strong>Daily reminder</strong>: pick the time in the field on the right (20:00 to begin with), tap the row, allow notifications, done. From then on the phone shows a notification every day at that hour — with the app closed — naming what is still open: “2 still open: Intermittent Fasting, Reading”, or simply “Time to fill in your tracked items” if the app has not been opened that day. Tapping it opens the app. When everything scheduled for today is already ticked off before the hour, no reminder comes. Change the time whenever you like; tap the row again to turn it off. It needs the app on your Home Screen (iPhone): in plain Safari the row says so. This is the one thing in the app that leaves the phone — see <em>Why it cannot send itself</em> for exactly what, and why.</p>
                     <p><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. An aspiration is one sentence about who you are becoming: “Strong and durable into my seventies”. No date and no number — the habits carry those. It has no colour of its own either, because colour already means <em>which habit</em> everywhere in this app. Habits are attached from either side: the aspiration's own sheet asks <strong>Which habits serve it?</strong> and lists them all, and editing a habit gains a <strong>Serves</strong> row once an aspiration exists. <em>Nothing in particular</em> is a permanent, perfectly good answer: a habit attached to nothing works exactly as it always has. A habit already under another aspiration shows which, so moving it is deliberate rather than silent.</p>
                     <p><strong>Why it is not just a text field</strong> — every app has a goals box and it is always dead text, because nothing ever reads it back. So each aspiration is answered every week: how many of its habits ran, on its own screen and in last week's analysis and summary. One that has been silent for three weeks is asked about — “Nothing has run under this for 6 weeks. Is it still true?” — rather than left sitting there looking meaningful. The app will also mention once, and then not again for a month, that an aspiration has no habits under it or that some habits serve nothing. Once, because a true sentence repeated every week stops being read.</p>
@@ -254,6 +254,14 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.45 <span class="vh-date">— 2 Oct 2026</span></h4>
+                    <p>The badge is a choice again.</p>
+                    <ul>
+                        <li><strong>The number on the app icon is off unless you switch it on</strong> — since v1.29 it appeared by itself the moment notifications were allowed, and the daily reminder allows them, so turning the reminder on put a number on your icon you never asked for. It is gone. Settings → <strong>Show the count on the app icon</strong> turns it on; the same row, now reading <strong>Hide the count on the app icon</strong>, turns it off again.</li>
+                        <li><strong>The icon in notifications matches the Home Screen</strong> — the notification and the Notifications list in iPhone Settings use a different icon file than the Home Screen does, and that file was a pre-rounded tile with see-through corners that iOS rounded a second time, which made it look smaller and darker. All icon files now carry the same full-bleed flame. An app already on the Home Screen may keep the icon it was installed with; a fresh installation gets the right one.</li>
+                        <li><strong>A third test</strong> — the icon badge stays off after notifications are allowed, shows the count when switched on, and clears when switched off.</li>
+                    </ul>
+
                     <h4>v1.44 <span class="vh-date">— 2 Oct 2026</span></h4>
                     <p>A reminder at your hour.</p>
                     <ul>
@@ -915,7 +923,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=65"></script>
-    <script src="js/app.js?v=65"></script>
+    <script src="js/icons.js?v=66"></script>
+    <script src="js/app.js?v=66"></script>
 </body>
 </html>

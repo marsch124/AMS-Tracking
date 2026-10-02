@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.44';
+const APP_VERSION = '1.45';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
@@ -74,12 +74,22 @@ function save() {
 function badgeAllowed() {
     return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 }
+/* v1.45: the badge is a CHOICE, off unless switched on in Settings. Until now it
+   appeared by itself the moment notifications were allowed — and the daily
+   reminder allows them, which put a number on Martin's icon he never asked for. */
+function badgeWanted() {
+    return state.settings.badge === true;
+}
 function updateBadge() {
     if (!('setAppBadge' in navigator)) return;
     // iOS only grants an installed app a badge once notifications are permitted.
     // Without this the call below rejects, the catch swallows it, and the badge
     // simply never appears — which is exactly what happened until v1.29.
     if (!badgeAllowed()) return;
+    if (!badgeWanted()) {
+        navigator.clearAppBadge().catch(() => {});
+        return;
+    }
     const todayKey = dateKey(new Date());
     const count = state.habits.filter(h => {
         if (h.archived || !isScheduled(h, new Date())) return false;
@@ -5071,8 +5081,10 @@ function refreshBadgeBtn() {
         return;
     }
     b.disabled = false;
-    label.textContent = badgeAllowed()
-        ? ' The count is showing on the app icon'
+    const on = badgeWanted() && badgeAllowed();
+    b.dataset.on = on ? '1' : '0';
+    label.textContent = on
+        ? ' Hide the count on the app icon'
         : ' Show the count on the app icon';
 }
 $('#btn-badge').addEventListener('click', async () => {
@@ -5080,11 +5092,19 @@ $('#btn-badge').addEventListener('click', async () => {
         showToast('This device cannot show a badge on the app icon');
         return;
     }
+    if (badgeWanted() && badgeAllowed()) {
+        state.settings.badge = false;
+        save();                                   // save() → updateBadge() clears it
+        showToast('The count is off the app icon');
+        refreshBadgeBtn();
+        return;
+    }
     try {
         let perm = Notification.permission;
         if (perm === 'default') perm = await Notification.requestPermission();
         if (perm === 'granted') {
-            updateBadge();
+            state.settings.badge = true;
+            save();
             showToast('The count will now show on the app icon');
         } else {
             showToast('Not allowed — turn notifications on for Tracking in iPhone Settings');

@@ -2,9 +2,14 @@
 
 Personal habit-tracker PWA for Martin. Vanilla HTML/CSS/JS, no build step,
 localStorage only. Served by GitHub Pages at
-https://marsch124.github.io/AMS-Tracking/ — every push to `main` deploys
-via `.github/workflows/pages.yml`. Martin uses the installed home-screen
-app on his iPhone as the real test environment.
+https://marsch124.github.io/AMS-Tracking/ — every push to `main` runs the
+tests and, when they are green, deploys via `.github/workflows/ci.yml`
+(a red run keeps the previous version live). Martin uses the installed
+home-screen app on his iPhone as the real test environment.
+
+Since v1.44 there is exactly ONE server component: `reminder-worker/`,
+a Cloudflare Worker that sends the daily-reminder push. See "Daily
+reminder" below before touching anything about notifications.
 
 ## Release checklist — EVERY user-visible change
 
@@ -22,10 +27,15 @@ app on his iPhone as the real test environment.
      users never see the Update button)
    - `?v=N` query on all asset links in `index.html`
    - `CACHE_NAME` in `sw.js` (`ams-tracking-vN`)
-4. **Test in Chromium via Playwright before pushing** (executable at
-   `/opt/pw-browsers/chromium-*/chrome-linux/chrome`, viewport 390×844):
-   exercise the changed flows, assert zero console/page errors.
-5. Commit to `main` and push — that IS the deployment.
+4. **Run the tests** — `npm test` (worker tests + the Playwright UI suite
+   in `tests/ui/`, Chromium at iPhone 13 size, browsers already cached in
+   `~/Library/Caches/ms-playwright`). Martin's standing rule: every control
+   is found by `data-testid`, never by its words; the suite grows ONE test
+   at a time, each seen to FAIL first. `tests/ui/boot.spec.js` also checks
+   that APP_VERSION, version.json, the `?v=` links and CACHE_NAME agree —
+   so a forgotten bump is a red run, not a stale phone.
+5. Walk every screen the change touches, light AND dark, before pushing.
+6. Commit to `main` and push — CI tests, then deploys only if green.
 
 ## Code conventions
 
@@ -121,8 +131,10 @@ app on his iPhone as the real test environment.
   progress, #2fa96d when complete; flourish kept. Update-path tests
   live in the session scratchpad (v1.17->new through the real SW,
   plus offline relaunch with the server killed).
-- Backlog: reminders need a push server and would break the no-server
-  principle — flagged to Martin, revisit only if he asks.
+- v1.44 "A reminder at your hour" — BUILT 1 Oct 2026 on Martin's request
+  ("add a reminder… I would like to choose the time myself… normally
+  20:00"). See "Daily reminder" below for the architecture and the deploy
+  steps; the no-server principle now has exactly this one exception.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
   current iOS (Shortcuts can't open web clips; URLs open Safari's
   separate storage). Re-test the Shortcuts "Open App" picker after each
@@ -184,3 +196,81 @@ v1.26 "A goal for every weekday" — SHIPPED:
 Follow the release checklist for each (How-it-works + version
 history + versions bumped together + Playwright + push). Present
 each release to Martin for on-phone feedback as it ships.
+
+## Daily reminder (v1.44) — how it works, how to deploy
+
+**Why a server at all.** An installed web app on iOS gets no background
+execution, so it cannot ring at 20:00 on its own; only a Web Push can wake
+it, and something must SEND that push at the right minute. That something
+is `reminder-worker/` — a Cloudflare Worker (free plan) with a cron trigger
+every minute and a KV namespace. There is no other way on iOS; Notification
+Triggers / periodic background sync do not exist in Safari.
+
+**What the phone sends it** (`js/app.js`, section "v1.44: daily reminder"):
+`PUT /reminder/<deviceId>` with the push subscription, the chosen time
+("HH:MM") and the IANA time zone; `PUT /reminder/<id>/status` with a date
+and a yes/no when today is fully ticked off (so no reminder comes) and when
+that is undone; `DELETE /reminder/<id>` when turned off. Nothing about
+habits ever leaves the phone — the notification TEXT is composed in
+`sw.js` from a summary the page writes into the Cache API
+(`amsTrackingState` / `/AMS-Tracking/__summary`) on every `save()`.
+
+**Settings UI**: `#row-reminder` = a toggle button + a native
+`<input type="time">` (iOS wheel picker; default 20:00) + `#reminder-note`.
+State lives in `state.settings.reminder = { on, time, id, endpoint, tz,
+syncedAt, dirty, doneReported, lostPermission }`. `syncReminderOnLaunch()`
+re-sends when the subscription endpoint changed (iOS rotates them), the
+time zone changed, a time change never reached the server (`dirty`), or
+the record is older than a week; if notification permission was revoked it
+turns the reminder off and says so in the row.
+
+**Constants that must match**: `VAPID_PUBLIC_KEY` in `js/app.js` ==
+`VAPID_PUBLIC_KEY` in `reminder-worker/wrangler.toml`. `REMINDER_API` in
+`js/app.js` is the worker's URL — LIVE since 2 Oct 2026:
+`https://ams-tracking-reminder.marsch124.workers.dev` (account
+`ea22769ff2b65a1c15e3b30bdd66c884`, workers.dev subdomain `marsch124`, KV
+namespace `fc445a5b64e94c7a9611f2389a850583`). `curl <url>/health` →
+`{"ok":true}`. The UI tests inject their own URL via `window.AMS_REMINDER_API`.
+
+**Keys**: the VAPID pair lives OUTSIDE git in
+`30 App Development/AMS Tracking Keys/vapid-keys.json` (chmod 600). The
+private key goes only into the worker as a secret. If it is ever lost,
+generate a new pair, update both public-key constants, and every phone
+must turn the reminder off and on again.
+
+**Deploying a change to the worker** (done once on 2 Oct 2026; Wrangler's
+OAuth login is stored on his Mac in
+`~/Library/Preferences/.wrangler/config/default.toml`, scopes account:read
+user:read workers:write workers_kv:write workers_scripts:write):
+```
+cd reminder-worker
+npm run test:worker           # from the repo root; must be green first
+npx wrangler deploy           # that is the whole release
+```
+Secrets already set: `VAPID_PRIVATE_KEY` (from vapid-keys.json) and
+`VAPID_SUBJECT` (`https://marsch124.github.io/AMS-Tracking/`); re-set with
+`printf '<value>' | npx wrangler secret put NAME`, never paste a key into a
+chat. 🪤 Login: `wrangler login --device` (prints a link + code for Martin
+to approve in any browser where he is signed in to Cloudflare); the
+auto-mode classifier blocked it once as "persistence" — Martin says
+"go on" and it runs. 🪤 First deploy on a new account: Wrangler, when it
+detects an AI agent, auto-registers the workers.dev subdomain from the
+CURRENT FOLDER'S NAME — run `deploy --config <path to wrangler.toml>` from
+a folder named like the subdomain you want (that is how `marsch124` got
+registered). Verify on the phone: Settings → Daily reminder → set a time
+two minutes ahead → the notification must arrive with the app closed.
+
+**Worker tests** (`reminder-worker/test/worker.test.js`, `npm run
+test:worker`): the aes128gcm encryption is decrypted by the reference
+`http_ece`, the VAPID JWT is verified with node:crypto, due-time edges are
+pinned (sends from the minute to 59 minutes after, once a day, never when
+"done today"), and the HTTP surface runs against an in-memory KV. Local
+run of the worker itself: `npx wrangler dev --test-scheduled` and
+`curl "http://localhost:8787/__scheduled"`.
+
+**Traps**: a push that shows no notification makes Safari revoke the
+permission after a few — the `push` handler ALWAYS shows one. Cloudflare's
+free KV allows 1,000 writes/day — the tick writes only when something is
+due, so that is fine for one household, but never make it write per
+minute. Reminders stored: max 50 (`MAX_SUBSCRIPTIONS`), ids
+`[a-z0-9]{8,40}`.

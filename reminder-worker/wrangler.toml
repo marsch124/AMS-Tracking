@@ -1,0 +1,21 @@
+# AMS Tracking — daily-reminder worker. Deploy from this folder:
+#   npx wrangler deploy
+# First time only (see ../CLAUDE.md "Daily reminder"):
+#   npx wrangler kv namespace create REMINDERS   -> paste the id below
+#   npx wrangler secret put VAPID_PRIVATE_KEY     -> from "AMS Tracking Keys/vapid-keys.json" (outside git)
+#   npx wrangler secret put VAPID_SUBJECT         -> mailto:<Martin's e-mail>
+name = "ams-tracking-reminder"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[vars]
+# The public half of the VAPID pair — the same string sits in js/app.js.
+VAPID_PUBLIC_KEY = "BGkVSL7nrvFzJ4EzyH45W9YGaij80sTCYItx0dZqMRX-TKCmnHkwVxq0D-gv3rTf2CgOdNl55UvRcDHQYm6TF9k"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "REMINDERS"
+id = "fc445a5b64e94c7a9611f2389a850583"

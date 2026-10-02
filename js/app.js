@@ -1,8 +1,10 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.43';
+const APP_VERSION = '1.44';
 const STORE_KEY = 'amsTracking.v1';
+/* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
+const RUNTIME = { summaryJson: '', doneTimer: null };
 
 const PALETTE = [
     '#3b70f0', // blue
@@ -65,6 +67,7 @@ function load() {
 function save() {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
     updateBadge();
+    mirrorSummary();
 }
 
 /* Icon badge: scheduled habits still open today (installed PWAs only) */
@@ -4736,6 +4739,7 @@ $('#btn-settings').addEventListener('click', () => {
     $('#archived-count').textContent = state.habits.filter(h => h.archived).length;
     $('#sheet-settings').hidden = false;
     refreshBadgeBtn();
+    refreshReminderRow();
 });
 $('#btn-settings-close').addEventListener('click', () => { $('#sheet-settings').hidden = true; });
 $('#sheet-settings').addEventListener('click', (e) => {
@@ -5091,6 +5095,259 @@ $('#btn-badge').addEventListener('click', async () => {
     refreshBadgeBtn();
 });
 
+
+/* ================= v1.44: daily reminder =================
+
+   The ONE feature that talks to a server. An installed web app on an iPhone
+   gets no background time at all, so it cannot ring at 20:00 by itself; the
+   only thing that wakes it is a Web Push message, and something has to SEND
+   that message at the right minute. That something is reminder-worker/ — a
+   small Cloudflare Worker of Martin's. Per phone it stores Apple's push
+   address for this app, the chosen time, the time zone, and a yes/no "already
+   done today" so it can stay quiet. It never sees a habit, a streak or a
+   name: the notification's text is composed by the service worker from a
+   summary this page writes into the Cache API on every save (mirrorSummary).
+   With the reminder off, nothing is sent anywhere. */
+
+const REMINDER_API = window.AMS_REMINDER_API || 'https://ams-tracking-reminder.marsch124.workers.dev';   // reminder-worker/, deployed 2 Oct 2026
+const VAPID_PUBLIC_KEY = 'BGkVSL7nrvFzJ4EzyH45W9YGaij80sTCYItx0dZqMRX-TKCmnHkwVxq0D-gv3rTf2CgOdNl55UvRcDHQYm6TF9k';
+const REMINDER_DEFAULT_TIME = '20:00';
+const REMINDER_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const SUMMARY_URL = location.origin + '/AMS-Tracking/__summary';   // a Cache API key, never fetched
+
+function reminderSettings() {
+    const st = state.settings;
+    if (!st.reminder) st.reminder = { on: false, time: REMINDER_DEFAULT_TIME };
+    if (!REMINDER_TIME_RE.test(st.reminder.time || '')) st.reminder.time = REMINDER_DEFAULT_TIME;
+    return st.reminder;
+}
+
+function reminderSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+}
+
+function reminderDeviceId() {
+    const r = reminderSettings();
+    if (!r.id) r.id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    return r.id;
+}
+
+function urlBase64ToUint8Array(s) {
+    const b64 = (s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+}
+
+/* ---- what the service worker needs to word the notification ---- */
+
+function summarizeToday() {
+    const now = new Date();
+    const key = dateKey(now);
+    const open = [];
+    let total = 0;
+    state.habits.forEach(h => {
+        if (h.archived || !isScheduled(h, now)) return;
+        total++;
+        if (doneSet(h)[key] || skipSet(h)[key]) return;
+        if (h.type === 'timer' && activeSession(h)) return;   // a fast underway is not "open"
+        open.push(h.name);
+    });
+    return { date: key, total, open };
+}
+
+function mirrorSummary() {
+    if (!('caches' in window)) return;
+    const s = summarizeToday();
+    const json = JSON.stringify(s);
+    if (json === RUNTIME.summaryJson) return;
+    RUNTIME.summaryJson = json;
+    caches.open('amsTrackingState')
+        .then(c => c.put(SUMMARY_URL, new Response(json, { headers: { 'Content-Type': 'application/json' } })))
+        .catch(() => {});
+    reportDoneState(s);
+}
+
+/* Tell the worker when today is already complete, so no reminder comes — and
+   take it back if a tick is undone. Debounced; only ever a date and a yes/no. */
+function reportDoneState(s) {
+    const r = state.settings.reminder;
+    if (!r || !r.on || !REMINDER_API) return;
+    const done = s.total > 0 && s.open.length === 0;
+    const reported = r.doneReported || {};
+    if (reported[s.date] === done) return;
+    if (!done && reported[s.date] !== true) return;   // nothing to take back
+    clearTimeout(RUNTIME.doneTimer);
+    RUNTIME.doneTimer = setTimeout(() => {
+        reminderApi('PUT', '/reminder/' + reminderDeviceId() + '/status', { date: s.date, done })
+            .then(() => {
+                r.doneReported = {};
+                r.doneReported[s.date] = done;
+                localStorage.setItem(STORE_KEY, JSON.stringify(state));   // not save(): no loop
+            })
+            .catch(() => {});
+    }, 1500);
+}
+
+/* ---- talking to the worker ---- */
+
+async function reminderApi(method, path, body) {
+    if (!REMINDER_API) throw new Error('no-service');
+    const res = await fetch(REMINDER_API + path, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('http-' + res.status);
+    return res.json().catch(() => ({}));
+}
+
+async function getPushSubscription(create) {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub && create) {
+        sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+    }
+    return sub;
+}
+
+async function sendReminderToServer(sub) {
+    const r = reminderSettings();
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm';
+    await reminderApi('PUT', '/reminder/' + reminderDeviceId(), {
+        subscription: sub.toJSON(),
+        time: r.time,
+        tz
+    });
+    r.endpoint = sub.endpoint;
+    r.tz = tz;
+    r.syncedAt = Date.now();
+    r.dirty = false;
+    save();
+}
+
+async function enableReminder() {
+    const r = reminderSettings();
+    r.lostPermission = false;
+    if (!reminderSupported()) {
+        setReminderNote('Needs the app on your Home Screen.');
+        showToast('Reminders work in the app on your Home Screen');
+        return;
+    }
+    if (!REMINDER_API) {
+        setReminderNote('The reminder service is not set up yet.');
+        return;
+    }
+    try {
+        let perm = Notification.permission;
+        if (perm === 'default') perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+            setReminderNote('Not allowed — turn notifications on for Tracking in iPhone Settings.');
+            return;
+        }
+        const sub = await getPushSubscription(true);
+        r.on = true;
+        await sendReminderToServer(sub);
+        refreshBadgeBtn();
+        updateBadge();
+        showToast('Reminder on — every day at ' + r.time);
+    } catch (e) {
+        r.on = false;
+        save();
+        setReminderNote('Could not reach the reminder service — check the connection and try again.');
+    }
+    refreshReminderRow();
+}
+
+async function disableReminder() {
+    const r = reminderSettings();
+    r.on = false;
+    r.dirty = false;
+    r.doneReported = {};
+    save();
+    refreshReminderRow();
+    showToast('Reminder off');
+    try { await reminderApi('DELETE', '/reminder/' + reminderDeviceId()); } catch (e) { /* the unsubscribe below makes the server forget us anyway */ }
+    try {
+        const sub = await getPushSubscription(false);
+        if (sub) await sub.unsubscribe();
+    } catch (e) { /* nothing to undo */ }
+}
+
+async function changeReminderTime(value) {
+    const r = reminderSettings();
+    if (!REMINDER_TIME_RE.test(value || '')) return;
+    r.time = value;
+    r.dirty = r.on;
+    save();
+    refreshReminderRow();
+    if (!r.on) return;
+    try {
+        const sub = await getPushSubscription(true);
+        await sendReminderToServer(sub);
+        showToast('Reminder moved to ' + value);
+    } catch (e) {
+        /* stays dirty; syncReminderOnLaunch sends it next time we are online */
+    }
+    refreshReminderRow();
+}
+
+/* Keep the worker's copy current: iOS may hand out a new push address, the
+   phone may change time zone, a time change may not have reached the server. */
+async function syncReminderOnLaunch() {
+    const r = state.settings.reminder;
+    if (!r || !r.on) return;
+    if (!reminderSupported() || Notification.permission !== 'granted') {
+        r.on = false;
+        r.lostPermission = true;
+        save();
+        return;
+    }
+    try {
+        const sub = await getPushSubscription(true);
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Stockholm';
+        const WEEK = 7 * 24 * 3600 * 1000;
+        const stale = r.dirty || sub.endpoint !== r.endpoint || tz !== r.tz || Date.now() - (r.syncedAt || 0) > WEEK;
+        if (stale) await sendReminderToServer(sub);
+    } catch (e) { /* offline — next launch */ }
+}
+
+/* ---- the Settings row ---- */
+
+function setReminderNote(text) {
+    $('#reminder-note').textContent = text || '';
+}
+
+function refreshReminderRow() {
+    const r = reminderSettings();
+    $('#row-reminder').dataset.on = r.on ? '1' : '0';
+    $('#reminder-label').textContent = r.on ? 'Daily reminder: on' : 'Daily reminder: off';
+    const t = $('#reminder-time');
+    if (t.value !== r.time) t.value = r.time;
+    if (r.on) {
+        setReminderNote(r.dirty
+            ? 'Every day at ' + r.time + ' — the new time goes out when you are online.'
+            : 'Every day at ' + r.time + ' — also when the app is closed.');
+    } else if (r.lostPermission) {
+        setReminderNote('Off — notifications were turned off for Tracking in iPhone Settings.');
+    } else if (!reminderSupported()) {
+        setReminderNote('Needs the app on your Home Screen.');
+    } else {
+        setReminderNote('Pick the time, then tap to turn it on.');
+    }
+}
+
+$('#btn-reminder').addEventListener('click', () => {
+    if (reminderSettings().on) disableReminder();
+    else enableReminder();
+});
+$('#reminder-time').addEventListener('change', (e) => changeReminderTime(e.target.value));
+
 $('#btn-update').addEventListener('click', () => {
     $('#sheet-settings').hidden = true;
     checkForUpdate(true);
@@ -5127,3 +5384,5 @@ if (navigator.storage && navigator.storage.persist) {
 
 save();
 renderToday();
+syncReminderOnLaunch();
+document.documentElement.dataset.ready = '1';   // the UI tests wait for this

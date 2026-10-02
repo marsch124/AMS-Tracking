@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ams-tracking-v64';
+const CACHE_NAME = 'ams-tracking-v65';
 
 const urlsToCache = [
     '/AMS-Tracking/',
@@ -117,4 +117,55 @@ self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
+});
+
+/* ---------- v1.44: the daily reminder ----------
+   reminder-worker/ sends ONE Web Push a day at the time chosen in Settings.
+   The text is composed HERE, from a summary the page writes into the Cache
+   API on every save — so the notification can name the habits still open
+   without the server ever knowing a habit's name. Safari insists that every
+   push shows a notification, so there is always something to show. */
+const SUMMARY_URL = self.location.origin + '/AMS-Tracking/__summary';
+
+function localDateKey(d) {
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+async function reminderText(payload) {
+    let body = (payload && payload.body) || 'Time to fill in your tracked items.';
+    try {
+        const cache = await caches.open('amsTrackingState');
+        const res = await cache.match(SUMMARY_URL);
+        const s = res ? await res.json() : null;
+        if (s && s.date === localDateKey(new Date())) {
+            if (s.total > 0 && s.open.length === 0) body = 'Everything is ticked off for today.';
+            else if (s.open.length === 1) body = 'Still open: ' + s.open[0];
+            else if (s.open.length > 1) body = s.open.length + ' still open: ' + s.open.join(', ');
+        }
+    } catch (e) { /* no summary — the plain text will do */ }
+    return body;
+}
+
+self.addEventListener('push', (event) => {
+    let payload = null;
+    try { payload = event.data ? event.data.json() : null; } catch (e) { payload = null; }
+    event.waitUntil((async () => {
+        const body = await reminderText(payload);
+        await self.registration.showNotification((payload && payload.title) || 'AMS Tracking', {
+            body,
+            tag: 'ams-tracking-reminder',
+            data: { url: self.registration.scope }
+        });
+    })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const target = (event.notification.data && event.notification.data.url) || self.registration.scope;
+    event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+        const open = list.find((c) => c.url.startsWith(self.registration.scope));
+        if (open) return open.focus();
+        return self.clients.openWindow(target);
+    }));
 });

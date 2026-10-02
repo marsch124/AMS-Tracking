@@ -15,6 +15,7 @@ An easy-to-use, visually pleasing habit tracker PWA. The main screen shows the t
 - 🎨 **8 colors and emoji icons** per habit, automatic dark mode
 - 📡 **Fully offline** — installable PWA, all data stays on the device (localStorage)
 - 💾 **Backup** — export/import all data as JSON from Settings
+- 🔔 **Daily reminder** (optional, since v1.44) — pick an hour in Settings and the phone reminds you every day, app closed or not, naming what is still open; quiet when everything is already ticked off
 - ❓ **In-app help** — collapsible "How it works" and version history sections under Settings
 
 ## Usage
@@ -42,9 +43,13 @@ python3 -m http.server 7794
 ├── manifest.json   # PWA configuration
 ├── css/style.css   # Styling (light/dark, mobile-first)
 ├── js/app.js       # All logic: storage, streaks, rendering
-├── sw.js           # Service worker (offline; network-first navigations)
-└── icons/          # Generated app icons
+├── sw.js           # Service worker (offline; shows the daily-reminder notification)
+├── icons/          # Generated app icons
+├── reminder-worker # Cloudflare Worker that SENDS the daily reminder (the only server)
+└── tests/ui        # Playwright UI tests — run in CI on every push, gate the deploy
 ```
+
+Tests: `npm test` (worker tests + UI tests in Chromium at iPhone size).
 
 When releasing a change, bump the `?v=` query on the asset links in `index.html` and the `CACHE_NAME` in `sw.js`.
 
@@ -57,4 +62,4 @@ Everything lives in `localStorage` under `amsTracking.v1`:
 
 ## Privacy
 
-All data is stored locally on the device. No servers, no tracking, no accounts.
+All habit data is stored locally on the device — no servers, no tracking, no accounts. The one optional exception is the daily reminder: when you turn it on, a small Cloudflare Worker of the author's keeps the phone's push address, the chosen time, the time zone and a yes/no "already done today", and sends the nudge. It never receives a habit, a streak or a name; the words in the notification are chosen on the phone. With the reminder off, nothing is sent at all.

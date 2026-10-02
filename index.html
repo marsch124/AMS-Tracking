@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=64">
+    <link rel="stylesheet" href="css/style.css?v=65">
 </head>
 <body>
 
@@ -20,7 +20,7 @@
     <main id="screen-today" class="screen">
         <div class="today-head">
             <h1 id="today-title" class="page-title">Today</h1>
-            <button id="version-pill" class="version-pill" aria-label="App version — tap to check for updates"></button>
+            <button id="version-pill" class="version-pill" data-testid="version-pill" aria-label="App version — tap to check for updates"></button>
         </div>
         <div id="day-progress" class="day-progress" hidden>
             <div id="dp-bar" class="dp-bar"></div>
@@ -34,7 +34,7 @@
         <nav class="bottom-bar">
             <button id="btn-stats" class="pill-btn icon-only" aria-label="Statistics"><span data-hi="chart"></span></button>
             <button id="btn-add" class="pill-btn icon-only" aria-label="Add habit"><span data-hi="plus"></span></button>
-            <button id="btn-settings" class="pill-btn icon-only" aria-label="Settings"><span data-hi="sliders"></span></button>
+            <button id="btn-settings" class="pill-btn icon-only" data-testid="settings" aria-label="Settings"><span data-hi="sliders"></span></button>
         </nav>
 
         <div id="empty-state" class="empty-state" hidden>
@@ -176,7 +176,7 @@
     </div>
 
     <!-- ============ SETTINGS SHEET ============ -->
-    <div id="sheet-settings" class="sheet-backdrop" hidden>
+    <div id="sheet-settings" class="sheet-backdrop" data-testid="sheet-settings" hidden>
         <div class="sheet">
             <div class="sheet-handle"></div>
             <h2>Settings</h2>
@@ -186,6 +186,11 @@
             <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
             <button id="btn-histimport" class="list-btn"><span data-hi="timer"></span> Import fasting history</button>
             <button id="btn-badge" class="list-btn"><span data-hi="sunrise"></span> Show the count on the app icon</button>
+            <div id="row-reminder" class="list-row" data-on="0" data-testid="reminder-row">
+                <button id="btn-reminder" class="list-row-btn" data-testid="reminder-toggle"><span data-hi="bell"></span> <span id="reminder-label">Daily reminder: off</span></button>
+                <input id="reminder-time" type="time" value="20:00" aria-label="Reminder time" data-testid="reminder-time">
+            </div>
+            <p id="reminder-note" class="settings-hint" data-testid="reminder-note"></p>
             <button id="btn-update" class="list-btn"><span data-hi="sunrise"></span> Check for app update</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
@@ -215,7 +220,7 @@
                     <p><strong>Last week and next week are different questions</strong> — the “Last week” card and the report picture give you the week's figures; <em>Last week</em> on this screen says whether they were any good, which is the thing the numbers on their own never tell you. It compares one week against your recent normal, so it only speaks when something stood out: your best week in two months, the first time you made the target since August, a run of clean weeks ending. An ordinary week gets no sentence. <em>What to try next week</em> is the opposite — it ignores any single week and reads eight of them for a pattern, because a bad week is not a habit and a habit is invisible in a single week.</p>
                     <p><strong>How the notes are worked out, and what they will not do</strong> — there is no intelligence behind them and nothing is sent anywhere: the app does arithmetic on what is already on your phone and picks the sentences that fit. So every note names the figure it came from — “4 of your last 8 misses fell on a Thursday” — and you can disagree with it. The thresholds are set high on purpose: most notes need several weeks before they will say anything at all, because a confident sentence about a coincidence is worse than silence. When there is nothing honest to say, the screen says that instead of filling the space. Two things it deliberately never does: call a weekly target's rest days a slip (six out of seven means one blank day by design), and tell the same story twice about one habit.</p>
                     <p><strong>Habit suggestions</strong> — three at a time, rotating each week, and anything close to something you already track is left out. <strong>Add this habit</strong> opens the ordinary new-habit sheet with the name, icon and target filled in: it is a starting point you can change, and nothing is created until you press Save.</p>
-                    <p><strong>Why it cannot send itself</strong> — an installed web app gets no time to run when it is closed: iPhones give it no background execution at all, so nothing can happen on a Sunday evening unless you open the app. And your data is only ever on this phone, so a mail server somewhere would have nothing to report on. The picture has to be made here, by you, with one tap — which is why the card puts itself in front of you at the start of each week rather than waiting to be found.</p>
+                    <p><strong>Why it cannot send itself</strong> — an installed web app gets no time to run when it is closed: iPhones give it no background execution at all, so nothing can happen on a Sunday evening unless you open the app. And your data is only ever on this phone, so a mail server somewhere would have nothing to report on. The picture has to be made here, by you, with one tap — which is why the card puts itself in front of you at the start of each week rather than waiting to be found. The <strong>daily reminder</strong> is the one exception, and it only works because a small server does the sending: a tiny program of Martin's running at Cloudflare (its code is in the app's repository) keeps, per phone, the push address Apple hands out for this app, the chosen time, the time zone, and a yes/no “already done today”. That is all it ever receives — no habit, no streak, no name; the words in the notification are chosen on the phone. With the reminder off, nothing is sent at all.</p>
                     <p><strong>Fasting stages</strong> — the fasting detail view shows the commonly-cited phases of a fast on a colored track: Digestion (0–4h), Settling in (4–12h), Fat burning (12–16h), and Deep fast (16h+). While a fast is running, a marker sits at your elapsed time, the current stage is highlighted, and a line names it (“Now: Fat burning”); it moves along live. This is a popular approximation from fasting literature, not medical advice — every body is different.</p>
                     <p><strong>The fasting calendar</strong> — for a fasting habit, each calendar day shows the date with the fasted hours in a circle beneath: green when that day's goal was met, gray when the fast fell short of it, red with a live count for today's fast in progress, and a dashed circle with a dash (–) for skip days. A one-line legend under the calendar explains the circles right where they appear. The Fasts card counts how many days met the goal.</p>
                     <p><strong>Day notes</strong> — tap the pencil in the calendar header to enter note mode, then tap any day to write a short note (“skipped, travel day”, “hard fast”). Days with notes get a mark, and the month's notes are listed under the calendar; tap one to edit it. When today has a note, a small dot in the habit's color appears next to the name on its Today card — tap the dot to read the note, with an Edit button right in the bar.</p>
@@ -229,6 +234,7 @@
                     <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. An iPhone only allows this once you have said yes to notifications, so it is <strong>off until you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>, then allow the prompt. (Before v1.29 the app simply tried and failed silently, so the badge never actually appeared.) It updates whenever the app is opened or used — a web app can't change it in the background.</p>
+                    <p><strong>Daily reminder</strong> — Settings → <strong>Daily reminder</strong>: pick the time in the field on the right (20:00 to begin with), tap the row, allow notifications, done. From then on the phone shows a notification every day at that hour — with the app closed — naming what is still open: “2 still open: Intermittent Fasting, Reading”, or simply “Time to fill in your tracked items” if the app has not been opened that day. Tapping it opens the app. When everything scheduled for today is already ticked off before the hour, no reminder comes. Change the time whenever you like; tap the row again to turn it off. It needs the app on your Home Screen (iPhone): in plain Safari the row says so. This is the one thing in the app that leaves the phone — see <em>Why it cannot send itself</em> for exactly what, and why.</p>
                     <p><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. An aspiration is one sentence about who you are becoming: “Strong and durable into my seventies”. No date and no number — the habits carry those. It has no colour of its own either, because colour already means <em>which habit</em> everywhere in this app. Habits are attached from either side: the aspiration's own sheet asks <strong>Which habits serve it?</strong> and lists them all, and editing a habit gains a <strong>Serves</strong> row once an aspiration exists. <em>Nothing in particular</em> is a permanent, perfectly good answer: a habit attached to nothing works exactly as it always has. A habit already under another aspiration shows which, so moving it is deliberate rather than silent.</p>
                     <p><strong>Why it is not just a text field</strong> — every app has a goals box and it is always dead text, because nothing ever reads it back. So each aspiration is answered every week: how many of its habits ran, on its own screen and in last week's analysis and summary. One that has been silent for three weeks is asked about — “Nothing has run under this for 6 weeks. Is it still true?” — rather than left sitting there looking meaningful. The app will also mention once, and then not again for a month, that an aspiration has no habits under it or that some habits serve nothing. Once, because a true sentence repeated every week stops being read.</p>
                     <p><strong>Starting one</strong> — the sheet offers four sentences to start from rather than an empty box, and whichever you pick is yours to rewrite. Archiving an aspiration never touches the habits under it: they simply become unattached, and the Undo bar puts it back.</p>
@@ -248,6 +254,15 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.44 <span class="vh-date">— 2 Oct 2026</span></h4>
+                    <p>A reminder at your hour.</p>
+                    <ul>
+                        <li><strong>Daily reminder</strong> — Settings → <strong>Daily reminder</strong>. Pick the time in the field on the right (it starts at 20:00), tap the row, allow notifications. Every day at that hour the phone shows a notification, app closed or not, that names what is still open — “2 still open: Intermittent Fasting, Reading” — or just says it is time to fill things in if the app has not been opened that day. Tapping it opens the app. Tap the row again to turn it off; change the time whenever you like.</li>
+                        <li><strong>Quiet when there is nothing left</strong> — if everything scheduled for today is ticked off before the hour, no reminder comes.</li>
+                        <li><strong>The first thing that leaves the phone</strong> — an installed web app cannot wake itself, so a tiny program of Martin's at Cloudflare (its code is in the repository) keeps the reminder time, the phone's push address and a yes/no “done today”, and sends the nudge. It never sees a habit. With the reminder off, nothing is sent at all — the rest of the app stays exactly as private as before. <em>How it works</em> says this in full.</li>
+                        <li><strong>Every update is tested before it goes live</strong> — automatic tests now run the app at iPhone size on every change, and a failing run keeps the previous version online. The first two tests check that the app starts cleanly with one consistent version number everywhere, and that the reminder turns on, keeps its time across a restart, and turns off.</li>
+                    </ul>
+
                     <h4>v1.43 <span class="vh-date">— 15 Sep 2026</span></h4>
                     <p>Two buttons that cannot be lost.</p>
                     <ul>
@@ -900,7 +915,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=64"></script>
-    <script src="js/app.js?v=64"></script>
+    <script src="js/icons.js?v=65"></script>
+    <script src="js/app.js?v=65"></script>
 </body>
 </html>

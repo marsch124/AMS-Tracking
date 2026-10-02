@@ -1,0 +1,77 @@
+# Every push runs the tests: the reminder worker's Web Push crypto against the
+# reference implementation, and the app's UI in Chromium at iPhone size. A push to
+# main that passes them is then PUBLISHED to GitHub Pages by the deploy job — and
+# only then. A red run stops the release: the site stays at the previous version.
+name: Tests and deploy
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reminder worker tests
+        run: npm run test:worker
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: UI tests
+        run: npm run test:ui
+      - name: Keep the report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14
+      - name: Keep the traces when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results
+          retention-days: 14
+
+  # The release. `needs: tests` is the gate — GitHub does not start this job unless
+  # the tests job succeeded. Only a push to main publishes.
+  deploy:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble the site (the app's files only — no tests, no worker, no tooling)
+        run: |
+          mkdir -p _site
+          cp index.html manifest.json sw.js version.json README.md _site/
+          cp -R css _site/css
+          cp -R js _site/js
+          cp -R icons _site/icons
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

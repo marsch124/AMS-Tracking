@@ -2012,3 +2012,65 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
     .part-chip.pending { animation: none; }
 }
+
+/* ---------- v1.44: daily reminder row (Settings) ---------- */
+.list-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 10px;
+    padding-right: 12px;
+}
+
+.list-row-btn {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9412rem;
+    font-weight: 600;
+    padding: 15px;
+    cursor: pointer;
+}
+
+.list-row input[type="time"] {
+    flex: none;
+    border: none;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9412rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding: 7px 10px;
+    border-radius: 10px;
+    min-width: 4.4em;
+    text-align: center;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.list-row input[type="time"]::-webkit-date-and-time-value {
+    text-align: center;
+    min-height: 1.3em;
+}
+
+.list-row[data-on="1"] input[type="time"] {
+    background: var(--accent);
+    color: #fff;
+}
+
+.settings-hint {
+    margin: -4px 6px 12px;
+    font-size: 0.7647rem;
+    line-height: 1.45;
+    color: var(--text-dim);
+}
+
+.settings-hint:empty { display: none; }

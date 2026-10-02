@@ -1,0 +1,19 @@
+{
+  "name": "ams-tracking",
+  "version": "1.44.0",
+  "description": "Easy, visual habit tracker PWA — daily check-offs, start/stop timers (intermittent fasting), and a daily reminder at the hour you choose.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 7794",
+    "test": "npm run test:worker && npm run test:ui",
+    "test:worker": "node --test reminder-worker/test/*.test.js",
+    "test:ui": "playwright test"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "http_ece": "^1.2.1",
+    "web-push": "^3.6.7"
+  }
+}

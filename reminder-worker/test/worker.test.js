@@ -11,25 +11,32 @@ import worker, { encryptPayload, vapidAuthorization, dueVerdict, localClock, run
 
 const vapid = webpush.generateVAPIDKeys();
 
+// Counts every operation by the free plan's four daily allowances.
 function fakeKV() {
   const m = new Map();
+  const ops = { read: 0, write: 0, delete: 0, list: 0 };
   return {
-    _m: m,
-    async get(k, type) { const e = m.get(k); if (!e) return null; return type === 'json' ? JSON.parse(e.value) : e.value; },
+    _m: m, ops,
+    async get(k, type) { ops.read++; const e = m.get(k); if (!e) return null; return type === 'json' ? JSON.parse(e.value) : e.value; },
     async getWithMetadata(k, type) {
+      ops.read++;
       const e = m.get(k);
       if (!e) return { value: null, metadata: null };
       return { value: type === 'json' ? JSON.parse(e.value) : e.value, metadata: e.metadata };
     },
-    async put(k, v, o) { m.set(k, { value: v, metadata: (o && o.metadata) || null }); },
-    async delete(k) { m.delete(k); },
+    async put(k, v, o) { ops.write++; m.set(k, { value: v, metadata: (o && o.metadata) || null }); },
+    async delete(k) { ops.delete++; m.delete(k); },
     async list(o) {
+      ops.list++;
       const prefix = (o && o.prefix) || '';
       const keys = [...m.entries()].filter(([k]) => k.startsWith(prefix)).map(([k, e]) => ({ name: k, metadata: e.metadata }));
       return { keys: o && o.limit ? keys.slice(0, o.limit) : keys, list_complete: true };
     },
   };
 }
+
+// what the worker has stored for one phone
+const rec = (kv, id) => (JSON.parse(kv._m.get('reminders')?.value || '{}'))[id];
 
 const env = (kv) => ({ REMINDERS: kv || fakeKV(), VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey, VAPID_SUBJECT: 'mailto:test@example.com' });
 
@@ -152,7 +159,7 @@ test('runDue: sends once at the hour, decryptable by the phone, then stays quiet
   // 20:01 the same day: not again
   r = await runDue(e, new Date('2026-10-01T18:01:00Z'), fetchFn);
   assert.deepEqual([r.sent, sent.length], [0, 1]);
-  assert.equal(kv._m.get('sub:abcdefgh12').metadata.lastSent, '2026-10-01');
+  assert.equal(rec(kv, 'abcdefgh12').lastSent, '2026-10-01');
   // next day 20:00: again
   r = await runDue(e, new Date('2026-10-02T18:00:00Z'), fetchFn);
   assert.deepEqual([r.sent, sent.length], [1, 2]);
@@ -189,23 +196,29 @@ test('runDue: a phone that reported "done today" is left in peace, and only toda
 test('runDue: a gone subscription (410) is dropped; a 5xx is retried next minute', async () => {
   const kv = fakeKV();
   const e = env(kv);
-  await storeViaHttp(e, 'gone0000001', makePhone().subscription);
+  const gone = makePhone();
+  await storeViaHttp(e, 'gone0000001', gone.subscription);
   await storeViaHttp(e, 'flaky000001', makePhone().subscription);
   let fail = true;
   const fetchFn = async (url) => {
-    if (url === JSON.parse(kv._m.get('sub:gone0000001')?.value || '{}').subscription?.endpoint) return new Response(null, { status: 410 });
+    if (url === gone.subscription.endpoint) return new Response(null, { status: 410 });
     return new Response(null, { status: fail ? 503 : 201 });
   };
   let r = await runDue(e, new Date('2026-10-01T18:00:00Z'), fetchFn);
   assert.deepEqual([r.dropped, r.failed, r.sent], [1, 1, 0]);
   assert.deepEqual([...r.statuses].sort(), [410, 503]);
   assert.deepEqual(r.errors, []);
-  assert.equal(kv._m.has('sub:gone0000001'), false);
-  assert.equal(kv._m.get('sub:flaky000001').metadata.lastSent, null);
+  assert.equal(rec(kv, 'gone0000001'), undefined);
+  assert.equal(rec(kv, 'flaky000001').lastSent, null);
+  // the same failure all hour is written once, not once a minute
+  const writes = kv.ops.write;
+  r = await runDue(e, new Date('2026-10-01T18:00:40Z'), fetchFn);
+  assert.equal(r.failed, 1);
+  assert.equal(kv.ops.write, writes);
   fail = false;
   r = await runDue(e, new Date('2026-10-01T18:01:00Z'), fetchFn);
   assert.deepEqual([r.dropped, r.failed, r.sent], [0, 0, 1]);
-  assert.equal(kv._m.get('sub:flaky000001').metadata.lastSent, '2026-10-01');
+  assert.equal(rec(kv, 'flaky000001').lastSent, '2026-10-01');
 });
 
 test('HTTP: validation, CORS, delete, health', async () => {
@@ -216,7 +229,7 @@ test('HTTP: validation, CORS, delete, health', async () => {
 
   res = await worker.fetch(new Request('https://w.test/health'), e);
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { ok: true, version: '1.0', vapid: true, subject: true });
+  assert.deepEqual(await res.json(), { ok: true, version: '1.1', vapid: true, subject: true });
   // a private key that does not belong to the public key is reported, not hidden
   const other = webpush.generateVAPIDKeys();
   res = await worker.fetch(new Request('https://w.test/health'), { ...e, VAPID_PRIVATE_KEY: other.privateKey });
@@ -232,15 +245,18 @@ test('HTTP: validation, CORS, delete, health', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('Access-Control-Allow-Origin'), 'https://marsch124.github.io');   // never reflected for strangers
   assert.deepEqual(await res.json(), { ok: true, time: '20:00', tz: 'Europe/Stockholm' });
-  const stored = kv._m.get('sub:abcdefgh12');
-  assert.deepEqual(stored.metadata, { time: '20:00', tz: 'Europe/Stockholm', lastSent: null, doneDate: null });
-  assert.equal(JSON.parse(stored.value).subscription.endpoint, phone.subscription.endpoint);
+  const stored = rec(kv, 'abcdefgh12');
+  assert.deepEqual([stored.time, stored.tz, stored.lastSent, stored.doneDate], ['20:00', 'Europe/Stockholm', null, null]);
+  assert.equal(stored.subscription.endpoint, phone.subscription.endpoint);
 
   // an update keeps lastSent/doneDate but takes the new time
-  stored.metadata.lastSent = '2026-10-01';
+  const all = JSON.parse(kv._m.get('reminders').value);
+  all.abcdefgh12.lastSent = '2026-10-01';
+  await kv.put('reminders', JSON.stringify(all));
   res = await storeViaHttp(e, 'abcdefgh12', phone.subscription, '19:30');
   assert.equal(res.status, 200);
-  assert.deepEqual(kv._m.get('sub:abcdefgh12').metadata, { time: '19:30', tz: 'Europe/Stockholm', lastSent: '2026-10-01', doneDate: null });
+  const updated = rec(kv, 'abcdefgh12');
+  assert.deepEqual([updated.time, updated.tz, updated.lastSent, updated.doneDate], ['19:30', 'Europe/Stockholm', '2026-10-01', null]);
 
   assert.equal((await storeViaHttp(e, 'BAD ID', phone.subscription)).status, 400);
   assert.equal((await storeViaHttp(e, 'abcdefgh12', phone.subscription, '24:00')).status, 400);
@@ -258,5 +274,57 @@ test('HTTP: validation, CORS, delete, health', async () => {
 
   res = await worker.fetch(new Request('https://w.test/reminder/abcdefgh12', { method: 'DELETE' }), e);
   assert.equal(res.status, 200);
+  assert.equal(rec(kv, 'abcdefgh12'), undefined);
+});
+
+test('a whole day of minute ticks stays far inside the free plan (12 Oct 2026: v1.0 listed every minute)', async () => {
+  const kv = fakeKV();
+  const e = env(kv);
+  await storeViaHttp(e, 'abcdefgh12', makePhone().subscription);
+  await storeViaHttp(e, 'zyxwvuts98', makePhone().subscription, '07:15');
+  const before = { ...kv.ops };
+  const fetchFn = async () => new Response(null, { status: 201 });
+  let sent = 0;
+  const start = Date.parse('2026-10-11T22:00:00Z');                    // 00:00 Stockholm
+  for (let i = 0; i < 1440; i++) sent += (await runDue(e, new Date(start + i * 60_000), fetchFn)).sent;
+  assert.equal(sent, 2);                                               // both phones, once each
+  const used = Object.fromEntries(Object.keys(before).map(k => [k, kv.ops[k] - before[k]]));
+  assert.equal(used.list, 0);                                          // free: 1,000 a day
+  assert.equal(used.read, 1440);                                       // free: 100,000 a day
+  assert.equal(used.write, 2);                                         // free: 1,000 a day
+  assert.equal(used.delete, 0);
+});
+
+test('v1.0 records (one key per phone) move into the single key once, with their state', async () => {
+  const kv = fakeKV();
+  const e = env(kv);
+  const phone = makePhone();
+  const old = { subscription: phone.subscription, time: '20:00', tz: 'Europe/Stockholm', updatedAt: '2026-10-02T12:40:00.000Z' };
+  await kv.put('sub:abcdefgh12', JSON.stringify(old), { metadata: { time: '20:00', tz: 'Europe/Stockholm', lastSent: '2026-10-11', doneDate: '2026-10-12', lastStatus: 201 } });
+  const sent = [];
+  const fetchFn = async (url, init) => { sent.push(init); return new Response(null, { status: 201 }); };
+
+  let r = await runDue(e, new Date('2026-10-12T09:40:00Z'), fetchFn);  // 11:40, nothing due
+  assert.equal(r.checked, 1);
+  assert.equal(kv.ops.list, 1);
+  assert.deepEqual(rec(kv, 'abcdefgh12'), { ...old, lastSent: '2026-10-11', doneDate: '2026-10-12', lastStatus: 201 });
+  // "done today" survived the move: 20:00 stays quiet; the next day it sends again
+  r = await runDue(e, new Date('2026-10-12T18:00:00Z'), fetchFn);
+  assert.deepEqual([r.quiet, r.sent], [1, 0]);
+  r = await runDue(e, new Date('2026-10-13T18:00:00Z'), fetchFn);
+  assert.equal(r.sent, 1);
+  assert.equal(JSON.parse(phone.decrypt(sent[0].body)).title, 'AMS Tracking');
+  assert.equal(kv.ops.list, 1);                                        // never again
+
+  // a store with nobody in it is still a store: no listing every minute
+  const empty = fakeKV();
+  await runDue(env(empty), new Date('2026-10-12T09:40:00Z'), fetchFn);
+  await runDue(env(empty), new Date('2026-10-12T09:41:00Z'), fetchFn);
+  assert.equal(empty.ops.list, 1);
+
+  // turning the reminder off also removes the old key
+  const res = await worker.fetch(new Request('https://w.test/reminder/abcdefgh12', { method: 'DELETE' }), e);
+  assert.equal(res.status, 200);
+  assert.equal(rec(kv, 'abcdefgh12'), undefined);
   assert.equal(kv._m.has('sub:abcdefgh12'), false);
 });

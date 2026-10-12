@@ -17,19 +17,27 @@
  * CRON (every minute): send the reminder to every phone whose local clock has
  *   just passed its chosen time today (within a 60-minute window), once per day.
  *
- * Storage: Workers KV, key "sub:<id>", value = the JSON above, metadata =
- * { time, tz, lastSent, doneDate } so the minute-tick needs ONE list call and
- * only reads a value when something is actually due.
+ * Storage: Workers KV, ONE key "reminders" = { "<id>": { subscription, time,
+ * tz, updatedAt, lastSent, doneDate, lastStatus } }. The minute tick READS that
+ * one key (free plan: 100,000 reads a day; the tick uses 1,440) and writes only
+ * when something was actually due.
+ * 🪤 v1.0 kept one key per phone and LISTED them every minute — 1,440 lists a
+ * day against a free allowance of 1,000. Cloudflare still let them through but
+ * mailed "KV daily operation limit" warnings several times a day (50 % at
+ * 10:25 Swedish time) and says over-limit calls will fail — which would have
+ * silenced the 20:00 reminder. Found 12 Oct 2026. Never put a list() — or a
+ * write — on the per-minute path.
  *
  * Web Push itself (RFC 8291 aes128gcm + RFC 8292 VAPID) is implemented below
  * with WebCrypto; reminder-worker/test proves it against the reference
  * implementation (http_ece / web-push) on every run of `npm test`.
  */
 
-export const WORKER_VERSION = '1.0';
+export const WORKER_VERSION = '1.1';
 const WINDOW_MINUTES = 60;   // how long after the chosen time a missed tick may still send
 const TTL_SECONDS = 3600;    // Apple keeps an undelivered push this long (phone offline)
 const MAX_SUBSCRIPTIONS = 50;
+const STORE_KEY = 'reminders';
 const ID_RE = /^[a-z0-9]{8,40}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const ORIGIN_RE = /^(https:\/\/marsch124\.github\.io|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
@@ -195,30 +203,64 @@ function validTz(tz) {
     try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); return true; } catch (e) { return false; }
 }
 
+/* ---------- storage: every phone in one key ---------- */
+
+async function loadAll(env) {
+    const all = await env.REMINDERS.get(STORE_KEY, 'json');
+    return all || migrateFromV10(env);
+}
+
+/* v1.0 kept one key per phone ("sub:<id>", time/tz/lastSent/doneDate in its
+   metadata). The first time "reminders" is missing, fold those in — ONE list,
+   once; the result is written even when empty, so it never lists again. The
+   old keys stay put (a second, stale-read migration then rebuilds the same
+   thing); turning a reminder off removes its old key too. */
+async function migrateFromV10(env) {
+    const all = {};
+    const list = await env.REMINDERS.list({ prefix: 'sub:' });
+    for (const key of list.keys) {
+        const value = await env.REMINDERS.get(key.name, 'json');
+        if (!value || !value.subscription) continue;
+        const meta = key.metadata || {};
+        all[key.name.slice(4)] = {
+            subscription: value.subscription,
+            time: meta.time || value.time,
+            tz: meta.tz || value.tz,
+            updatedAt: value.updatedAt || null,
+            lastSent: meta.lastSent || null,
+            doneDate: meta.doneDate || null,
+            ...(meta.lastStatus !== undefined ? { lastStatus: meta.lastStatus } : {})
+        };
+    }
+    await saveAll(env, all);
+    return all;
+}
+
+async function saveAll(env, all) {
+    await env.REMINDERS.put(STORE_KEY, JSON.stringify(all));
+}
+
 /* ---------- the minute tick ---------- */
 
 export async function runDue(env, now, fetchFn) {
-    const list = await env.REMINDERS.list({ prefix: 'sub:' });
+    const all = await loadAll(env);
     const report = { checked: 0, sent: 0, quiet: 0, dropped: 0, failed: 0, statuses: [], errors: [] };
-    for (const key of list.keys) {
+    let changed = false;
+    for (const [id, rec] of Object.entries(all)) {
         report.checked++;
-        const meta = key.metadata || {};
-        if (!validTz(meta.tz)) continue;
-        const local = localClock(now, meta.tz);
-        const verdict = dueVerdict(meta, local);
+        if (!rec || !rec.subscription || !validTz(rec.tz)) continue;
+        const local = localClock(now, rec.tz);
+        const verdict = dueVerdict(rec, local);
         if (verdict === 'no') continue;
-
-        const value = await env.REMINDERS.get(key.name, 'json');
-        if (!value || !value.subscription) continue;
-        const newMeta = { ...meta };
 
         if (verdict === 'skip-done') {
             report.quiet++;
-            newMeta.lastSent = local.date;
+            rec.lastSent = local.date;
+            changed = true;
         } else {
             let status = 0;
             try {
-                status = await sendPush(value.subscription, JSON.stringify({
+                status = await sendPush(rec.subscription, JSON.stringify({
                     title: 'AMS Tracking',
                     body: 'Time to fill in your tracked items.'
                 }), env, fetchFn);
@@ -228,20 +270,23 @@ export async function runDue(env, now, fetchFn) {
             }
             report.statuses.push(status);
             if (status === 404 || status === 410) {           // the phone unsubscribed
-                await env.REMINDERS.delete(key.name);
+                delete all[id];
                 report.dropped++;
+                changed = true;
                 continue;
             }
-            newMeta.lastStatus = status;
+            if (rec.lastStatus !== status) changed = true;     // a failure repeated all hour is written once
+            rec.lastStatus = status;
             if (status >= 200 && status < 500) {
-                newMeta.lastSent = local.date;                 // delivered (or our fault: do not retry all hour)
+                rec.lastSent = local.date;                     // delivered (or our fault: do not retry all hour)
                 report.sent++;
+                changed = true;
             } else {
                 report.failed++;                               // network / 5xx: try again next minute
             }
         }
-        await env.REMINDERS.put(key.name, JSON.stringify(value), { metadata: newMeta });
     }
+    if (changed) await saveAll(env, all);
     return report;
 }
 
@@ -282,27 +327,19 @@ async function upsert(id, request, env, h) {
     if (!TIME_RE.test(body.time || '')) return json({ error: 'bad time' }, 400, h);
     if (typeof body.tz !== 'string' || !validTz(body.tz)) return json({ error: 'bad tz' }, 400, h);
 
-    const key = 'sub:' + id;
-    const existing = await env.REMINDERS.getWithMetadata(key, 'json');
-    if (!existing.value) {
-        const all = await env.REMINDERS.list({ prefix: 'sub:', limit: MAX_SUBSCRIPTIONS + 1 });
-        if (all.keys.length >= MAX_SUBSCRIPTIONS) return json({ error: 'full' }, 429, h);
-    }
-    const oldMeta = existing.metadata || {};
-    const meta = {
-        time: body.time,
-        tz: body.tz,
-        lastSent: oldMeta.lastSent || null,
-        doneDate: oldMeta.doneDate || null
-    };
-    const value = {
+    const all = await loadAll(env);
+    const old = all[id];
+    if (!old && Object.keys(all).length >= MAX_SUBSCRIPTIONS) return json({ error: 'full' }, 429, h);
+    all[id] = {
         subscription: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
         time: body.time,
         tz: body.tz,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        lastSent: (old && old.lastSent) || null,
+        doneDate: (old && old.doneDate) || null
     };
-    await env.REMINDERS.put(key, JSON.stringify(value), { metadata: meta });
-    return json({ ok: true, time: meta.time, tz: meta.tz }, 200, h);
+    await saveAll(env, all);
+    return json({ ok: true, time: body.time, tz: body.tz }, 200, h);
 }
 
 async function setStatus(id, request, env, h) {
@@ -311,14 +348,13 @@ async function setStatus(id, request, env, h) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || typeof body.done !== 'boolean') {
         return json({ error: 'bad status' }, 400, h);
     }
-    const key = 'sub:' + id;
-    const existing = await env.REMINDERS.getWithMetadata(key, 'json');
-    if (!existing.value) return json({ error: 'unknown' }, 404, h);
-    const meta = { ...(existing.metadata || {}) };
-    if (body.done) meta.doneDate = body.date;
-    else if (meta.doneDate === body.date) meta.doneDate = null;
-    await env.REMINDERS.put(key, JSON.stringify(existing.value), { metadata: meta });
-    return json({ ok: true, doneDate: meta.doneDate || null }, 200, h);
+    const all = await loadAll(env);
+    const rec = all[id];
+    if (!rec) return json({ error: 'unknown' }, 404, h);
+    if (body.done) rec.doneDate = body.date;
+    else if (rec.doneDate === body.date) rec.doneDate = null;
+    await saveAll(env, all);
+    return json({ ok: true, doneDate: rec.doneDate || null }, 200, h);
 }
 
 export default {
@@ -338,7 +374,9 @@ export default {
         if (request.method === 'PUT' && !m[2]) return upsert(id, request, env, h);
         if (request.method === 'PUT' && m[2]) return setStatus(id, request, env, h);
         if (request.method === 'DELETE' && !m[2]) {
-            await env.REMINDERS.delete('sub:' + id);
+            const all = await loadAll(env);
+            if (all[id]) { delete all[id]; await saveAll(env, all); }
+            await env.REMINDERS.delete('sub:' + id);            // v1.0's key, if this phone had one
             return json({ ok: true }, 200, h);
         }
         return json({ error: 'method not allowed' }, 405, h);

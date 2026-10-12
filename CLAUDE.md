@@ -230,14 +230,22 @@ turns the reminder off and says so in the row.
 `https://ams-tracking-reminder.marsch124.workers.dev` (account
 `ea22769ff2b65a1c15e3b30bdd66c884`, workers.dev subdomain `marsch124`, KV
 namespace `fc445a5b64e94c7a9611f2389a850583`). `curl <url>/health` →
-`{"ok":true,"version":"1.0","vapid":true,"subject":true}` — `vapid:false`
+`{"ok":true,"version":"1.1","vapid":true,"subject":true}` — `vapid:false`
 means the private secret does not match the public key (re-put it).
 The UI tests inject their own URL via `window.AMS_REMINDER_API`.
 
 **Watching it live**: `npx wrangler tail --format json` (from
 `reminder-worker/`) prints one `tick {checked,sent,quiet,dropped,failed,
-statuses,errors}` line per minute while something is stored; the stored
-records are `npx wrangler kv key list --REMOTE --namespace-id <id>` —
+statuses,errors}` line per minute while something is stored. Since worker
+1.1 (12 Oct 2026) every phone lives in ONE KV key, `reminders` =
+`{ "<deviceId>": { subscription, time, tz, updatedAt, lastSent, doneDate,
+lastStatus } }`; v1.0's per-phone keys (`sub:<id>`, state in metadata) were
+folded in automatically on the first tick and stay behind as harmless
+leftovers (DELETE removes a phone's old key too). 🪤 `wrangler kv key list
+--remote` answered "Authentication error [10000]" on 12 Oct 2026 although
+namespace list and deploy worked — use Cloudflare's GraphQL analytics
+(`kvOperationsAdaptiveGroups`, by `actionType`/`datetimeMinute`, wrangler's
+OAuth token from `default.toml`) to see what the worker really does.
 🪤 without `--remote` wrangler 4 shows its LOCAL simulation, which is
 always empty (that cost two false readings on 2 Oct 2026). A send is
 retried every minute inside the 60-minute window until the push service
@@ -277,13 +285,21 @@ two minutes ahead → the notification must arrive with the app closed.
 test:worker`): the aes128gcm encryption is decrypted by the reference
 `http_ece`, the VAPID JWT is verified with node:crypto, due-time edges are
 pinned (sends from the minute to 59 minutes after, once a day, never when
-"done today"), and the HTTP surface runs against an in-memory KV. Local
+"done today"), the HTTP surface runs against an in-memory KV that counts
+every operation (a simulated day must cost 0 lists, 1,440 reads, 1 write
+per send), and the v1.0 → 1.1 storage move is pinned. Local
 run of the worker itself: `npx wrangler dev --test-scheduled` and
 `curl "http://localhost:8787/__scheduled"`.
 
 **Traps**: a push that shows no notification makes Safari revoke the
 permission after a few — the `push` handler ALWAYS shows one. Cloudflare's
-free KV allows 1,000 writes/day — the tick writes only when something is
-due, so that is fine for one household, but never make it write per
-minute. Reminders stored: max 50 (`MAX_SUBSCRIPTIONS`), ids
+free KV allows per day 100,000 reads but only 1,000 writes, 1,000 deletes
+and 1,000 LISTS. 🚨 Worker 1.0 listed the keys every minute = 1,440 lists a
+day: Cloudflare mailed Martin "KV daily operation limit 50 % / … reached"
+several times a day from 3 Oct and warned over-limit calls would fail (it
+had not refused one yet — the 20:00 reminder went out every evening).
+Worker 1.1 reads one key per tick (1,440 reads = 1.4 %) and writes only
+when something was due; the test "a whole day of minute ticks stays far
+inside the free plan" counts every operation of 1,440 ticks — keep it
+green. Never put a list() or a write on the per-minute path. Reminders stored: max 50 (`MAX_SUBSCRIPTIONS`), ids
 `[a-z0-9]{8,40}`.

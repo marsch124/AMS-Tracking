@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.45';
+const APP_VERSION = '1.46';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
@@ -2691,37 +2691,17 @@ function toLocalInput(ms) {
 const FAST_GOAL_PRESETS = [13, 15, 16, 18];
 
 function openFastSheet(habit, session, fromToday) {
-    fastEdit = { habitId: habit.id, session, goal: session.g || null, fromToday: !!fromToday };
+    fastEdit = { habitId: habit.id, session, fromToday: !!fromToday };
     $('#fast-sheet-title').textContent = session.e ? 'Edit fast' : 'Fast in progress';
     $('#fast-start').value = toLocalInput(session.s);
     $('#fast-end-wrap').hidden = !session.e;
     if (session.e) $('#fast-end').value = toLocalInput(session.e);
-    $('#fast-goal-wrap').hidden = !!session.e;
-    if (!session.e) renderFastGoalChips(habit);
     updateFastNote();
     $('#sheet-fast').hidden = false;
 }
 
-function renderFastGoalChips(habit) {
-    const row = $('#fast-goal');
-    row.innerHTML = '';
-    const def = document.createElement('button');
-    def.type = 'button';
-    def.className = 'chip goal-chip' + (fastEdit.goal === null ? ' sel' : '');
-    const defG = goalHoursOn(habit, goalDayFor(fastEdit.session));
-    def.textContent = defG ? `${defG}h` : '\u2014';
-    def.title = 'Habit default';
-    def.addEventListener('click', () => { fastEdit.goal = null; renderFastGoalChips(habit); });
-    row.appendChild(def);
-    FAST_GOAL_PRESETS.filter(h => h !== defG).forEach(h => {
-        const c = document.createElement('button');
-        c.type = 'button';
-        c.className = 'chip goal-chip' + (fastEdit.goal === h ? ' sel' : '');
-        c.textContent = `${h}h`;
-        c.addEventListener('click', () => { fastEdit.goal = h; renderFastGoalChips(habit); });
-        row.appendChild(c);
-    });
-}
+/* v1.46: no goal chips here any more — the goal is set once, in Edit habit
+   (main + per-weekday). A goal already on a running fast (session.g) is kept. */
 
 function updateFastNote() {
     if (!fastEdit) return;
@@ -2759,10 +2739,6 @@ $('#btn-fast-save').addEventListener('click', () => {
         session.e = end;
     }
     session.s = start;
-    if (!session.e) {
-        if (fastEdit.goal) session.g = fastEdit.goal;
-        else delete session.g;
-    }
     habit.sessions.sort((a, b) => a.s - b.s);
     save();
     $('#sheet-fast').hidden = true;

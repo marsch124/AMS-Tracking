@@ -56,7 +56,7 @@ reminder" below before touching anything about notifications.
 - v1.5 "Delight & data" — SHIPPED: milestone celebrations, fast-length
   chart with goal line, share-sheet backup with staleness note.
 - v1.6 "Life happens" — SHIPPED: skip days (excused, streak-safe),
-  per-fast goal (long-press start / edit running fast), day notes.
+  per-fast goal (long-press start only; v1.46 removed the goal chips from the running-fast edit sheet — the goal lives in Edit habit), day notes.
 - v1.7 "Analysis layer" — SHIPPED: stats overview screen, CSV export
   (semicolon-separated, decimal commas for DACH Excel).
 - v1.8 "Polish & protection" — SHIPPED: tap-a-pixel inspection with

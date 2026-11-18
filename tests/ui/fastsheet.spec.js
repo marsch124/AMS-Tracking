@@ -28,3 +28,10 @@ test('a running fast is edited without goal chips', async ({ page }) => {
 
   expect(errors).toEqual([]);
 });
+
+// v1.47: no "Tonight's goal" sheet any more — holding the fasting button picks nothing.
+test('the fasting button has no goal picker', async ({ page }) => {
+  await openApp(page);
+  expect(await page.evaluate(() => typeof openStartGoalSheet)).toBe('undefined');
+  await expect(page.locator('#sheet-startgoal')).toHaveCount(0);
+});

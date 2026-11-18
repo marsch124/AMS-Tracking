@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.46';
+const APP_VERSION = '1.47';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
@@ -553,17 +553,17 @@ function buildCard(habit) {
         else toggleToday(habit);
     });
 
-    // long-press on an idle fasting button picks tonight's goal before starting;
-    // on a check-off button it marks yesterday done (forgot-to-log catch-up)
-    if ((habit.type === 'timer' && !active) || habit.type !== 'timer') {
+    // long-press on a check-off button marks yesterday done (forgot-to-log
+    // catch-up). v1.47: the fasting button has no long-press — its goal is set
+    // once, in Edit habit (the "Tonight's goal" sheet is gone).
+    if (habit.type !== 'timer') {
         let lpTimer = null;
         btn.addEventListener('pointerdown', () => {
             lpTimer = setTimeout(() => {
                 lpTimer = null;
                 btn.dataset.lp = '1';
-                if (habit.type === 'timer') openStartGoalSheet(habit);
                 // a multi-part habit picks the parts instead of "all done"
-                else if (habitParts(habit)) openPartsSheet(habit, addDays(new Date(), -1), true);
+                if (habitParts(habit)) openPartsSheet(habit, addDays(new Date(), -1), true);
                 else markYesterday(habit);
             }, 500);
         });
@@ -1434,31 +1434,6 @@ function startFast(habit, goalH) {
         save();
         renderToday();
     });
-}
-
-let startGoalHabitId = null;
-
-function openStartGoalSheet(habit) {
-    startGoalHabitId = habit.id;
-    const row = $('#startgoal-chips');
-    row.innerHTML = '';
-    // "tonight's" default: the goal of the day this fast will end on
-    const now = new Date();
-    const defG = goalHoursOn(habit, now.getHours() >= 12 ? addDays(now, 1) : now);
-    const options = [[null, defG ? `${defG}h` : 'no goal'],
-        ...FAST_GOAL_PRESETS.filter(h => h !== defG).map(h => [h, `${h}h`])];
-    options.forEach(([g, text]) => {
-        const c = document.createElement('button');
-        c.type = 'button';
-        c.className = 'chip goal-chip' + (g === null ? ' sel' : '');
-        c.textContent = text;
-        c.addEventListener('click', () => {
-            $('#sheet-startgoal').hidden = true;
-            startFast(habit, g);
-        });
-        row.appendChild(c);
-    });
-    $('#sheet-startgoal').hidden = false;
 }
 
 /* Live tick for running timers */
@@ -2711,10 +2686,6 @@ function updateFastNote() {
         isFinite(s) && isFinite(e) && e > s ? `Duration: ${fmtDuration(e - s)} h` : '';
 }
 
-$('#btn-startgoal-cancel').addEventListener('click', () => { $('#sheet-startgoal').hidden = true; });
-$('#sheet-startgoal').addEventListener('click', (e) => {
-    if (e.target === $('#sheet-startgoal')) $('#sheet-startgoal').hidden = true;
-});
 
 $('#fast-start').addEventListener('input', updateFastNote);
 $('#fast-end').addEventListener('input', updateFastNote);
@@ -4999,7 +4970,7 @@ $('#toast-undo').addEventListener('click', () => {
 /* drag a bottom sheet down (from its top, or when scrolled to the top) to close it */
 function setupSheetDismiss() {
     [['#sheet-edit', null], ['#sheet-settings', null], ['#sheet-fast', null],
-     ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null], ['#sheet-startgoal', null],
+     ['#sheet-reorder', () => renderToday()], ['#sheet-archived', null],
      ['#sheet-skiprange', null], ['#sheet-hours', null], ['#sheet-note', null], ['#sheet-histimport', null],
      ['#sheet-parts', null]]
         .forEach(([sel, after]) => {

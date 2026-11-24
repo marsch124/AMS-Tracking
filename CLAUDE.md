@@ -156,6 +156,9 @@ reminder" below before touching anything about notifications.
   app keeps the icon it was added with; getting the new one means remove
   + re-add, which can wipe its localStorage — backup first, import after,
   reminder on again (written into How it works → App icon).
+- v1.50 "A real iPhone app, through TestFlight" — BUILT 24 Nov 2026 on
+  Martin's request ("take it all the way from here to test flight,
+  including GitHub"). See "iPhone app (TestFlight)" below.
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
   current iOS (Shortcuts can't open web clips; URLs open Safari's
   separate storage). Re-test the Shortcuts "Open App" picker after each
@@ -324,3 +327,79 @@ when something was due; the test "a whole day of minute ticks stays far
 inside the free plan" counts every operation of 1,440 ticks — keep it
 green. Never put a list() or a write on the per-minute path. Reminders stored: max 50 (`MAX_SUBSCRIPTIONS`), ids
 `[a-z0-9]{8,40}`.
+
+## iPhone app (TestFlight, v1.50) — how it works, how to release
+
+**What it is.** The same web files inside a native shell: Capacitor 8, Swift
+Package Manager (no CocoaPods), Xcode project in `ios/App/App.xcodeproj`,
+bundle id `io.github.marsch124.amstracking`, display name "Tracking",
+iPhone only, portrait only. The web app keeps NO build step:
+`scripts/native-www.mjs` only copies `index.html`, `css/`, `js/`, `icons/`,
+`manifest.json`, `version.json` into `www/` (git-ignored) and puts
+`js/capacitor.js` (from `@capacitor/core`) in front of the app's scripts;
+`npm run native:sync` = that + `cap sync ios`. `ios/App/App/public` and the
+generated `capacitor.config.json` there are git-ignored too.
+
+**What differs inside the app** (`js/app.js`, block "v1.50: inside the
+iPhone app"; everything hangs on `NATIVE`, which is false in any browser):
+- no service worker, no update check (`#btn-update` hidden, `checkForUpdate`
+  returns) — a new version is a new TestFlight build;
+- notification permission via `notifPermission()` / `askNotifPermission()`
+  (plugin in the app, `Notification` on the web) — use these two, never
+  `Notification.permission` directly;
+- reminder = local notifications, ids 4400–4429, one per day for 30 days,
+  re-planned by `planNativeReminders()` on every `save()`, every start and
+  every return to the foreground. NEVER talks to `reminder-worker/` — and
+  must not: a backup imported from the web app carries that app's device id,
+  and a DELETE from here would switch the web app's reminder off;
+- badge through `@capawesome/capacitor-badge` (`setBadge()`);
+- sharing: `navigator.canShare` / `navigator.share` are REPLACED in the app
+  by functions that write the file to the cache folder and open the native
+  sheet (`@capacitor/filesystem` + `@capacitor/share`) — call sites unchanged;
+- safety copy: every save also writes `amsTracking.v1.json` to the app's
+  Library folder; a start with empty localStorage restores from it
+  (`restoreFromSafetyCopy`). `safetyCopyArmed` keeps a first start from
+  overwriting the copy before it was looked at — do not remove that guard.
+
+**Tests.** `tests/ui/native-*.spec.js` run the same pages with a stand-in
+bridge (`fakeNative()` in `tests/ui/_app.js`, records every plugin call in
+`window.__native.calls`). They prove the app's side; they cannot prove the
+plugins. For that the `ios` job in `.github/workflows/ci.yml` compiles the
+project on a Mac runner (no signing), starts it in a simulator, keeps a
+screenshot + the app's console as the artifact `ios-simulator-run`, and
+fails unless the app printed its own `AMS native start …` line.
+
+**Releasing.** Push to `main` → `tests` → `ios` → `testflight` (also on the
+1st of each month by schedule, because a TestFlight build expires after 90
+days; GitHub pauses schedules in a repository with no activity for 60 days).
+Version = `APP_VERSION`, build number = `<run number>.<attempt>`. The upload
+is skipped with a notice — not failed — while the four repository secrets
+are missing:
+`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY` (the whole text of the .p8
+file), `APPLE_TEAM_ID`. Signing is Apple's cloud signing: the archive is
+built unsigned and `xcodebuild -exportArchive -allowProvisioningUpdates`
+signs and uploads it with the API key (`ios/ExportOptions.plist`); no
+certificate or profile is stored anywhere. The key needs the **Admin** role
+(cloud-managed distribution certificates require it).
+🚨 As of 24 Nov 2026 the `testflight` job has NEVER RUN — the secrets were
+not set yet. Everything up to and including the simulator run is verified;
+signing and upload are written from documentation and must be watched on
+their first real run.
+
+**What only Martin can do** (Apple gives no API for these): be in the Apple
+Developer Program (99 USD a year); register the bundle id under
+Certificates, Identifiers & Profiles; create the app record in App Store
+Connect (New App → iOS → that bundle id); create the API key (Users and
+Access → Integrations → App Store Connect API, role Admin) and put the four
+values into GitHub → Settings → Secrets and variables → Actions; add
+himself to an internal TestFlight group and install the TestFlight app.
+Never paste the .p8 key into a chat.
+
+**Changing the native side.** Plugins are added with `npm i` + `npm run
+native:sync` (rewrites `ios/App/CapApp-SPM/Package.swift`; commit it). The
+project was generated on Linux with `npx cap add ios --packagemanager SPM`
+— no Mac was involved, so the only place it has ever been compiled is the
+CI job. The app icon is `ios/App/App/Assets.xcassets/AppIcon.appiconset/
+AppIcon-512@2x.png` (1024 px, rendered from `icons/icon.svg`, no alpha —
+Apple rejects icons with transparency).
+

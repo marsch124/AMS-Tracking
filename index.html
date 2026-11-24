@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=70">
+    <link rel="stylesheet" href="css/style.css?v=71">
 </head>
 <body>
 
@@ -172,7 +172,7 @@
             <div class="sheet-handle"></div>
             <h2>Settings</h2>
             <button id="btn-week-report" class="list-btn"><span data-hi="export"></span> Send last week's report</button>
-            <button id="btn-export" class="list-btn"><span data-hi="export"></span> Export backup (JSON)</button>
+            <button id="btn-export" class="list-btn" data-testid="export-backup"><span data-hi="export"></span> Export backup (JSON)</button>
             <button id="btn-import" class="list-btn"><span data-hi="import"></span> Import backup</button>
             <button id="btn-csv" class="list-btn"><span data-hi="chart"></span> Export CSV for Excel</button>
             <button id="btn-histimport" class="list-btn"><span data-hi="timer"></span> Import fasting history</button>
@@ -182,7 +182,7 @@
                 <input id="reminder-time" type="time" value="20:00" aria-label="Reminder time" data-testid="reminder-time">
             </div>
             <p id="reminder-note" class="settings-hint" data-testid="reminder-note"></p>
-            <button id="btn-update" class="list-btn"><span data-hi="sunrise"></span> Check for app update</button>
+            <button id="btn-update" class="list-btn" data-testid="check-update"><span data-hi="sunrise"></span> Check for app update</button>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button id="btn-reorder" class="list-btn"><span data-hi="reorder"></span> Reorder habits</button>
             <button id="btn-layout" class="list-btn"><span data-hi="grid"></span> <span id="layout-label">Layout: list</span></button>
@@ -236,6 +236,7 @@
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
                     <p><strong>Voice commands (Siri)</strong> — as of iOS 2026 releases, Shortcuts cannot open an installed web app: the “Open App” action doesn't list it, and “Open URLs” lands in Safari, which keeps a completely separate copy of your data — so a voice or Lock Screen launcher isn't possible yet. The practical setup is the app icon in the Dock; the icon badge shows the day's status before you even tap. Worth re-trying after each iOS update: if “Tracking” ever appears in the Shortcuts “Open App” picker, a “Hey Siri, Fasten” shortcut and a Lock Screen button will work immediately. (The <code>?fast=start/stop/toggle</code> web commands exist for platforms where links open in the installed app.)</p>
+                    <p><strong>The iPhone app (TestFlight)</strong> — since v1.50 the same app can also be installed as a real iPhone app through Apple's TestFlight, next to (or instead of) the one added from Safari. It has the same screens and reads the same backups, but it keeps <em>its own</em> data: to move, use Settings → <strong>Export backup (JSON)</strong> in the old app and Settings → <strong>Import backup</strong> in the new one, then switch the daily reminder on once in the new app. Four things work differently inside it. <strong>Reminder:</strong> the phone plans the notifications itself, for the next 30 days at your chosen time, and re-plans them whenever you open the app or tick something — no server is involved, today's reminder is dropped once everything is ticked off, and a day with nothing open gets none; if the app is not opened for 30 days the reminders stop until you open it again. <strong>Updates:</strong> a new version arrives through the TestFlight app, not through an Update button, so Settings has no “Check for app update” row there. A TestFlight build stops opening 90 days after it was made; a fresh one is uploaded automatically on the 1st of every month and with every release. <strong>Sharing:</strong> backups, CSV files and posters go to the iPhone's own share sheet. <strong>Safety copy:</strong> besides its normal storage the app writes every change to a file of its own and takes the data back from that file if the storage is ever found empty; Settings shows “Storage: inside the app, with a safety copy”. That file is deleted together with the app, so a backup now and then is still worth it.</p>
                     <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. The version you're on is written at the very bottom of Settings, and Settings → <strong>Check for app update</strong> looks for a new one immediately. (Until v1.47 a faint version number also sat at the top right of Today; it left with the rest of the header in v1.48.)</p>
                     <p><strong>Old history</strong> — switching from another fasting app? Settings → “Import fasting history” accepts pasted rows (day + hours, or start + end times, or this app's own CSV), previews what it found, and adds them as fasts — days that already have a fast are left untouched, and the import can be undone.</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it. When it has been more than 30 days, the app says so once (at most monthly) with a bar at the bottom whose “Back up” button opens the share sheet right away. It also asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
@@ -245,6 +246,19 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.50 <span class="vh-date">— 24 Nov 2026</span></h4>
+                    <p>A real iPhone app, through TestFlight.</p>
+                    <ul>
+                        <li><strong>What it is</strong> — the app can now also be built as a native iPhone app and installed through Apple's TestFlight. It is the same app with the same screens: its files are packed into a native shell instead of being loaded from the web.</li>
+                        <li><strong>Nothing changes in the app you have</strong> — the one added from Safari works exactly as before, including the daily reminder through the reminder service. This release only adds the parts the iPhone app needs, and they stay switched off everywhere else.</li>
+                        <li><strong>Separate data</strong> — the iPhone app starts empty. Move your data once with Export backup (old app) and Import backup (new app); after that the two apps do not sync with each other.</li>
+                        <li><strong>Reminder without a server</strong> — in the iPhone app the phone plans the notifications itself, for the next 30 days at the time you choose. They are re-planned whenever you open the app or tick something off; today's is dropped once everything is done. Turn the reminder on once in the new app, also after importing a backup in which it was on.</li>
+                        <li><strong>Icon badge, sharing</strong> — the count on the icon and the share sheet for backups, CSV files, the weekly report and posters use the iPhone's own functions there.</li>
+                        <li><strong>A safety copy of your data</strong> — the iPhone app writes every change to a second place, a file inside the app, and restores from it if its normal storage is ever found empty.</li>
+                        <li><strong>Updates through TestFlight</strong> — every release is uploaded to TestFlight as a new build, and a fresh build is uploaded on the 1st of each month because a TestFlight build expires after 90 days. The iPhone app therefore has no “Check for app update” row.</li>
+                        <li><strong>Four more tests</strong> — the reminder planned on the phone, the badge, the share sheet for a backup, and the safety copy with its restore are each tested against a stand-in for the iPhone's functions; on GitHub the iPhone app itself is compiled and started in a simulator on every change.</li>
+                    </ul>
+
                     <h4>v1.49 <span class="vh-date">— 24 Nov 2026</span></h4>
                     <p>Habit icons you can see.</p>
                     <ul>
@@ -936,7 +950,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=70"></script>
-    <script src="js/app.js?v=70"></script>
+    <script src="js/icons.js?v=71"></script>
+    <script src="js/app.js?v=71"></script>
 </body>
 </html>

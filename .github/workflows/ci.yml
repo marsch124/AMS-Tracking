@@ -8,6 +8,10 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  # A TestFlight build stops opening 90 days after it was uploaded. On the 1st of
+  # every month main is built and uploaded again, so there is always a fresh one.
+  schedule:
+    - cron: '23 3 1 * *'
 
 jobs:
   tests:
@@ -78,7 +82,8 @@ jobs:
 
   # The iPhone app (since v1.50): the same files inside a native shell — Capacitor,
   # project in ios/. Compiled for the simulator on every push, without signing, so a
-  # break in the native side is seen at once and costs no Apple account.
+  # break in the native side is seen at once and costs no Apple account. The app is
+  # then started in a simulator; the picture and the app's own log are kept.
   ios:
     needs: tests
     runs-on: macos-latest
@@ -93,9 +98,7 @@ jobs:
       - name: Put the app's files into the iPhone project
         run: npm run native:sync
       - name: Which Xcode
-        run: |
-          xcodebuild -version
-          xcodebuild -list -project ios/App/App.xcodeproj
+        run: xcodebuild -version
       - name: Build for the simulator (no signing)
         run: |
           set -o pipefail
@@ -103,4 +106,117 @@ jobs:
             -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO | tail -n 40
+      - name: Start it in a simulator
+        run: |
+          set -e
+          APP=$(find build/dd/Build/Products -maxdepth 2 -name 'App.app' | head -n 1)
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          devices = json.load(sys.stdin)['devices']
+          runtimes = sorted((k for k in devices if 'iOS' in k), reverse=True)
+          print(next(d['udid'] for k in runtimes for d in devices[k] if d['name'].startswith('iPhone')))")
+          echo "app: $APP   simulator: $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          mkdir -p ios-run
+          xcrun simctl install "$UDID" "$APP"
+          # Capacitor prints the web view's console to the app's standard output.
+          xcrun simctl launch --stdout="$PWD/ios-run/app.log" --stderr="$PWD/ios-run/app.err" "$UDID" io.github.marsch124.amstracking
+          sleep 25
+          xcrun simctl io "$UDID" screenshot ios-run/today.png
+          echo "---- what the app wrote to its log ----"
+          cut -c1-400 ios-run/app.log | head -n 120 || true
+          # The app says so itself once its native side has started (js/app.js, syncNativeOnLaunch).
+          grep -a -q 'AMS native start' ios-run/app.log
+      - name: Keep the picture and the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-run
+          path: ios-run
+          retention-days: 14
 
+  # Are the four Apple secrets there? Without them the upload below is skipped —
+  # not failed — so the repository works for anyone who has not set them.
+  apple-keys:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$ASC_PRIVATE_KEY" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=TestFlight upload skipped::Set the repository secrets ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY and APPLE_TEAM_ID to upload builds (see CLAUDE.md, iPhone app)."
+          fi
+
+  # The TestFlight release: main only, after the tests and the simulator build.
+  # Signed by Apple's cloud signing through the App Store Connect API key — no
+  # certificate or profile is stored anywhere. Version = APP_VERSION from
+  # js/app.js; build number = this run's number, so every upload is unique.
+  testflight:
+    needs: [tests, ios, apple-keys]
+    if: needs.apple-keys.outputs.ready == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    concurrency:
+      group: testflight
+      cancel-in-progress: false
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Put the app's files into the iPhone project
+        run: npm run native:sync
+      - name: Version and build number
+        run: |
+          VERSION=$(sed -n "s/^const APP_VERSION = '\([^']*\)';.*/\1/p" js/app.js)
+          test -n "$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "BUILD=${{ github.run_number }}.${{ github.run_attempt }}" >> "$GITHUB_ENV"
+          echo "Uploading version $VERSION, build ${{ github.run_number }}.${{ github.run_attempt }}"
+      - name: The API key, for this run only
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          sed -i '' "s/APPLE_TEAM_ID/${APPLE_TEAM_ID}/" ios/ExportOptions.plist
+      - name: Archive (unsigned — it is signed at export)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/App.xcarchive \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -n 40
+      - name: Sign and upload to TestFlight
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive -exportPath build/export \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

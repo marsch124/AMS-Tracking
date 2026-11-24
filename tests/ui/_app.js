@@ -72,3 +72,50 @@ export async function fakeServiceWorker(page, opts = {}) {
     Object.defineProperty(navigator, 'serviceWorker', { value: fake, configurable: true });
   }, opts);
 }
+
+// The iPhone app (v1.50) is these same files inside a native shell, where
+// Capacitor's bridge is present and four things go through native plugins. This
+// stand-in is that bridge: every plugin call is recorded in window.__native.calls
+// as { plugin, method, arg }, files "written" are kept in window.__native.files.
+//   opts.perm   — notification permission at start: 'prompt' | 'granted' | 'denied'
+//   opts.grant  — what the system prompt answers when the app asks (default true)
+//   opts.files  — files already on the "phone", keyed 'DIRECTORY/path'
+export async function fakeNative(page, opts = {}) {
+  await page.addInitScript((o) => {
+    const n = (window.__native = { calls: [], files: { ...(o.files || {}) }, perm: o.perm || 'prompt' });
+    const plugin = (name, methods) => new Proxy({}, {
+      get: (_, method) => async (arg) => {
+        n.calls.push({ plugin: name, method, arg: arg === undefined ? null : JSON.parse(JSON.stringify(arg)) });
+        if (methods[method]) return methods[method](arg || {});
+        return {};
+      },
+    });
+    const plugins = {
+      LocalNotifications: plugin('LocalNotifications', {
+        checkPermissions: () => ({ display: n.perm }),
+        requestPermissions: () => { n.perm = o.grant === false ? 'denied' : 'granted'; return { display: n.perm }; },
+      }),
+      Badge: plugin('Badge', {}),
+      Share: plugin('Share', {}),
+      Filesystem: plugin('Filesystem', {
+        writeFile: (a) => { n.files[a.directory + '/' + a.path] = a.data; return { uri: 'file:///phone/' + a.directory + '/' + a.path }; },
+        readFile: (a) => {
+          const key = a.directory + '/' + a.path;
+          if (!(key in n.files)) throw new Error('File does not exist');
+          return { data: n.files[key] };
+        },
+      }),
+      SystemBars: plugin('SystemBars', {}),
+    };
+    window.Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'ios',
+      registerPlugin: (name) => plugins[name],
+      Plugins: plugins,
+    };
+  }, opts);
+}
+
+export const nativeCalls = (page, plugin, method) =>
+  page.evaluate(([p, m]) => window.__native.calls.filter((c) => c.plugin === p && (!m || c.method === m)), [plugin, method]);
+

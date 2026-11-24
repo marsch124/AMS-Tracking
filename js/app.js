@@ -1,10 +1,110 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.49';
+const APP_VERSION = '1.50';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
+
+/* ================= v1.50: inside the iPhone app =================
+   The same files also run inside a native shell (Capacitor; the Xcode project
+   is in ios/), installed through TestFlight. A web view inside an app has no
+   service worker, no Web Push, no Badging API and no dependable web share — so
+   in there, and only there, those things go through native plugins. NATIVE is
+   false in every browser and in the Home Screen web app; nothing in this block
+   runs for them. */
+const CAP = window.Capacitor;
+const NATIVE = !!(CAP && typeof CAP.isNativePlatform === 'function' && CAP.isNativePlatform() &&
+    typeof CAP.registerPlugin === 'function');
+const NP = NATIVE ? {
+    notif: CAP.registerPlugin('LocalNotifications'),
+    badge: CAP.registerPlugin('Badge'),
+    files: CAP.registerPlugin('Filesystem'),
+    share: CAP.registerPlugin('Share')
+} : null;
+
+/* Notification permission, the same three words on both sides. In the app it is
+   asked of iOS through the plugin and remembered here; refreshNativePermission()
+   reads it at every start, because it can be changed in iPhone Settings. */
+let nativePerm = 'default';
+function notifPermission() {
+    if (NATIVE) return nativePerm;
+    return typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
+}
+function nativePermFrom(res) {
+    const d = res && res.display;
+    return d === 'granted' ? 'granted' : d === 'denied' ? 'denied' : 'default';
+}
+async function askNotifPermission() {
+    if (!NATIVE) return Notification.requestPermission();
+    nativePerm = nativePermFrom(await NP.notif.requestPermissions());
+    return nativePerm;
+}
+async function refreshNativePermission() {
+    try { nativePerm = nativePermFrom(await NP.notif.checkPermissions()); } catch (e) { /* stays as it was */ }
+}
+
+/* The safety copy. iOS may empty a web view's storage (it treats it as website
+   data); it never empties the app's own files. So every save also lands in one
+   file in the app's Library folder, and a start that finds the storage empty
+   takes the data back from it — see restoreFromSafetyCopy() at the bottom. */
+const SAFETY_FILE = 'amsTracking.v1.json';
+const HAD_DATA_AT_START = !NATIVE || localStorage.getItem(STORE_KEY) !== null;
+let safetyCopyArmed = HAD_DATA_AT_START;   // never overwrite the copy before it was looked at
+function writeSafetyCopy(now) {
+    if (!NATIVE || !safetyCopyArmed) return;
+    clearTimeout(RUNTIME.safetyTimer);
+    const write = () => NP.files.writeFile({
+        path: SAFETY_FILE,
+        data: localStorage.getItem(STORE_KEY) || '',
+        directory: 'LIBRARY',
+        encoding: 'utf8'
+    }).then(() => { RUNTIME.safetyCopyOk = true; })
+      .catch((e) => { RUNTIME.safetyCopyOk = false; console.error('Safety copy failed', e); });
+    if (now) write();
+    else RUNTIME.safetyTimer = setTimeout(write, 600);
+}
+
+/* Sharing: the app's share sheet is the native one. The call sites keep asking
+   navigator.canShare / navigator.share exactly as in the browser; inside the app
+   those two are these functions. A file is written to the cache folder first,
+   because the native sheet shares files by address. */
+if (NATIVE) {
+    const toBase64 = (blob) => new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result).split(',')[1] || '');
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(blob);
+    });
+    const nativeShare = async (data) => {
+        const d = data || {};
+        const opts = {};
+        if (d.files && d.files.length) {
+            opts.files = [];
+            for (const f of d.files) {
+                const out = await NP.files.writeFile({
+                    path: 'share/' + f.name,
+                    data: await toBase64(f),
+                    directory: 'CACHE',
+                    recursive: true
+                });
+                opts.files.push(out.uri);
+            }
+        }
+        if (d.text) opts.text = d.text;
+        if (d.title) opts.title = d.title;
+        if (d.url) opts.url = d.url;
+        try {
+            await NP.share.share(opts);
+        } catch (e) {
+            // closing the sheet is not an error — the callers look for AbortError
+            if (/cancel/i.test((e && e.message) || '')) throw new DOMException('Share canceled', 'AbortError');
+            throw e;
+        }
+    };
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+    Object.defineProperty(navigator, 'share', { value: nativeShare, configurable: true });
+}
 
 const PALETTE = [
     '#3b70f0', // blue
@@ -68,11 +168,24 @@ function save() {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
     updateBadge();
     mirrorSummary();
+    if (NATIVE) {
+        writeSafetyCopy(false);
+        planNativeReminders();
+    }
 }
 
 /* Icon badge: scheduled habits still open today (installed PWAs only) */
 function badgeAllowed() {
-    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    return notifPermission() === 'granted';
+}
+/* A browser needs the Badging API (and notifications to ask for); the iPhone
+   app has its badge plugin. */
+function badgeSupported() {
+    return NATIVE || ('setAppBadge' in navigator && typeof Notification !== 'undefined');
+}
+function setBadge(count) {
+    if (NATIVE) return (count > 0 ? NP.badge.set({ count }) : NP.badge.clear()).catch(() => {});
+    return (count > 0 ? navigator.setAppBadge(count) : navigator.clearAppBadge()).catch(() => {});
 }
 /* v1.45: the badge is a CHOICE, off unless switched on in Settings. Until now it
    appeared by itself the moment notifications were allowed — and the daily
@@ -81,13 +194,13 @@ function badgeWanted() {
     return state.settings.badge === true;
 }
 function updateBadge() {
-    if (!('setAppBadge' in navigator)) return;
+    if (!badgeSupported()) return;
     // iOS only grants an installed app a badge once notifications are permitted.
     // Without this the call below rejects, the catch swallows it, and the badge
     // simply never appears — which is exactly what happened until v1.29.
     if (!badgeAllowed()) return;
     if (!badgeWanted()) {
-        navigator.clearAppBadge().catch(() => {});
+        setBadge(0);
         return;
     }
     const todayKey = dateKey(new Date());
@@ -97,8 +210,7 @@ function updateBadge() {
         if (h.type === 'timer' && activeSession(h)) return false; // fast underway
         return true;
     }).length;
-    if (count > 0) navigator.setAppBadge(count).catch(() => {});
-    else navigator.clearAppBadge().catch(() => {});
+    setBadge(count);
 }
 
 function applyTheme() {
@@ -111,6 +223,11 @@ function applyTheme() {
         m.setAttribute('content',
             t === 'dark' ? '#0d1117' : t === 'light' ? '#f2f4f8' : m.dataset.orig);
     });
+    // the iPhone app has a real status bar: light text on a forced dark theme, dark on light
+    if (NATIVE && CAP.Plugins && CAP.Plugins.SystemBars) {
+        Promise.resolve(CAP.Plugins.SystemBars.setStyle({ style: t === 'dark' ? 'DARK' : t === 'light' ? 'LIGHT' : 'DEFAULT' }))
+            .catch(() => {});
+    }
 }
 
 function newId() {
@@ -415,6 +532,7 @@ function showToast(msg, actionFn, actionLabel, duration) {
 let lastUpdateCheck = 0;
 
 async function checkForUpdate(manual) {
+    if (NATIVE) return;   // the iPhone app carries its files; a new version comes through TestFlight
     const nowMs = Date.now();
     if (!manual && nowMs - lastUpdateCheck < 5 * 60000) return;
     lastUpdateCheck = nowMs;
@@ -4619,6 +4737,12 @@ $('#btn-theme').addEventListener('click', () => {
 
 async function updateStorageNote() {
     const el = $('#storage-note');
+    if (NATIVE) {
+        el.textContent = RUNTIME.safetyCopyOk
+            ? 'Storage: inside the app, with a safety copy'
+            : 'Storage: inside the app';
+        return;
+    }
     try {
         const persisted = navigator.storage && await navigator.storage.persisted();
         let size = '';
@@ -4648,7 +4772,7 @@ $('#btn-settings-close').addEventListener('click', () => { $('#sheet-settings').
 $('#sheet-settings').addEventListener('click', (e) => {
     if (e.target === $('#sheet-settings')) $('#sheet-settings').hidden = true;
 });
-$('#app-version').textContent = 'AMS Tracking v' + APP_VERSION;
+$('#app-version').textContent = 'AMS Tracking v' + APP_VERSION + (NATIVE ? ' · iPhone app' : '');
 
 /* v1.24: the data lives only on this phone — remind about stale backups,
    at most once a month, with the export one tap away */
@@ -4966,7 +5090,7 @@ function refreshBadgeBtn() {
     const b = $('#btn-badge');
     if (!b) return;
     const label = b.lastChild;
-    if (!('setAppBadge' in navigator) || typeof Notification === 'undefined') {
+    if (!badgeSupported()) {
         label.textContent = ' App icon badge not supported here';
         b.disabled = true;
         return;
@@ -4979,7 +5103,7 @@ function refreshBadgeBtn() {
         : ' Show the count on the app icon';
 }
 $('#btn-badge').addEventListener('click', async () => {
-    if (!('setAppBadge' in navigator) || typeof Notification === 'undefined') {
+    if (!badgeSupported()) {
         showToast('This device cannot show a badge on the app icon');
         return;
     }
@@ -4991,8 +5115,8 @@ $('#btn-badge').addEventListener('click', async () => {
         return;
     }
     try {
-        let perm = Notification.permission;
-        if (perm === 'default') perm = await Notification.requestPermission();
+        let perm = notifPermission();
+        if (perm === 'default') perm = await askNotifPermission();
         if (perm === 'granted') {
             state.settings.badge = true;
             save();
@@ -5034,6 +5158,7 @@ function reminderSettings() {
 }
 
 function reminderSupported() {
+    if (NATIVE) return true;   // planned on the phone itself, see "the reminder inside the iPhone app"
     return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
 }
 
@@ -5054,21 +5179,28 @@ function urlBase64ToUint8Array(s) {
 /* ---- what the service worker needs to word the notification ---- */
 
 function summarizeToday() {
-    const now = new Date();
-    const key = dateKey(now);
+    return summarizeDay(new Date());
+}
+
+/* The same count for any day. For a day still to come nothing is ticked yet, so
+   everything scheduled and not skip-marked (a vacation) is open. */
+function summarizeDay(when) {
+    const key = dateKey(when);
+    const isToday = key === dateKey(new Date());
     const open = [];
     let total = 0;
     state.habits.forEach(h => {
-        if (h.archived || !isScheduled(h, now)) return;
+        if (h.archived || !isScheduled(h, when)) return;
         total++;
         if (doneSet(h)[key] || skipSet(h)[key]) return;
-        if (h.type === 'timer' && activeSession(h)) return;   // a fast underway is not "open"
+        if (isToday && h.type === 'timer' && activeSession(h)) return;   // a fast underway is not "open"
         open.push(h.name);
     });
     return { date: key, total, open };
 }
 
 function mirrorSummary() {
+    if (NATIVE) return;   // no service worker in the app, and no server to tell
     if (!('caches' in window)) return;
     const s = summarizeToday();
     const json = JSON.stringify(s);
@@ -5084,7 +5216,7 @@ function mirrorSummary() {
    take it back if a tick is undone. Debounced; only ever a date and a yes/no. */
 function reportDoneState(s) {
     const r = state.settings.reminder;
-    if (!r || !r.on || !REMINDER_API) return;
+    if (NATIVE || !r || !r.on || !REMINDER_API) return;
     const done = s.total > 0 && s.open.length === 0;
     const reported = r.doneReported || {};
     if (reported[s.date] === done) return;
@@ -5142,9 +5274,83 @@ async function sendReminderToServer(sub) {
     save();
 }
 
+/* ---- the reminder inside the iPhone app ----
+   No server and no push: the app asks iOS itself to show a notification at the
+   chosen time on each of the next 30 days, and re-plans them on every save and
+   every start. Today's is left out once everything is ticked off; a day with
+   nothing open gets none. The words name what is open — exactly for today,
+   and for the days ahead what will be open if the app is not opened before. */
+const NATIVE_REMINDER_DAYS = 30;
+const NATIVE_REMINDER_ID = 4400;   // ids 4400..4429 belong to the reminder
+
+function reminderBody(s) {
+    if (s.open.length === 1) return 'Still open: ' + s.open[0];
+    if (s.open.length > 1) return s.open.length + ' still open: ' + s.open.join(', ');
+    return 'Time to fill in your tracked items.';
+}
+
+function planNativeReminders() {
+    if (!NATIVE) return;
+    clearTimeout(RUNTIME.planTimer);
+    RUNTIME.planTimer = setTimeout(applyNativeReminders, 400);
+}
+
+async function applyNativeReminders() {
+    const r = reminderSettings();
+    const ids = [];
+    for (let i = 0; i < NATIVE_REMINDER_DAYS; i++) ids.push({ id: NATIVE_REMINDER_ID + i });
+    try {
+        await NP.notif.cancel({ notifications: ids });
+        if (!r.on || nativePerm !== 'granted') return;
+        const [hh, mm] = r.time.split(':').map(Number);
+        const now = new Date();
+        const list = [];
+        for (let i = 0; i < NATIVE_REMINDER_DAYS; i++) {
+            const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, hh, mm, 0, 0);
+            if (at.getTime() <= now.getTime() + 5000) continue;   // today's hour has passed
+            const s = summarizeDay(at);
+            if (!s.open.length) continue;                         // done, skipped, or nothing scheduled
+            list.push({
+                id: NATIVE_REMINDER_ID + i,
+                title: 'AMS Tracking',
+                body: reminderBody(s),
+                schedule: { at, allowWhileIdle: true }
+            });
+        }
+        if (list.length) await NP.notif.schedule({ notifications: list });
+    } catch (e) {
+        console.error('Planning the reminder failed', e);
+    }
+}
+
+async function enableNativeReminder() {
+    const r = reminderSettings();
+    try {
+        let perm = notifPermission();
+        if (perm === 'default') perm = await askNotifPermission();
+        if (perm !== 'granted') {
+            setReminderNote('Not allowed — turn notifications on for Tracking in iPhone Settings.');
+            return;
+        }
+        r.on = true;
+        r.dirty = false;
+        save();                 // save() plans the notifications
+        refreshBadgeBtn();
+        updateBadge();
+        showToast('Reminder on — every day at ' + r.time);
+    } catch (e) {
+        r.on = false;
+        save();
+        setReminderNote('Could not turn the reminder on — please try again.');
+        return;
+    }
+    refreshReminderRow();
+}
+
 async function enableReminder() {
     const r = reminderSettings();
     r.lostPermission = false;
+    if (NATIVE) return enableNativeReminder();
     if (!reminderSupported()) {
         setReminderNote('Needs the app on your Home Screen.');
         showToast('Reminders work in the app on your Home Screen');
@@ -5155,8 +5361,8 @@ async function enableReminder() {
         return;
     }
     try {
-        let perm = Notification.permission;
-        if (perm === 'default') perm = await Notification.requestPermission();
+        let perm = notifPermission();
+        if (perm === 'default') perm = await askNotifPermission();
         if (perm !== 'granted') {
             setReminderNote('Not allowed — turn notifications on for Tracking in iPhone Settings.');
             return;
@@ -5183,6 +5389,7 @@ async function disableReminder() {
     save();
     refreshReminderRow();
     showToast('Reminder off');
+    if (NATIVE) return;   // save() has already taken the planned notifications away
     try { await reminderApi('DELETE', '/reminder/' + reminderDeviceId()); } catch (e) { /* the unsubscribe below makes the server forget us anyway */ }
     try {
         const sub = await getPushSubscription(false);
@@ -5194,10 +5401,11 @@ async function changeReminderTime(value) {
     const r = reminderSettings();
     if (!REMINDER_TIME_RE.test(value || '')) return;
     r.time = value;
-    r.dirty = r.on;
+    r.dirty = r.on && !NATIVE;   // in the app there is no server the new time has to reach
     save();
     refreshReminderRow();
     if (!r.on) return;
+    if (NATIVE) { showToast('Reminder moved to ' + value); return; }
     try {
         const sub = await getPushSubscription(true);
         await sendReminderToServer(sub);
@@ -5211,6 +5419,7 @@ async function changeReminderTime(value) {
 /* Keep the worker's copy current: iOS may hand out a new push address, the
    phone may change time zone, a time change may not have reached the server. */
 async function syncReminderOnLaunch() {
+    if (NATIVE) return syncNativeOnLaunch();
     const r = state.settings.reminder;
     if (!r || !r.on) return;
     if (!reminderSupported() || Notification.permission !== 'granted') {
@@ -5226,6 +5435,45 @@ async function syncReminderOnLaunch() {
         const stale = r.dirty || sub.endpoint !== r.endpoint || tz !== r.tz || Date.now() - (r.syncedAt || 0) > WEEK;
         if (stale) await sendReminderToServer(sub);
     } catch (e) { /* offline — next launch */ }
+}
+
+/* The iPhone app's start: learn what iOS currently allows, then bring the badge
+   and the planned notifications in line with it. A reminder that is "on" in data
+   that came from the web app (an imported backup) has never been allowed HERE —
+   it is switched off quietly and waits to be turned on once. */
+async function syncNativeOnLaunch() {
+    await refreshNativePermission();
+    const r = state.settings.reminder;
+    if (r && r.on && nativePerm !== 'granted') {
+        r.on = false;
+        r.lostPermission = nativePerm === 'denied';
+        save();
+    }
+    refreshReminderRow();
+    refreshBadgeBtn();
+    updateBadge();
+    await applyNativeReminders();
+    // one line for the Xcode console and the simulator run in CI
+    console.log('AMS native start v' + APP_VERSION + ' — notifications: ' + nativePerm +
+        ', reminder: ' + (r && r.on ? 'on' : 'off'));
+}
+
+/* A start that found the web view's storage empty: if the safety copy is there,
+   put it back and start again with it; otherwise this is a genuine first start
+   and the copy may be written from now on. */
+async function restoreFromSafetyCopy() {
+    if (!NATIVE || HAD_DATA_AT_START) return;
+    try {
+        const res = await NP.files.readFile({ path: SAFETY_FILE, directory: 'LIBRARY', encoding: 'utf8' });
+        const copy = JSON.parse(res.data);
+        if (copy && Array.isArray(copy.habits)) {
+            localStorage.setItem(STORE_KEY, res.data);
+            location.reload();
+            return;
+        }
+    } catch (e) { /* no copy yet */ }
+    safetyCopyArmed = true;
+    writeSafetyCopy(true);
 }
 
 /* ---- the Settings row ---- */
@@ -5293,7 +5541,16 @@ if (navigator.storage && navigator.storage.persist) {
     navigator.storage.persist().catch(() => {});
 }
 
+if (NATIVE) {
+    $('#btn-update').style.display = 'none';   // the app is updated through TestFlight, not from the web
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) writeSafetyCopy(true);   // leaving the app: write the copy now, not in 600 ms
+        else planNativeReminders();                   // back, perhaps on a new day: re-plan
+    });
+}
+
 save();
 renderToday();
+restoreFromSafetyCopy();
 syncReminderOnLaunch();
 document.documentElement.dataset.ready = '1';   // the UI tests wait for this

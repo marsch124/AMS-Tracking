@@ -91,6 +91,8 @@ jobs:
   # then started in a simulator; the picture and the app's own log are kept.
   ios:
     needs: tests
+    # macos-15, not macos-latest: on 24 Nov 2026 jobs for macos-latest (macos-26) sat
+    # queued for over an hour, twice. Both have an Xcode new enough for Capacitor 8.
     runs-on: macos-15
     timeout-minutes: 30
     steps:
@@ -182,7 +184,7 @@ jobs:
   testflight:
     needs: [tests, ios, apple-keys]
     if: needs.apple-keys.outputs.ready == 'true'
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 45
     concurrency:
       group: testflight
@@ -201,6 +203,10 @@ jobs:
       - run: npm ci
       - name: Put the app's files into the iPhone project
         run: npm run native:sync
+      - name: Use the newest Xcode on this runner
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
+          xcodebuild -version
       - name: Version and build number
         run: |
           VERSION=$(sed -n "s/^const APP_VERSION = '\([^']*\)';.*/\1/p" js/app.js)

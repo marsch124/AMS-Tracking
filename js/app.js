@@ -585,6 +585,25 @@ function renderToday() {
     $('#empty-state').hidden = visible.length > 0;
 
     visible.forEach(habit => list.appendChild(buildCard(habit)));
+    fitNames(list);
+}
+
+/* v1.50: a name is fitted by MEASURING it, not only by counting its letters
+   (name-sm above 15, name-xs above 24 — see buildCard). The same name needs
+   more room on an iPhone (17-point text) than the letter count assumes, and the
+   fasting card has the narrowest name column: with the 32-point icons of v1.49
+   it showed "Intermittent Fas…". A name that is still cut steps down one size
+   at a time; only one that does not fit at the smallest keeps its ellipsis. */
+function fitNames(root) {
+    root.querySelectorAll('.habit-name').forEach(n => {
+        if (n.scrollWidth <= n.clientWidth) return;
+        if (!n.classList.contains('name-sm') && !n.classList.contains('name-xs')) {
+            n.classList.add('name-sm');
+            if (n.scrollWidth <= n.clientWidth) return;
+        }
+        n.classList.remove('name-sm');
+        n.classList.add('name-xs');
+    });
 }
 
 function buildCard(habit) {

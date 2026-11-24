@@ -369,6 +369,23 @@ project on a Mac runner (no signing), starts it in a simulator, keeps a
 screenshot + the app's console as the artifact `ios-simulator-run`, and
 fails unless the app printed its own `AMS native start …` line.
 
+**What the simulator run showed (24 Nov 2026, iPhone 17 Pro, Xcode 26.3).**
+The app loads at `capacitor://localhost`; SystemBars, Filesystem and
+LocalNotifications answer; the safety copy is written to
+`Library/amsTracking.v1.json`; permission starts as `prompt`. A first start
+logs one `[error] readFile … does not exist` — that is the look for the
+safety copy and is expected. 🪤 The artifact cannot be downloaded from a
+cloud session (the blob host is blocked), so the step also prints a small
+JPEG of the screenshot as base64 into the job log, between
+`---- picture (base64 jpeg) ----` and `---- end of picture ----`: cut it out,
+`base64 -d`, and LOOK at it. 🪤 The Chromium tests run at a 16px base, an
+iPhone at 17px with a wider font — widths that fit in the tests can be cut
+on the phone; that is how "Intermittent Fas…" got through v1.49 and why
+`fitNames()` (js/app.js) now measures names, tested at 17px in
+`tests/ui/namefit.spec.js`. 🪤 Mac runners: `macos-latest` jobs sat queued
+for 60+ minutes twice that day, `macos-15` between 2 and 63; the jobs use
+`macos-15` and select its newest Xcode.
+
 **Releasing.** Push to `main` → `tests` → `ios` → `testflight` (also on the
 1st of each month by schedule, because a TestFlight build expires after 90
 days; GitHub pauses schedules in a repository with no activity for 60 days).

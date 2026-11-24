@@ -148,7 +148,11 @@ reminder" below before touching anything about notifications.
   them back unasked. The version is read from `data-testid="app-version"`
   at the bottom of Settings (boot.spec.js uses it). Habit icons on the
   Today cards grew 19px -> 24px (`.habit-name .hi`; grid 18 -> 22) on his
-  follow-up "make the icons in the list a bit larger". 🪤 An installed iOS
+  follow-up "make the icons in the list a bit larger"; v1.49 (same day,
+  "Why not still bigger?") took them to 32px in the list — he chose 32
+  out of 24/28/32, pinned by tests/ui/cardicon.spec.js. The grid layout
+  stays at 22px: its narrow cards already cut "Medit | Brea | Cold" at
+  the old 18px, and every extra pixel of icon cuts more. 🪤 An installed iOS
   app keeps the icon it was added with; getting the new one means remove
   + re-add, which can wipe its localStorage — backup first, import after,
   reminder on again (written into How it works → App icon).

@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.48';
+const APP_VERSION = '1.49';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
@@ -554,12 +554,13 @@ function buildCard(habit) {
     main.className = 'habit-main';
     const name = document.createElement('p');
     name.className = 'habit-name';
+    name.dataset.testid = 'habit-name';
     const parts = habitParts(habit);
     if (parts) {
         // each part is its own little word: colored when done, plain when not,
         // and tappable for the exact fix when a tap count goes wrong
         const donePartsToday = donePartsOn(habit, todayKey);
-        name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>` +
+        name.innerHTML = `<span class="habit-icon" data-testid="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>` +
             parts.map((p, i) =>
                 `<button class="part-chip${donePartsToday.includes(i) ? ' on' : ''}"` +
                 ` style="${donePartsToday.includes(i) ? `color:${habit.color}` : ''}"` +
@@ -574,7 +575,7 @@ function buildCard(habit) {
             });
         });
     } else {
-        name.innerHTML = `<span class="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
+        name.innerHTML = `<span class="habit-icon" data-testid="habit-icon" style="color:${habit.color}">${icon(habit.icon)}</span>${escapeHtml(habit.name)}`;
     }
     if (habit.name.length > 24) name.classList.add('name-xs');
     else if (habit.name.length > 15) name.classList.add('name-sm');

@@ -91,7 +91,7 @@ jobs:
   # then started in a simulator; the picture and the app's own log are kept.
   ios:
     needs: tests
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +103,11 @@ jobs:
       - name: Put the app's files into the iPhone project
         run: npm run native:sync
       - name: Which Xcode
-        run: xcodebuild -version
+        run: |
+          ls -d /Applications/Xcode*.app
+          NEWEST=$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)
+          sudo xcode-select -s "$NEWEST"
+          xcodebuild -version
       - name: Build for the simulator (no signing)
         run: |
           set -o pipefail

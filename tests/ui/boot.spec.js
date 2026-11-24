@@ -3,14 +3,16 @@
 // the ?v= on every asset link, and the service worker's cache name have cost real
 // releases when one of them was forgotten.
 import { test, expect } from '@playwright/test';
-import { APP_VERSION, read, openApp, watchErrors, fakeServiceWorker } from './_app.js';
+import { APP_VERSION, read, openApp, openSettings, watchErrors, fakeServiceWorker } from './_app.js';
 
 test('starts without errors and shows one consistent version', async ({ page }) => {
   const errors = watchErrors(page);
   await fakeServiceWorker(page);
   await openApp(page);
 
-  await expect(page.getByTestId('version-pill')).toHaveText('v' + APP_VERSION);
+  // The version is shown at the bottom of Settings (the pill on Today left in v1.48).
+  await openSettings(page);
+  await expect(page.getByTestId('app-version')).toContainText('v' + APP_VERSION);
   expect(JSON.parse(read('version.json')).version).toBe(APP_VERSION);
 
   const assetVersions = new Set([...read('index.html').matchAll(/\?v=(\d+)/g)].map((m) => m[1]));

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- AMS Tracking app icon (v1.48): the day grid. Solid = done, pale = missed, hollow = today. -->
+  <!-- Source for every PNG in this folder: render at 512/192/180 full-bleed, 64 with rounded corners. -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#4b7bf5"/><stop offset="1" stop-color="#7a5af8"/></linearGradient></defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <rect x="115" y="115" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="189" y="115" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="263" y="115" width="60" height="60" rx="15" fill="#fff" fill-opacity=".3"/>
+  <rect x="337" y="115" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="115" y="189" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="189" y="189" width="60" height="60" rx="15" fill="#fff" fill-opacity=".3"/>
+  <rect x="263" y="189" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="337" y="189" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="115" y="263" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="189" y="263" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="263" y="263" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="337" y="263" width="60" height="60" rx="15" fill="#fff" fill-opacity=".3"/>
+  <rect x="115" y="337" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="189" y="337" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="263" y="337" width="60" height="60" rx="15" fill="#fff"/>
+  <rect x="342" y="342" width="50" height="50" rx="11" fill="none" stroke="#fff" stroke-width="10"/>
+</svg>

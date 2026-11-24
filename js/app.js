@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.47';
+const APP_VERSION = '1.48';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
@@ -458,12 +458,6 @@ function tint(color, pct) {
 }
 
 function renderToday() {
-    // the heading greets the time of day instead of restating the date
-    const hour = new Date().getHours();
-    $('#today-title').textContent =
-        hour >= 5 && hour < 12 ? 'Morning' :
-        hour >= 12 && hour < 18 ? 'Afternoon' : 'Evening';
-
     renderReviewLinks();
 
     const list = $('#habit-list');
@@ -471,39 +465,6 @@ function renderToday() {
     list.classList.toggle('grid-layout', state.settings.layout === 'grid');
     const visible = state.habits.filter(h => !h.archived);
     $('#empty-state').hidden = visible.length > 0;
-
-    // day progress: done vs scheduled today (skip-marked days are excused)
-    const todayKey = dateKey(new Date());
-    const scheduledToday = visible.filter(h =>
-        isScheduled(h, new Date()) && !skipSet(h)[todayKey]);
-    const doneToday = scheduledToday.filter(h => doneSet(h)[todayKey]).length;
-    const dp = $('#day-progress');
-    dp.hidden = scheduledToday.length === 0;
-    if (scheduledToday.length) {
-        const all = doneToday === scheduledToday.length;
-        // one segment per scheduled habit; the filled ones walk the traffic
-        // light from red (first check-off) to green (day complete)
-        const bar = $('#dp-bar');
-        bar.innerHTML = '';
-        const p = scheduledToday.length > 1 ? (doneToday - 1) / (scheduledToday.length - 1) : 1;
-        const color = all ? '#2fa96d' : `hsl(${Math.round(10 + 115 * p)}, 62%, 46%)`;
-        scheduledToday.forEach((h, i) => {
-            const seg = document.createElement('span');
-            seg.className = 'dp-seg' + (i < doneToday ? ' filled' : '');
-            if (i < doneToday) seg.style.background = color;
-            bar.appendChild(seg);
-        });
-        $('#dp-text').innerHTML = all
-            ? icon('check', 'dp-check') + `All ${scheduledToday.length} done`
-            : `${doneToday} of ${scheduledToday.length} done`;
-        // the last check-off of the day earns a short flourish (once per completion)
-        dp.classList.remove('dp-celebrate');
-        if (all && dayJustCompleted) {
-            void dp.offsetWidth; // restart the animation on repeat completions
-            dp.classList.add('dp-celebrate');
-        }
-    }
-    dayJustCompleted = false;
 
     visible.forEach(habit => list.appendChild(buildCard(habit)));
 }
@@ -826,7 +787,6 @@ function swipeDone(habit) {
         habit.done[key] = 1; // all parts
         if (!before.length) {
             justChecked = habit.id;
-            if (dayComplete()) dayJustCompleted = true;
         }
         save();
         renderToday();
@@ -851,7 +811,6 @@ function swipeDone(habit) {
     habit.done = habit.done || {};
     habit.done[key] = 1;
     justChecked = habit.id;
-    if (dayComplete()) dayJustCompleted = true;
     save();
     renderToday();
     showToast('Marked done', () => {
@@ -1274,16 +1233,6 @@ function bestRunInMonth(habit, y, m) {
 
 
 let justChecked = null; // habit id whose checkmark should draw itself
-let dayJustCompleted = false; // set when a live action finishes the day
-
-/* True when every habit scheduled (and not skip-marked) today is done */
-function dayComplete() {
-    const todayKey = dateKey(new Date());
-    const sched = state.habits.filter(h => !h.archived &&
-        isScheduled(h, new Date()) && !skipSet(h)[todayKey]);
-    return sched.length > 0 && sched.every(h => doneSet(h)[todayKey]);
-}
-
 /* ================= v1.27: multi-part habits =================
    A habit whose name reads "Medit | Brea | Cold" is tracked in parts.
    done[key] then holds the array of part indices done that day; a plain
@@ -1318,7 +1267,6 @@ function togglePart(habit, idx) {
     // the day flipping from nothing to something is a real check-off
     if (!before.length && after.length) {
         justChecked = habit.id;
-        if (dayComplete()) dayJustCompleted = true;
     }
     save();
     renderToday();
@@ -1371,7 +1319,6 @@ function toggleToday(habit) {
     else habit.done[key] = 1;
     if (habit.done[key]) {
         justChecked = habit.id;
-        if (dayComplete()) dayJustCompleted = true;
     }
     save();
     renderToday();
@@ -1404,7 +1351,6 @@ function toggleTimer(habit) {
     const active = activeSession(habit);
     if (active) {
         active.e = Date.now();
-        if (dayComplete()) dayJustCompleted = true;
         save();
         renderToday();
         showToast(`Fast ended \u2014 ${fmtDuration(active.e - active.s)} h`, () => {
@@ -2003,7 +1949,6 @@ function saveBackfillFast(hours) {
     habit.sessions = habit.sessions || [];
     habit.sessions.push({ s: end - hours * 3600e3, e: end });
     habit.sessions.sort((a, b) => a.s - b.s);
-    if (hoursCtx.fromToday && dayComplete()) dayJustCompleted = true;
     save();
     $('#sheet-hours').hidden = true;
     if (hoursCtx.fromToday) renderToday();
@@ -4703,8 +4648,6 @@ $('#sheet-settings').addEventListener('click', (e) => {
     if (e.target === $('#sheet-settings')) $('#sheet-settings').hidden = true;
 });
 $('#app-version').textContent = 'AMS Tracking v' + APP_VERSION;
-$('#version-pill').textContent = 'v' + APP_VERSION;
-$('#version-pill').addEventListener('click', () => checkForUpdate(true));
 
 /* v1.24: the data lives only on this phone — remind about stale backups,
    at most once a month, with the export one tap away */

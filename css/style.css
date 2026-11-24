@@ -1077,39 +1077,6 @@ html, body {
 
 /* ---------- v1.11: the feel release ---------- */
 
-.day-progress {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    /* the date line above it is gone (v1.23.2), so it spaces itself */
-    margin: 10px 4px 16px;
-}
-
-.day-progress[hidden] { display: none; }
-
-.dp-bar {
-    flex: 1;
-    height: 7px;
-    display: flex;
-    gap: 3px;
-}
-
-/* v1.22: one segment per habit scheduled today */
-.dp-seg {
-    flex: 1;
-    border-radius: 3.5px;
-    background: var(--border);
-    transition: background 0.25s ease;
-}
-
-.dp-text {
-    font-size: 0.7353rem;
-    font-weight: 700;
-    color: var(--text-dim);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-}
-
 .habit-action.ink-draw .hi path {
     stroke-dasharray: 30;
     stroke-dashoffset: 30;
@@ -1779,36 +1746,6 @@ html, body {
 
 /* ---------- v1.19: the feel, part two ---------- */
 
-/* day-complete moment: bar pops, the checkmark draws itself */
-.dp-check {
-    width: 15px;
-    height: 15px;
-    vertical-align: -3px;
-    margin-right: 4px;
-    color: #2fa96d;
-}
-.dp-celebrate .dp-bar { animation: dp-pop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
-@keyframes dp-pop {
-    0% { transform: scaleY(1); }
-    35% { transform: scaleY(1.9); }
-    100% { transform: scaleY(1); }
-}
-.dp-celebrate .dp-seg.filled { animation: dp-shine 0.7s ease; }
-@keyframes dp-shine {
-    0% { filter: brightness(1); }
-    40% { filter: brightness(1.45); }
-    100% { filter: brightness(1); }
-}
-.dp-celebrate .dp-check path {
-    stroke-dasharray: 30;
-    stroke-dashoffset: 30;
-    animation: ink-draw 0.35s ease-out 0.25s forwards;
-}
-@media (prefers-reduced-motion: reduce) {
-    .dp-celebrate .dp-bar, .dp-celebrate .dp-seg.filled { animation: none; }
-    .dp-celebrate .dp-check path { animation: none; stroke-dashoffset: 0; }
-}
-
 /* screen transitions: push in from the right, pop back from the left */
 .screen-fwd { animation: screen-fwd 0.24s cubic-bezier(0.3, 0.8, 0.3, 1); }
 .screen-back { animation: screen-back 0.24s cubic-bezier(0.3, 0.8, 0.3, 1); }
@@ -1848,31 +1785,7 @@ html, body {
 .habit-card.swipe-armed-r { box-shadow: 0 0 0 2.5px #2fa96d, var(--shadow); }
 .habit-card.swipe-armed-l { box-shadow: 0 0 0 2.5px var(--text-dim), var(--shadow); }
 
-/* ---------- v1.21: version pill + fasting-zone labels ---------- */
-
-.today-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-}
-
-/* current version, tap to check for updates — deliberately faint so it
-   never competes with the content (v1.23.2, was a bright blue pill) */
-.version-pill {
-    border: none;
-    background: none;
-    color: var(--text-dim);
-    opacity: 0.45;
-    font-size: 0.7059rem;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    padding: 4px 6px;
-    border-radius: 999px;
-    cursor: pointer;
-    margin-bottom: 8px;
-    font-variant-numeric: tabular-nums;
-}
-.version-pill:active { transform: scale(0.94); }
+/* ---------- v1.21: fasting-zone labels (the version pill left in v1.48) ---------- */
 
 /* tiny words under the fasting card's tap areas — laid over the card's
    bottom padding so the card itself stays a single line (v1.21 wrapped) */

@@ -12,22 +12,13 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="stylesheet" href="css/style.css?v=68">
+    <link rel="stylesheet" href="css/style.css?v=69">
 </head>
 <body>
 
     <!-- ============ TODAY (main) SCREEN ============ -->
     <main id="screen-today" class="screen">
-        <div class="today-head">
-            <h1 id="today-title" class="page-title">Today</h1>
-            <button id="version-pill" class="version-pill" data-testid="version-pill" aria-label="App version — tap to check for updates"></button>
-        </div>
-        <div id="day-progress" class="day-progress" hidden>
-            <div id="dp-bar" class="dp-bar"></div>
-            <span id="dp-text" class="dp-text"></span>
-        </div>
-
-        <div id="habit-list" class="habit-list"></div>
+        <div id="habit-list" class="habit-list" data-testid="habit-list"></div>
 
         <div id="review-links"></div>
 
@@ -203,7 +194,7 @@
                 <div class="fold-body">
                     <p><strong>Daily habits</strong> — tap the big circle on a card to check the habit off for today; tap again to undo. The flame shows your current streak: consecutive scheduled days completed. Today doesn't break the streak until it's over.</p>
 
-                    <p><strong>Habits with several parts</strong> — name a habit with vertical bars, like <em>Medit | Brea | Cold</em>, and the app tracks each part on its own. The number of taps on the big circle picks the part: <strong>one tap</strong> toggles the first part, <strong>two quick taps</strong> the second, <strong>three</strong> the third. While you tap, the part you're about to toggle lights up, so you can see the count landing; a moment after your last tap it registers, and a bar confirms it (“Brea done”) with Undo. Done parts are written in the habit's color, the others stay gray, and the circle is checked as soon as <em>any</em> part is done — so streaks, week dots and the day bar count the day as complete. You can also tap a part's word directly to toggle exactly that one, and swiping the card to the right marks all parts at once. Two, three or four parts are supported.</p>
+                    <p><strong>Habits with several parts</strong> — name a habit with vertical bars, like <em>Medit | Brea | Cold</em>, and the app tracks each part on its own. The number of taps on the big circle picks the part: <strong>one tap</strong> toggles the first part, <strong>two quick taps</strong> the second, <strong>three</strong> the third. While you tap, the part you're about to toggle lights up, so you can see the count landing; a moment after your last tap it registers, and a bar confirms it (“Brea done”) with Undo. Done parts are written in the habit's color, the others stay gray, and the circle is checked as soon as <em>any</em> part is done — so streaks and week dots count the day as complete. You can also tap a part's word directly to toggle exactly that one, and swiping the card to the right marks all parts at once. Two, three or four parts are supported.</p>
 
                     <p><strong>Parts on an earlier day</strong> — press and hold the big circle of a multi-part habit and a small sheet opens for <em>yesterday</em> with one button per part: tick the ones you did and save, so a day can hold just Medit and Cold. The same sheet opens when you tap any day in that habit's calendar, which is how you correct a day further back — it opens with that day's parts already ticked. Saving with nothing ticked empties the day, and “Mark as skip day instead” excuses it (holidays, illness). Every change shows an Undo bar, and days filled in this way never trigger a milestone celebration.</p>
                     <p><strong>Weekly-target habits</strong> — for things like working out, where it's the count that matters, not the day: set a target such as 3× per week and check days off whenever they happen. The Today card leads with <strong>this week's count</strong> — “4/6”, with “this week” under it — and turns green the moment you reach the target. Under that, in smaller type, the flame counts <em>weeks</em> in which you hit it; the running week never breaks that streak until it's over. A habit already running as a daily check can be moved onto a weekly target at any time without losing a single tick — see <em>Changing a habit's type later</em>.</p>
@@ -230,8 +221,9 @@
                     <p><strong>Swipe to act</strong> — on the Today screen, swipe a card to the right to mark the habit done for today (for fasting: it stops a running fast, or opens the record-hours sheet when none is running), or swipe left to excuse today as a skip day. A colored ring shows when the swipe is far enough to fire, and every swipe action has the usual Undo bar. Days already done or skipped just tell you so instead of double-applying.</p>
                     <p><strong>Drag to reorder</strong> — press and hold a card until it lifts, then drag it up or down the list (works in the grid too) and let go. The new order is saved immediately, with Undo in the bar; Settings → Reorder habits still exists for precise arrow-button moves. The press-and-hold shortcuts on the round button itself (such as yesterday done on check-off habits) are untouched — the drag starts on the card body.</p>
                     <p><strong>Text size</strong> — the app follows the iPhone's Display &amp; Text Size setting: make text larger (or smaller) there and every screen scales with it, icons and buttons included.</p>
-                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today header shows the day bar: one segment per habit scheduled today, filling left to right as you check things off, with the filled color moving from red through amber to green as the day nears complete. When the last scheduled habit of the day is checked off, the bar celebrates with a brief pop and a hand-drawn checkmark. Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
+                    <p><strong>Gestures</strong> — swipe the month calendar left or right to change months, and drag any bottom sheet downward to close it. The Today screen has no header: it begins with the first habit card, and each card shows its own state (the greeting, the day bar and its “x of y done” counter were removed in v1.48). Screens slide like native iOS: details and stats push in from the right, going back slides home from the left (both stay still if the system's reduce-motion setting is on). The settings, stats, and add buttons float at the bottom of the screen, within thumb reach.</p>
                     <p><strong>Reorder, layout &amp; theme</strong> — Settings → Reorder habits moves habits up and down the Today list; Settings → Layout switches between the list view and a two-column grid; Settings → Theme picks auto (follow the system), always light, or always dark.</p>
+                    <p><strong>App icon</strong> — since v1.48 the icon is a day grid instead of a flame: sixteen squares on the blue-violet background, solid for days done, pale for days missed, and one hollow square for today. An iPhone keeps the icon an app was installed with, so the app already on your Home Screen goes on showing the flame. The only way to get the new picture is to remove the app from the Home Screen and add it again from Safari — and removing it can delete everything stored in it. So first Settings → <strong>Export backup (JSON)</strong>, then remove and re-add the app, then Settings → <strong>Import backup</strong>, and switch the daily reminder on again. If the picture is not worth that, nothing else in the app depends on it.</p>
                     <p><strong>Icon badge</strong> — on an installed app, the home-screen icon can show how many scheduled habits are still open today. It is <strong>off unless you switch it on</strong>: Settings → <strong>Show the count on the app icon</strong>; the same row then reads <strong>Hide the count on the app icon</strong> and takes it away again. An iPhone only allows a badge once you have said yes to notifications — the same permission the daily reminder uses — but allowing notifications no longer switches the badge on by itself (it did until v1.44). It updates whenever the app is opened or used — a web app can't change it in the background.</p>
                     <p><strong>Daily reminder</strong> — Settings → <strong>Daily reminder</strong>: pick the time in the field on the right (20:00 to begin with), tap the row, allow notifications, done. From then on the phone shows a notification every day at that hour — with the app closed — naming what is still open: “2 still open: Intermittent Fasting, Reading”, or simply “Time to fill in your tracked items” if the app has not been opened that day. Tapping it opens the app. When everything scheduled for today is already ticked off before the hour, no reminder comes. Change the time whenever you like; tap the row again to turn it off. It needs the app on your Home Screen (iPhone): in plain Safari the row says so. This is the one thing in the app that leaves the phone — see <em>Why it cannot send itself</em> for exactly what, and why.</p>
                     <p><strong>Aspirations</strong> — Stats &rarr; <strong>Aspirations</strong>. An aspiration is one sentence about who you are becoming: “Strong and durable into my seventies”. No date and no number — the habits carry those. It has no colour of its own either, because colour already means <em>which habit</em> everywhere in this app. Habits are attached from either side: the aspiration's own sheet asks <strong>Which habits serve it?</strong> and lists them all, and editing a habit gains a <strong>Serves</strong> row once an aspiration exists. <em>Nothing in particular</em> is a permanent, perfectly good answer: a habit attached to nothing works exactly as it always has. A habit already under another aspiration shows which, so moving it is deliberate rather than silent.</p>
@@ -244,7 +236,7 @@
                     <p><strong>Milestones</strong> — hitting a round streak (7, 14, 30, 50, 100&hellip; days, or 4, 10, 26, 52 weeks) or setting a personal-best fast earns a short celebration. Each milestone fires once.</p>
                     <p><strong>Fast chart</strong> — the fasting detail view charts your recent fasts as bars against the dashed goal line, so the trend is visible at a glance; tap a bar to edit that fast.</p>
                     <p><strong>Voice commands (Siri)</strong> — as of iOS 2026 releases, Shortcuts cannot open an installed web app: the “Open App” action doesn't list it, and “Open URLs” lands in Safari, which keeps a completely separate copy of your data — so a voice or Lock Screen launcher isn't possible yet. The practical setup is the app icon in the Dock; the icon badge shows the day's status before you even tap. Worth re-trying after each iOS update: if “Tracking” ever appears in the Shortcuts “Open App” picker, a “Hey Siri, Fasten” shortcut and a Lock Screen button will work immediately. (The <code>?fast=start/stop/toggle</code> web commands exist for platforms where links open in the installed app.)</p>
-                    <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. The faint version number at the top right of the Today screen always shows which version you're on — tapping it checks for an update immediately, as does Settings → Check for app update.</p>
+                    <p><strong>Updates</strong> — the app checks for a new version when opened and shows an “Update” button at the bottom when one is live; one tap loads it, no force-quitting needed. The version you're on is written at the very bottom of Settings, and Settings → <strong>Check for app update</strong> looks for a new one immediately. (Until v1.47 a faint version number also sat at the top right of Today; it left with the rest of the header in v1.48.)</p>
                     <p><strong>Old history</strong> — switching from another fasting app? Settings → “Import fasting history” accepts pasted rows (day + hours, or start + end times, or this app's own CSV), previews what it found, and adds them as fasts — days that already have a fast are left untouched, and the import can be undone.</p>
                     <p><strong>Your data</strong> — everything is stored only on this device. Export opens the share sheet on iPhone, so the backup can go straight to iCloud Drive (elsewhere it downloads a file); Import restores it. Settings shows how long ago the last backup was — since the phone holds the only copy, an occasional backup is worth it. When it has been more than 30 days, the app says so once (at most monthly) with a bar at the bottom whose “Back up” button opens the share sheet right away. It also asks the system to protect its storage from cleanup (the status is shown below). “Export CSV for Excel” shares two spreadsheet-ready files (semicolon-separated, decimal commas): one row per logged day with status and note, and one row per fast with start, end, and duration.</p>
                 </div>
@@ -253,6 +245,17 @@
             <details class="fold">
                 <summary><span class="fold-title"><span data-hi="scroll"></span> Version history</span></summary>
                 <div class="fold-body" id="version-history">
+                    <h4>v1.48 <span class="vh-date">— 24 Nov 2026</span></h4>
+                    <p>A grid for an icon, and Today without a header.</p>
+                    <ul>
+                        <li><strong>New app icon</strong> — the flame is replaced by a day grid: four rows of four squares on the same blue-violet background, solid for days done, pale for days missed, and a hollow square for today — the year grid from a habit's detail view in miniature. All icon files changed together (Home Screen, notifications, browser tab).</li>
+                        <li><strong>Your installed app keeps the flame until it is re-added</strong> — an iPhone stores the icon when the app is added to the Home Screen and does not fetch it again. To see the new icon: export a backup first (Settings → Export backup), remove the app from the Home Screen, add it again from Safari, import the backup, and switch the daily reminder on again. Removing the app can delete its data, so the backup comes first.</li>
+                        <li><strong>Today has no header any more</strong> — four things you crossed out are gone: the Morning / Afternoon / Evening greeting, the faint version number at the top right, the segmented day bar, and the “2 of 7 done” counter next to it. The screen now begins with the first habit card.</li>
+                        <li><strong>Gone with the day bar</strong> — the short celebration it played when the last habit of the day was checked off. The check mark on each card still draws itself, and the milestone celebrations are unchanged.</li>
+                        <li><strong>Where the version went</strong> — it is written at the very bottom of Settings, as before. Tapping the version number on Today to look for an update is no longer possible; Settings → Check for app update does the same, and the app still checks by itself whenever it is opened.</li>
+                        <li><strong>A sixth test</strong> — Today must begin with the habit cards and nothing above them, and the version must be readable in Settings. The start-up test now reads the version there instead of from the removed pill.</li>
+                    </ul>
+
                     <h4>v1.47 <span class="vh-date">— 18 Nov 2026</span></h4>
                     <p>No more goal sheet on hold.</p>
                     <ul>
@@ -749,7 +752,7 @@
                 </div>
             </details>
 
-            <p class="settings-note"><span id="backup-note"></span><br><span id="storage-note"></span><br>All data is stored only on this device.<br><span id="app-version"></span></p>
+            <p class="settings-note"><span id="backup-note"></span><br><span id="storage-note"></span><br>All data is stored only on this device.<br><span id="app-version" data-testid="app-version"></span></p>
             <div class="sheet-actions">
                 <button id="btn-settings-close" class="ghost-btn">Close</button>
             </div>
@@ -923,7 +926,7 @@
         <button id="toast-undo">Undo</button>
     </div>
 
-    <script src="js/icons.js?v=68"></script>
-    <script src="js/app.js?v=68"></script>
+    <script src="js/icons.js?v=69"></script>
+    <script src="js/app.js?v=69"></script>
 </body>
 </html>

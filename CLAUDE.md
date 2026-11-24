@@ -135,6 +135,21 @@ reminder" below before touching anything about notifications.
   ("add a reminder… I would like to choose the time myself… normally
   20:00"). See "Daily reminder" below for the architecture and the deploy
   steps; the no-server principle now has exactly this one exception.
+- v1.48 "A grid for an icon, and Today without a header" — BUILT 24 Nov
+  2026 on Martin's request (annotated screenshot with four crosses + "I
+  have never really liked the icon. Let's make it more like tracking").
+  App icon = day grid (he picked "B" out of four candidates); source is
+  `icons/icon.svg`, all five PNGs are rendered from it (512, 512
+  maskable, 192, 180 apple-touch — full-bleed RGB; favicon-64 with
+  rounded transparent corners). Today lost its whole header: greeting
+  (#today-title), version pill (#version-pill, v1.21), segmented day bar
+  + "x of y done" (#day-progress, v1.11/v1.22) and the day-complete
+  flourish (dayComplete()/dp-celebrate, v1.19) — do not bring any of
+  them back unasked. The version is read from `data-testid="app-version"`
+  at the bottom of Settings (boot.spec.js uses it). 🪤 An installed iOS
+  app keeps the icon it was added with; getting the new one means remove
+  + re-add, which can wipe its localStorage — backup first, import after,
+  reminder on again (written into How it works → App icon).
 - Parked: Siri/Lock-Screen launch of the installed app — impossible on
   current iOS (Shortcuts can't open web clips; URLs open Safari's
   separate storage). Re-test the Shortcuts "Open App" picker after each

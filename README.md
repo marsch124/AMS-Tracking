@@ -46,10 +46,20 @@ python3 -m http.server 7794
 ├── sw.js           # Service worker (offline; shows the daily-reminder notification)
 ├── icons/          # Generated app icons
 ├── reminder-worker # Cloudflare Worker that SENDS the daily reminder (the only server)
+├── ios/            # The iPhone app: a Capacitor shell around the same files (since v1.50)
+├── scripts/        # native-www.mjs — copies the web files into www/ for the iPhone app
 └── tests/ui        # Playwright UI tests — run in CI on every push, gate the deploy
 ```
 
 Tests: `npm test` (worker tests + UI tests in Chromium at iPhone size).
+
+**iPhone app (TestFlight).** `npm run native:sync` copies the web files into the
+Xcode project in `ios/` (Capacitor 8, Swift Package Manager). Every push compiles it
+on a Mac runner and starts it in a simulator; a push to `main` also uploads a build to
+TestFlight once the repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`
+and `APPLE_TEAM_ID` (an App Store Connect API key with the Admin role, and the Apple
+team id) are set. Without them the upload is skipped. Details: `CLAUDE.md`, section
+"iPhone app".
 
 When releasing a change, bump the `?v=` query on the asset links in `index.html` and the `CACHE_NAME` in `sw.js`.
 

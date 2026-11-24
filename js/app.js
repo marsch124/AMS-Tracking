@@ -5003,9 +5003,15 @@ $('#import-file').addEventListener('change', (e) => {
             if (!data || !Array.isArray(data.habits)) throw new Error('Not an AMS Tracking backup');
             if (!confirm(`Replace current data with this backup (${data.habits.length} habits)?`)) return;
             state = data;
+            if (NATIVE) {
+                // "reminder on" in a backup from the web app was allowed THERE, not here
+                const r = state.settings && state.settings.reminder;
+                if (r && r.on && nativePerm !== 'granted') r.on = false;
+            }
             save();
             $('#sheet-settings').hidden = true;
             renderToday();
+            if (NATIVE) { refreshReminderRow(); refreshBadgeBtn(); }
         } catch (err) {
             alert('Import failed: ' + err.message);
         }

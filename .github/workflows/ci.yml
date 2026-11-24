@@ -129,12 +129,19 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           mkdir -p ios-run
           xcrun simctl install "$UDID" "$APP"
-          # Capacitor prints the web view's console to the app's standard output.
-          xcrun simctl launch --stdout="$PWD/ios-run/app.log" --stderr="$PWD/ios-run/app.err" "$UDID" io.github.marsch124.amstracking
-          sleep 25
+          # Capacitor prints the web view's console to the app's standard output; a
+          # pseudo-terminal and unbuffered IO make each line arrive as it is written.
+          SIMCTL_CHILD_NSUnbufferedIO=YES xcrun simctl launch --console-pty "$UDID" io.github.marsch124.amstracking > ios-run/app.log 2>&1 &
+          sleep 40
           xcrun simctl io "$UDID" screenshot ios-run/today.png
           echo "---- what the app wrote to its log ----"
-          cut -c1-400 ios-run/app.log | head -n 120 || true
+          cut -c1-400 ios-run/app.log | head -n 150 || true
+          # The artifact needs a browser to open; a small copy of the picture goes into
+          # the log as text so it can be read from anywhere.
+          sips -Z 700 -s format jpeg -s formatOptions 55 ios-run/today.png --out ios-run/today-small.jpg > /dev/null
+          echo "---- picture (base64 jpeg) ----"
+          base64 -i ios-run/today-small.jpg | fold -w 200
+          echo "---- end of picture ----"
           # The app says so itself once its native side has started (js/app.js, syncNativeOnLaunch).
           grep -a -q 'AMS native start' ios-run/app.log
       - name: Keep the picture and the log

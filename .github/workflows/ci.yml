@@ -71,14 +71,19 @@ jobs:
           cp -R js _site/js
           cp -R icons _site/icons
           touch _site/.nojekyll
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         with:
           enablement: true
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+      # 24 Nov 2026: on the Main Hub the deploy step looked for the bundle in the same
+      # second it was uploaded and found nothing (three red deploys, tests green).
+      # GitHub's list of bundles lags a moment behind the upload, so give it one.
+      - name: Let the uploaded bundle show up
+        run: sleep 20
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   # The iPhone app (since v1.50): the same files inside a native shell — Capacitor,
   # project in ios/. Compiled for the simulator on every push, without signing, so a

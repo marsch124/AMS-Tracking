@@ -75,3 +75,32 @@ jobs:
           path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # The iPhone app (since v1.50): the same files inside a native shell — Capacitor,
+  # project in ios/. Compiled for the simulator on every push, without signing, so a
+  # break in the native side is seen at once and costs no Apple account.
+  ios:
+    needs: tests
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Put the app's files into the iPhone project
+        run: npm run native:sync
+      - name: Which Xcode
+        run: |
+          xcodebuild -version
+          xcodebuild -list -project ios/App/App.xcodeproj
+      - name: Build for the simulator (no signing)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO | tail -n 40
+

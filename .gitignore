@@ -3,3 +3,4 @@ playwright-report/
 test-results/
 reminder-worker/.wrangler/
 .DS_Store
+www/

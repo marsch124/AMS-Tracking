@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.marsch124.amstracking",
+  "appName": "Tracking",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "banner",
+        "list"
+      ]
+    }
+  }
+}

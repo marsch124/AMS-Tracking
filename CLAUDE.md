@@ -146,7 +146,9 @@ reminder" below before touching anything about notifications.
   + "x of y done" (#day-progress, v1.11/v1.22) and the day-complete
   flourish (dayComplete()/dp-celebrate, v1.19) — do not bring any of
   them back unasked. The version is read from `data-testid="app-version"`
-  at the bottom of Settings (boot.spec.js uses it). 🪤 An installed iOS
+  at the bottom of Settings (boot.spec.js uses it). Habit icons on the
+  Today cards grew 19px -> 24px (`.habit-name .hi`; grid 18 -> 22) on his
+  follow-up "make the icons in the list a bit larger". 🪤 An installed iOS
   app keeps the icon it was added with; getting the new one means remove
   + re-add, which can wipe its localStorage — backup first, import after,
   reminder on again (written into How it works → App icon).

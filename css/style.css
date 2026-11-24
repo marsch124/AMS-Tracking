@@ -69,7 +69,8 @@
 
 .pill-btn .hi { width: 1.2353rem; height: 1.2353rem; }
 .habit-action .hi { width: 1.3529rem; height: 1.3529rem; }
-.habit-name .hi { width: 1.1176rem; height: 1.1176rem; vertical-align: -4px; margin-right: 2px; }
+/* v1.48: 19px -> 24px on Martin's request ("icons in the list a bit larger") */
+.habit-name .hi { width: 1.4118rem; height: 1.4118rem; vertical-align: -6px; margin-right: 2px; }
 .page-title .habit-icon .hi { width: 2rem; height: 2rem; vertical-align: -4px; margin-right: 6px; }
 .stat-number .hi.flame { width: 1.0588rem; height: 1.0588rem; margin-left: 3px; vertical-align: -2px; }
 .chip .hi { width: 1.4706rem; height: 1.4706rem; }
@@ -769,7 +770,7 @@ html, body {
 .gcard .habit-action { width: 2.8235rem; height: 2.8235rem; }
 .gcard .habit-action .hi { width: 1.2941rem; height: 1.2941rem; }
 .gcard .habit-name { font-size: 0.9412rem; margin-bottom: 6px; }
-.gcard .habit-name .hi { width: 1.0588rem; height: 1.0588rem; vertical-align: -3.5px; }
+.gcard .habit-name .hi { width: 1.2941rem; height: 1.2941rem; vertical-align: -5px; }
 .gcard .wd { width: 1rem; height: 1rem; font-size: 0.5294rem; }
 .gcard .week-dots { gap: 4px; }
 

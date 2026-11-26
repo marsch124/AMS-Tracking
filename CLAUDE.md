@@ -448,5 +448,32 @@ iPhone app only (iOS 17+, deployment target 17.0). The web app has none of it.
   like the fasting card ("Siri: fast started at 20:13").
 - Target = the first non-archived timer habit (same as the old `?fast=` link,
   which stays for the web app).
-- Never ask Siri to "just start fasting" in the docs without the Shortcuts
-  tip: naming a shortcut "Start Fasting" drops the "in Tracking".
+- Apple requires the app name in every App Shortcut phrase, so plain "Hey
+  Siri, start fasting" only works through his own shortcut named "Start
+  Fasting" (the tip in How it works) — keep that tip whenever the phrases
+  are mentioned.
+- Siri's answers come from `FastingStore` (status + waiting steps): goal of a
+  new fast = weekday goal of the day it is expected to end (start >= 12:00 →
+  tomorrow), like `goalDayFor()`.
+- **Tests:** `tests/ui/native-fasting.spec.js` (stand-in `AMSFasting` in
+  `fakeNative()`, `opts.steps`) proves the page side. 🪤 Running an App
+  Shortcut in the SIMULATOR always fails ("Unable to run App Shortcut";
+  linkd: "Failed to generate bundleIdentity … requiresValidBundle") for any
+  local build — unsigned, ad-hoc, team, Debug or Release. The shortcuts are
+  listed in the Shortcuts app all the same. On 26 Nov 2026 the Swift side was
+  proved with a temporary `-amsSiri stop` launch argument calling
+  `FastingStore.stopBySiri()` (answer "Fast ended after 3 min. Goal was 16
+  h.", the page then applied the step); real Siri needs the TestFlight build
+  on a phone. The quick actions DO work in the simulator (long-press the
+  icon with a >0.5 s tap).
+
+## App Store Connect (since v1.51)
+
+App "AMS Tracking", Apple id 6839502190, bundle-id record 4TPCUXJXNK
+(`io.github.marsch124.amstracking`), SKU `amstracking`, internal beta group
+"Martin" (`c3fa83df-eb47-4dd3-97d5-1455a092a729`, all builds). First build
+1.51 (1) was uploaded from the Mac on 26 Nov 2026 (archive + exportArchive
+with the Admin key, see the TestFlight memory note). The four repository
+secrets the `testflight` job needs were NOT set yet on that day (the agent's
+safety check refused `gh secret set`); until they are, every run skips the
+upload with a notice and nothing refreshes the build monthly.

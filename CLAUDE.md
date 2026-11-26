@@ -474,6 +474,8 @@ App "AMS Tracking", Apple id 6839502190, bundle-id record 4TPCUXJXNK
 "Martin" (`c3fa83df-eb47-4dd3-97d5-1455a092a729`, all builds). First build
 1.51 (1) was uploaded from the Mac on 26 Nov 2026 (archive + exportArchive
 with the Admin key, see the TestFlight memory note). The four repository
-secrets the `testflight` job needs were NOT set yet on that day (the agent's
-safety check refused `gh secret set`); until they are, every run skips the
-upload with a notice and nothing refreshes the build monthly.
+secrets the `testflight` job needs were set the same morning with Martin's
+yes in chat (the agent's safety check had refused `gh secret set` once
+without it). From then on every push to `main` and the 1st of each month
+upload a build from GitHub (build number `<run>.<attempt>`, always above the
+Mac's 1.51 (1)).

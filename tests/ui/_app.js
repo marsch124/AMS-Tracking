@@ -80,9 +80,11 @@ export async function fakeServiceWorker(page, opts = {}) {
 //   opts.perm   — notification permission at start: 'prompt' | 'granted' | 'denied'
 //   opts.grant  — what the system prompt answers when the app asks (default true)
 //   opts.files  — files already on the "phone", keyed 'DIRECTORY/path'
+//   opts.steps  — v1.51: Siri / Home Screen menu steps waiting in the app ({ a, t, src });
+//                 a test adds more by pushing to window.__native.steps
 export async function fakeNative(page, opts = {}) {
   await page.addInitScript((o) => {
-    const n = (window.__native = { calls: [], files: { ...(o.files || {}) }, perm: o.perm || 'prompt' });
+    const n = (window.__native = { calls: [], files: { ...(o.files || {}) }, perm: o.perm || 'prompt', steps: [...(o.steps || [])] });
     const plugin = (name, methods) => new Proxy({}, {
       get: (_, method) => async (arg) => {
         n.calls.push({ plugin: name, method, arg: arg === undefined ? null : JSON.parse(JSON.stringify(arg)) });
@@ -106,6 +108,9 @@ export async function fakeNative(page, opts = {}) {
         },
       }),
       SystemBars: plugin('SystemBars', {}),
+      AMSFasting: plugin('AMSFasting', {
+        takePending: () => { const steps = n.steps; n.steps = []; return { steps }; },
+      }),
     };
     window.Capacitor = {
       isNativePlatform: () => true,

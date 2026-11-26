@@ -1,7 +1,7 @@
 /* AMS Tracking — simple, visual habit tracker (vanilla JS, localStorage) */
 'use strict';
 
-const APP_VERSION = '1.50';
+const APP_VERSION = '1.51';
 const STORE_KEY = 'amsTracking.v1';
 /* v1.44: in-memory scratch for the reminder (what the service worker was last told, a debounce timer) */
 const RUNTIME = { summaryJson: '', doneTimer: null };
@@ -20,7 +20,8 @@ const NP = NATIVE ? {
     notif: CAP.registerPlugin('LocalNotifications'),
     badge: CAP.registerPlugin('Badge'),
     files: CAP.registerPlugin('Filesystem'),
-    share: CAP.registerPlugin('Share')
+    share: CAP.registerPlugin('Share'),
+    fasting: CAP.registerPlugin('AMSFasting')   // v1.51: Home Screen menu + Siri (ios/App/App/Fasting.swift)
 } : null;
 
 /* Notification permission, the same three words on both sides. In the app it is
@@ -171,6 +172,7 @@ function save() {
     if (NATIVE) {
         writeSafetyCopy(false);
         planNativeReminders();
+        mirrorFastingStatus();
     }
 }
 
@@ -1487,33 +1489,37 @@ function markYesterday(habit) {
 function toggleTimer(habit) {
     habit.sessions = habit.sessions || [];
     const active = activeSession(habit);
-    if (active) {
-        active.e = Date.now();
+    if (active) endFast(habit, active);
+    else startFast(habit, null);
+}
+
+/* `at` (ms) and `msg` are for a step asked for earlier — Siri while the app was
+   closed (v1.51); a tap uses now and the usual words. */
+function endFast(habit, active, at, msg) {
+    active.e = at || Date.now();
+    save();
+    renderToday();
+    showToast(msg || `Fast ended \u2014 ${fmtDuration(active.e - active.s)} h`, () => {
+        active.e = null;
         save();
         renderToday();
-        showToast(`Fast ended \u2014 ${fmtDuration(active.e - active.s)} h`, () => {
-            active.e = null;
-            save();
-            renderToday();
-        });
-        const others = habit.sessions.filter(x => x.e && x !== active);
-        const duration = active.e - active.s;
-        if (others.length >= 3 && duration > Math.max(...others.map(x => x.e - x.s))) {
-            celebrate('Personal best fast!', habit.color, fmtDuration(duration) + ' h · ' + habit.name);
-        }
-    } else {
-        startFast(habit, null);
+    });
+    const others = habit.sessions.filter(x => x.e && x !== active);
+    const duration = active.e - active.s;
+    if (others.length >= 3 && duration > Math.max(...others.map(x => x.e - x.s))) {
+        celebrate('Personal best fast!', habit.color, fmtDuration(duration) + ' h · ' + habit.name);
     }
 }
 
-function startFast(habit, goalH) {
+function startFast(habit, goalH, at, msg) {
     habit.sessions = habit.sessions || [];
-    const session = { s: Date.now(), e: null };
+    const session = { s: at || Date.now(), e: null };
     if (goalH) session.g = goalH;
     habit.sessions.push(session);
+    habit.sessions.sort((a, b) => a.s - b.s);
     save();
     renderToday();
-    showToast(goalH ? `Fast started \u2014 goal ${goalH}h` : 'Fast started', () => {
+    showToast(msg || (goalH ? `Fast started \u2014 goal ${goalH}h` : 'Fast started'), () => {
         habit.sessions = habit.sessions.filter(x => x !== session);
         save();
         renderToday();
@@ -5487,18 +5493,19 @@ async function syncNativeOnLaunch() {
    put it back and start again with it; otherwise this is a genuine first start
    and the copy may be written from now on. */
 async function restoreFromSafetyCopy() {
-    if (!NATIVE || HAD_DATA_AT_START) return;
+    if (!NATIVE || HAD_DATA_AT_START) return false;
     try {
         const res = await NP.files.readFile({ path: SAFETY_FILE, directory: 'LIBRARY', encoding: 'utf8' });
         const copy = JSON.parse(res.data);
         if (copy && Array.isArray(copy.habits)) {
             localStorage.setItem(STORE_KEY, res.data);
             location.reload();
-            return;
+            return true;   // starting again — nothing else may run on the old data
         }
     } catch (e) { /* no copy yet */ }
     safetyCopyArmed = true;
     writeSafetyCopy(true);
+    return false;
 }
 
 /* ---- the Settings row ---- */
@@ -5538,28 +5545,91 @@ $('#btn-update').addEventListener('click', () => {
 });
 setTimeout(() => checkForUpdate(false), 2500);
 
-/* Voice / Shortcut commands: ?fast=start | stop | toggle acts on the
-   first (non-archived) fasting habit, so a Siri Shortcut opening that
-   URL starts or ends the fast. */
+/* Start / stop the fast without tapping the card: the ?fast=start | stop |
+   toggle link (web app), and — v1.51, iPhone app — the Home Screen menu and
+   Siri. All act on the first (non-archived) fasting habit. `at` is when it was
+   asked for: Siri may have been asked hours before the app opened, and the
+   fast keeps Siri's time. Rules (Fasting.swift answers Siri with the same):
+   a start while a fast runs does nothing; a stop needs a running fast that
+   began before it. */
+function fastingHabit() {
+    return state.habits.find(h => h.type === 'timer' && !h.archived) || null;
+}
+
+function clockText(ms) {
+    const d = new Date(ms);
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function applyFastAction(action, at, src) {
+    const habit = fastingHabit();
+    const now = Date.now();
+    const t = Math.min(at || now, now);
+    const bySiri = src === 'siri' && now - t > 60e3;   // asked while the app was closed: say who and when
+    if (!habit) {
+        if (!bySiri) showToast('No fasting habit found');
+        return false;
+    }
+    const active = activeSession(habit);
+    if (action === 'toggle') action = active ? 'stop' : 'start';
+    if (action === 'start') {
+        if (active) {
+            if (!bySiri) showToast(`Already fasting \u2014 ${fmtDuration(now - active.s)} h`);
+            return false;
+        }
+        startFast(habit, null, t, bySiri ? `Siri: fast started at ${clockText(t)}` : null);
+        return true;
+    }
+    if (action === 'stop') {
+        if (!active || t <= active.s) {
+            if (!bySiri) showToast('No fast is running');
+            return false;
+        }
+        endFast(habit, active, t, bySiri
+            ? `Siri: fast ended at ${clockText(t)} \u2014 ${fmtDuration(t - active.s)} h` : null);
+        return true;
+    }
+    return false;
+}
+
 function handleUrlAction() {
     const action = new URLSearchParams(location.search).get('fast');
     if (!action) return;
     history.replaceState(null, '', location.pathname);
-    const habit = state.habits.find(h => h.type === 'timer' && !h.archived);
-    if (!habit) {
-        showToast('No fasting habit found');
-        return;
-    }
-    const active = activeSession(habit);
-    if (action === 'start' || (action === 'toggle' && !active)) {
-        if (active) showToast(`Already fasting \u2014 ${fmtDuration(Date.now() - active.s)} h`);
-        else startFast(habit, null);
-    } else if (action === 'stop' || (action === 'toggle' && active)) {
-        if (!active) showToast('No fast is running');
-        else toggleTimer(habit);
-    }
+    applyFastAction(action, Date.now(), 'link');
 }
 handleUrlAction();
+
+/* v1.51, iPhone app: what Siri and the Home Screen menu left waiting
+   (Fasting.swift keeps it), applied in the order it was asked. */
+async function takeFastSteps() {
+    if (!NATIVE) return;
+    let res;
+    try { res = await NP.fasting.takePending(); } catch (e) { return; }
+    const steps = ((res && res.steps) || []).slice().sort((a, b) => a.t - b.t);
+    steps.forEach(st => applyFastAction(st.a, st.t, st.src));
+    if (steps.length) console.log('AMS fasting steps applied: ' + steps.map(st => st.src + ' ' + st.a).join(', '));
+}
+
+/* …and how the fasting habit stands, so Siri can answer at once and the menu
+   offers the step that fits (Start Fasting, or Stop Fasting · Since 20:13). */
+function mirrorFastingStatus() {
+    if (!NATIVE) return;
+    const habit = fastingHabit();
+    const active = habit ? activeSession(habit) : null;
+    const goalMs = active ? goalMsFor(habit, active) : null;
+    const status = {
+        habit: habit ? habit.name : null,
+        since: active ? active.s : null,
+        goalH: goalMs ? goalMs / 3600e3 : null,
+        goalHours: habit && habit.goalHours ? habit.goalHours : null,
+        goalByDay: habit && habit.goalByDay ? habit.goalByDay.map(g => (g != null && isFinite(g) && g > 0 ? g : null)) : null
+    };
+    const json = JSON.stringify(status);
+    if (json === RUNTIME.fastingJson) return;
+    RUNTIME.fastingJson = json;
+    NP.fasting.setStatus(status).catch(() => { RUNTIME.fastingJson = ''; });
+}
 
 applyTheme();
 if (navigator.storage && navigator.storage.persist) {
@@ -5569,13 +5639,16 @@ if (navigator.storage && navigator.storage.persist) {
 if (NATIVE) {
     $('#btn-update').style.display = 'none';   // the app is updated through TestFlight, not from the web
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) writeSafetyCopy(true);   // leaving the app: write the copy now, not in 600 ms
-        else planNativeReminders();                   // back, perhaps on a new day: re-plan
+        if (document.hidden) { writeSafetyCopy(true); return; }   // leaving the app: write the copy now, not in 600 ms
+        planNativeReminders();                                    // back, perhaps on a new day: re-plan
+        takeFastSteps();                                          // v1.51: Siri / the menu while away
     });
+    // v1.51: a step arrived while the app is open (Siri, or the menu of a running app)
+    NP.fasting.addListener('pending', () => takeFastSteps()).catch(() => {});
 }
 
 save();
 renderToday();
-restoreFromSafetyCopy();
+restoreFromSafetyCopy().then(reloading => { if (!reloading) takeFastSteps(); });
 syncReminderOnLaunch();
 document.documentElement.dataset.ready = '1';   // the UI tests wait for this

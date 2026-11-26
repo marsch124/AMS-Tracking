@@ -159,11 +159,13 @@ reminder" below before touching anything about notifications.
 - v1.50 "A real iPhone app, through TestFlight" — BUILT 24 Nov 2026 on
   Martin's request ("take it all the way from here to test flight,
   including GitHub"). See "iPhone app (TestFlight)" below.
-- Parked: Siri/Lock-Screen launch of the installed app — impossible on
-  current iOS (Shortcuts can't open web clips; URLs open Safari's
-  separate storage). Re-test the Shortcuts "Open App" picker after each
-  iOS release; if "Tracking" appears, the v1.12 URL commands plus an
-  Open App shortcut make it work with no app changes.
+- v1.51 "Start and stop a fast from the icon and Siri" — BUILT 26 Nov 2026:
+  Start/Stop Fasting in the Home Screen long-press menu, by Siri and in
+  Shortcuts, iPhone app only; deployment target 17.0. See "Start/Stop
+  Fasting from the menu and Siri (v1.51)" below.
+- Siri/Lock-Screen launch of the INSTALLED WEB APP stays impossible (Shortcuts
+  can't open web clips; URLs open Safari's separate storage). Solved in
+  v1.51 inside the iPhone app instead — the web app is unchanged.
 - Present batches to Martin and wait for his on-phone feedback between
   releases.
 
@@ -420,3 +422,31 @@ CI job. The app icon is `ios/App/App/Assets.xcassets/AppIcon.appiconset/
 AppIcon-512@2x.png` (1024 px, rendered from `icons/icon.svg`, no alpha —
 Apple rejects icons with transparency).
 
+## Start/Stop Fasting from the menu and Siri (v1.51)
+
+iPhone app only (iOS 17+, deployment target 17.0). The web app has none of it.
+
+- **Native file** `ios/App/App/Fasting.swift`: App Intents `StartFastingIntent`
+  / `StopFastingIntent` + an `AppShortcutsProvider` whose phrases contain the
+  app name ("start fasting in Tracking", "start a fast in Tracking", "stop
+  fasting in Tracking", "end my fast in Tracking"); they run without opening
+  the app and answer in Siri's voice. They also show up in Shortcuts under
+  "Tracking" with no setup. Home Screen quick actions are set dynamically as
+  `UIApplication.shortcutItems` — ONE item, the one that fits (Start =
+  moon, Stop = fork and knife, subtitle "Since HH:MM"); a tap opens the app
+  and starts/ends the fast.
+- **Plugin** "AMSFasting": a small in-app Capacitor plugin, registered from
+  `AppViewController.capacitorDidLoad` (not an npm plugin, so no `cap sync`).
+- **Hand-off.** JS mirrors `{habit name, running, since, goal hours}` to native
+  on every save via `AMSFasting.setStatus`; native uses it for the menu item
+  and Siri's answers. Siri and the menu append `{a:'start'|'stop', t:ms,
+  src:'siri'|'menu'}` to a queue in UserDefaults (t = the exact moment).
+  JS takes the queue with `AMSFasting.takePending()` at start, on return to
+  the foreground and on the plugin's "pending" event, and applies it in order
+  with `applyFastAction()`: a start is ignored while a fast runs; a stop is
+  ignored when none runs or when its time is before the start. Message + Undo
+  like the fasting card ("Siri: fast started at 20:13").
+- Target = the first non-archived timer habit (same as the old `?fast=` link,
+  which stays for the web app).
+- Never ask Siri to "just start fasting" in the docs without the Shortcuts
+  tip: naming a shortcut "Start Fasting" drops the "in Tracking".

@@ -1,22 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- AMS Tracking app icon (v1.48): the day grid. Solid = done, pale = missed, hollow = today. -->
-  <!-- Source for every PNG in this folder: render at 512/192/180 full-bleed, 64 with rounded corners. -->
-  <defs><linearGradient id="g" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#4b7bf5"/><stop offset="1" stop-color="#7a5af8"/></linearGradient></defs>
-  <rect width="512" height="512" fill="url(#g)"/>
-  <rect x="115" y="115" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="189" y="115" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="263" y="115" width="60" height="60" rx="15" fill="#fff" fill-opacity=".3"/>
-  <rect x="337" y="115" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="115" y="189" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="189" y="189" width="60" height="60" rx="15" fill="#fff" fill-opacity=".3"/>
-  <rect x="263" y="189" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="337" y="189" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="115" y="263" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="189" y="263" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="263" y="263" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="337" y="263" width="60" height="60" rx="15" fill="#fff" fill-opacity=".3"/>
-  <rect x="115" y="337" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="189" y="337" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="263" y="337" width="60" height="60" rx="15" fill="#fff"/>
-  <rect x="342" y="342" width="50" height="50" rx="11" fill="none" stroke="#fff" stroke-width="10"/>
+  <!-- AMS Tracking app icon (v1.51, his pick "1" of 4 on 26 Nov 2026): the day grid, hand-drawn —
+       ticks = done days, open squares = days still open. House style: flat calm blue, one white
+       1.9 stroke on the 24-point grid, round ends, no fill, no gradient. -->
+  <!-- Source for every PNG in icons/ and the iPhone app icon: render full-bleed at 1024/512/192/180,
+       64 with rounded corners; icon-512-maskable uses the same drawing smaller (safe zone). -->
+  <rect width="512" height="512" fill="#2f6fe0"/>
+  <g transform="translate(82 82) scale(14.5)" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.24 4.58l1.01 1.09l1.60 -1.93 M10.74 4.58l1.01 1.09l1.60 -1.93 M18.4 2.4000000000000004h2.2a1 1 0 0 1 1 1v2.2a1 1 0 0 1 -1 1h-2.2a1 1 0 0 1 -1 -1v-2.2a1 1 0 0 1 1 -1Z M3.4000000000000004 9.9h2.2a1 1 0 0 1 1 1v2.2a1 1 0 0 1 -1 1h-2.2a1 1 0 0 1 -1 -1v-2.2a1 1 0 0 1 1 -1Z M10.74 12.08l1.01 1.09l1.60 -1.93 M18.24 12.08l1.01 1.09l1.60 -1.93 M3.24 19.58l1.01 1.09l1.60 -1.93 M10.9 17.4h2.2a1 1 0 0 1 1 1v2.2a1 1 0 0 1 -1 1h-2.2a1 1 0 0 1 -1 -1v-2.2a1 1 0 0 1 1 -1Z M18.4 17.4h2.2a1 1 0 0 1 1 1v2.2a1 1 0 0 1 -1 1h-2.2a1 1 0 0 1 -1 -1v-2.2a1 1 0 0 1 1 -1Z"/>
+  </g>
 </svg>

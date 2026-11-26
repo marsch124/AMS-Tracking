@@ -8,10 +8,9 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-  # A TestFlight build stops opening 90 days after it was uploaded. On the 1st of
-  # every month main is built and uploaded again, so there is always a fresh one.
-  schedule:
-    - cron: '23 3 1 * *'
+  # 26 Nov 2026: no monthly schedule any more. The TestFlight app "Tracking" is now
+  # the NATIVE app (repo marsch124/AMS-Tracking-Native, version 2.0 and up), which
+  # uses the same App Store record — this repo must never upload into it again.
 
 jobs:
   tests:
@@ -181,9 +180,13 @@ jobs:
   # Signed by Apple's cloud signing through the App Store Connect API key — no
   # certificate or profile is stored anywhere. Version = APP_VERSION from
   # js/app.js; build number = this run's number, so every upload is unique.
+  # SWITCHED OFF 26 Nov 2026: the App Store record (app 6839502190, bundle
+  # io.github.marsch124.amstracking) now belongs to the native SwiftUI app in
+  # marsch124/AMS-Tracking-Native (2.0+). Two sources uploading into one app would
+  # mix builds on Martin's phone. Kept for the record; do not switch back on.
   testflight:
     needs: [tests, ios, apple-keys]
-    if: needs.apple-keys.outputs.ready == 'true'
+    if: false && needs.apple-keys.outputs.ready == 'true'
     runs-on: macos-15
     timeout-minutes: 45
     concurrency:

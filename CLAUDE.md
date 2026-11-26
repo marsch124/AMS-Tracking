@@ -467,6 +467,19 @@ iPhone app only (iOS 17+, deployment target 17.0). The web app has none of it.
   on a phone. The quick actions DO work in the simulator (long-press the
   icon with a >0.5 s tap).
 
+## 🚨 26 Nov 2026: the TestFlight app is now NATIVE — no uploads from here
+
+Martin chose (26 Nov 2026) to turn Tracking into a real SwiftUI app for iPhone,
+iPad and Mac with iCloud sync: repo **marsch124/AMS-Tracking-Native**
+(`~/Developer/AMS-Tracking-Native`), version 2.0 and up. It REUSES this App Store
+record (app 6839502190, bundle `io.github.marsch124.amstracking`), so it replaces
+the Capacitor shell on his phone and takes over the shell's safety copy
+`Library/amsTracking.v1.json` by itself. The `testflight` job in
+`.github/workflows/ci.yml` is therefore switched off (`if: false`) and the
+monthly schedule removed — never switch them back on, or two sources upload into
+one app. The web app on GitHub Pages stays live and unchanged; his data moves
+with Export backup (JSON) here → Import backup in the native app.
+
 ## App Store Connect (since v1.51)
 
 App "AMS Tracking", Apple id 6839502190, bundle-id record 4TPCUXJXNK
